@@ -27,8 +27,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "structlog>=23.0.0",
     "aiokafka>=0.8.0",
-    "redis>=5.0.0",
-    "fastapi-limiter>=0.1.5",
+    "redis[hiredis]>=5.0.0",
 ]
 
 [project.optional-dependencies]
@@ -40,6 +39,10 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.5.0",
 ]
+
+[project.scripts]
+opensense-dlq-show = "opensense.cli.dlq_show:main"
+opensense-ingest = "opensense.ingest.main:main"
 
 [project.urls]
 Homepage = "https://github.com/convolabai/opensense"

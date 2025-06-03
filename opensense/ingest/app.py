@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from opensense.ingest.config import settings
 from opensense.ingest.kafka import kafka_producer
 from opensense.ingest.security import verify_signature
+from opensense.ingest.middleware import RateLimitMiddleware
 
 logger = structlog.get_logger()
 
@@ -62,6 +63,9 @@ app = FastAPI(
     redoc_url="/redoc" if settings.debug else None,
     lifespan=lifespan,
 )
+
+# Add rate limiting middleware
+app.add_middleware(RateLimitMiddleware)
 
 
 class HealthResponse(BaseModel):
