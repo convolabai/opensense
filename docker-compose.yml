@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  # Redpanda (Kafka-compatible message broker)
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: opensense-redpanda
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --reserve-memory=0M
+      - --overprovisioned
+      - --node-id=0
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr=internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr=internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr=internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --rpc-addr=redpanda:33145
+      - --advertise-rpc-addr=redpanda:33145
+    ports:
+      - "19092:19092"  # Kafka API
+      - "18081:18081"  # Schema Registry
+      - "18082:18082"  # REST Proxy
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    networks:
+      - opensense
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis (for rate limiting)
+  redis:
+    image: redis:7-alpine
+    container_name: opensense-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - opensense
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # OpenSense Ingest Gateway
+  svc-ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opensense-svc-ingest
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - KAFKA_BROKERS=redpanda:9092
+      - REDIS_URL=redis://redis:6379
+      - MAX_BODY_BYTES=1048576
+      - RATE_LIMIT=200/minute
+    env_file:
+      - .env.ingest
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - opensense
+    restart: unless-stopped
+
+  # Redpanda Console (optional - for development)
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:latest
+    container_name: opensense-redpanda-console
+    entrypoint: /bin/sh
+    command: -c 'echo "$$CONSOLE_CONFIG_FILE" > /tmp/config.yml; /app/console'
+    environment:
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONSOLE_CONFIG_FILE: |
+        kafka:
+          brokers: ["redpanda:9092"]
+          schemaRegistry:
+            enabled: true
+            urls: ["http://redpanda:8081"]
+        redpanda:
+          adminApi:
+            enabled: true
+            urls: ["http://redpanda:9644"]
+        connect:
+          enabled: false
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redpanda
+    networks:
+      - opensense
+    profiles:
+      - dev
+
+volumes:
+  redpanda-data:
+  redis-data:
+
+networks:
+  opensense:
+    driver: bridge
