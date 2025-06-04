@@ -4,17 +4,20 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
 
-from opensense.ingest.app import app
+from opensense.app import app
 
 
 @pytest.fixture
 def client():
-    """Create a test client for the FastAPI app."""
-    with patch('opensense.ingest.kafka.kafka_producer') as mock_kafka:
+    """Create a test client for the consolidated FastAPI app."""
+    with patch('opensense.ingest.kafka.kafka_producer') as mock_kafka, \
+         patch('opensense.map.service.mapping_service') as mock_mapping:
         mock_kafka.start = AsyncMock()
         mock_kafka.stop = AsyncMock()
         mock_kafka.send_event = AsyncMock()
         mock_kafka.send_dlq = AsyncMock()
+        
+        mock_mapping.run = AsyncMock()
         
         # Override lifespan for testing
         app.router.lifespan_context = None
@@ -26,7 +29,11 @@ def test_health_endpoint(client):
     """Test the health check endpoint."""
     response = client.get("/health/")
     assert response.status_code == 200
-    assert response.json() == {"status": "up"}
+    data = response.json()
+    assert data["status"] == "up"
+    assert "services" in data
+    assert data["services"]["ingest"] == "up"
+    assert data["services"]["map"] == "up"
 
 
 def test_ingest_endpoint_valid_json(client):
@@ -94,3 +101,35 @@ def test_ingest_endpoint_different_sources(client):
         # Test custom source
         response = client.post("/ingest/custom-app", json=payload)
         assert response.status_code == 202
+
+
+def test_map_suggest_endpoint_unavailable(client):
+    """Test map suggest endpoint when LLM is unavailable."""
+    with patch('opensense.map.llm.llm_service') as mock_llm:
+        mock_llm.is_available.return_value = False
+        
+        payload = {"source": "github", "payload": {"action": "opened"}}
+        response = client.post("/map/suggest-map", json=payload)
+        
+        assert response.status_code == 503
+        assert "LLM service not available" in response.json()["detail"]
+
+
+def test_map_metrics_endpoint(client):
+    """Test map metrics endpoint."""
+    with patch('opensense.map.service.mapping_service') as mock_service:
+        mock_service.get_metrics.return_value = {
+            "events_processed": 100,
+            "events_mapped": 95,
+            "events_failed": 5,
+            "llm_invocations": 3,
+            "mapping_success_rate": 0.95,
+            "llm_usage_rate": 0.03
+        }
+        
+        response = client.get("/map/metrics/json")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["events_processed"] == 100
+        assert data["events_mapped"] == 95
+        assert data["mapping_success_rate"] == 0.95

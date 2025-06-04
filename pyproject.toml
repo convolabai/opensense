@@ -49,8 +49,7 @@ dev = [
 
 [project.scripts]
 opensense-dlq-show = "opensense.cli.dlq_show:main"
-opensense-ingest = "opensense.ingest.main:main"
-opensense-map = "opensense.map.main:main"
+opensense = "opensense.main:main"
 
 [project.urls]
 Homepage = "https://github.com/convolabai/opensense"

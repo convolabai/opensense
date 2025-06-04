@@ -1,4 +1,4 @@
-# Multi-stage build for OpenSense Ingest Gateway
+# Multi-stage build for OpenSense Services
 FROM python:3.12-slim as builder
 
 # Install build dependencies
@@ -39,6 +39,8 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY opensense/ ./opensense/
+COPY mappings/ ./mappings/
+COPY schemas/ ./schemas/
 
 # Set ownership
 RUN chown -R opensense:opensense /app
@@ -57,5 +59,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-# Run the application
-CMD ["python", "-m", "opensense.ingest.main"]
+# Run the consolidated application
+CMD ["python", "-m", "opensense.main"]

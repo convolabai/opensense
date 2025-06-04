@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock, patch
 # Add project root to path
 sys.path.insert(0, '/home/runner/work/opensense/opensense')
 
-from opensense.ingest.app import app
+from opensense.app import app
 from opensense.ingest.config import settings
 
 
@@ -27,7 +27,7 @@ def print_banner():
     print("🚀 OpenSense Ingest Gateway - Feature Demonstration")
     print("=" * 60)
     print("Epic 1 Implementation Validation")
-    print("Version: 0.2.0")
+    print("Version: 0.3.0")
     print("=" * 60)
 
 
@@ -37,8 +37,8 @@ def demo_os_101():
     print("-" * 40)
     
     # Validate FastAPI app creation
-    assert app.title == "OpenSense Ingest Gateway"
-    assert app.version == "0.2.0"
+    assert app.title == "OpenSense Services"
+    assert app.version == "0.3.0"
     print("✅ FastAPI app created with correct metadata")
     
     # Check health endpoint exists
