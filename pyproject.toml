@@ -49,6 +49,7 @@ dev = [
 
 [project.scripts]
 opensense-dlq-show = "opensense.cli.dlq_show:main"
+opensense-topics = "opensense.cli.topic_manager:main"
 opensense = "opensense.main:main"
 
 [project.urls]
