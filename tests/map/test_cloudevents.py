@@ -5,15 +5,14 @@ from opensense.map.cloudevents import CloudEventWrapper
 
 
 def test_canonical_event_creation():
-    """Test creating a canonical CloudEvent."""
+    """Test creating a canonical event in the new format."""
     wrapper = CloudEventWrapper()
     
     canonical_data = {
         "publisher": "github",
-        "resource": "pull_request",
-        "action": "opened",
-        "key": "number",
-        "value": 1374
+        "resource": {"type": "pull_request", "id": 1374},
+        "action": "create",
+        "summary": "PR 1374 opened by user"
     }
     
     raw_payload = {
@@ -21,60 +20,60 @@ def test_canonical_event_creation():
         "pull_request": {"number": 1374, "title": "Test PR"}
     }
     
-    event = wrapper.create_canonical_event(
+    canonical_event = wrapper.create_canonical_event(
         event_id="test-id-123",
         source="github",
         canonical_data=canonical_data,
         raw_payload=raw_payload
     )
     
-    # Verify CloudEvent structure
-    assert event["id"] == "test-id-123"
-    assert event["specversion"] == "1.0"
-    assert event["source"] == "/github"
-    assert event["type"] == "com.opensense.event"
-    assert event["schema_version"] == 1
-    assert "time" in event
+    # Verify canonical event structure (not CloudEvents envelope)
+    assert canonical_event["publisher"] == "github"
+    assert canonical_event["resource"]["type"] == "pull_request"
+    assert canonical_event["resource"]["id"] == 1374
+    assert canonical_event["action"] == "create"
+    assert canonical_event["summary"] == "PR 1374 opened by user"
+    assert canonical_event["raw"] == raw_payload
+    assert "timestamp" in canonical_event
     
-    # Verify data section
-    data = event["data"]
-    assert data["publisher"] == "github"
-    assert data["resource"] == "pull_request"
-    assert data["action"] == "opened"
-    assert data["key"] == "number"
-    assert data["value"] == 1374
-    assert data["raw"] == raw_payload
+    # Test CloudEvents envelope creation
+    cloud_event = wrapper.create_cloudevents_envelope("test-id-123", canonical_event)
+    
+    assert cloud_event["id"] == "test-id-123"
+    assert cloud_event["specversion"] == "1.0"
+    assert cloud_event["source"] == "/github"
+    assert cloud_event["type"] == "com.github.pull_request.create"
+    assert cloud_event["subject"] == "pull_request/1374"
+    assert cloud_event["data"] == canonical_event
 
 
 def test_event_validation():
-    """Test CloudEvent validation."""
+    """Test canonical event validation."""
     wrapper = CloudEventWrapper()
     
-    # Valid event
+    # Valid canonical event (new format)
     valid_event = {
-        "id": "test-123",
-        "specversion": "1.0",
-        "source": "/github",
-        "type": "com.opensense.event",
-        "time": "2025-06-03T15:45:02Z",
-        "schema_version": 1,
-        "data": {
-            "publisher": "github",
-            "resource": "pull_request",
-            "action": "opened",
-            "key": "number",
-            "value": 1374,
-            "raw": {"test": "data"}
-        }
+        "publisher": "github",
+        "resource": {"type": "pull_request", "id": 1374},
+        "action": "create",
+        "timestamp": "2025-06-03T15:45:02Z",
+        "summary": "PR 1374 opened",
+        "raw": {"test": "data"}
     }
     
     assert wrapper.validate_canonical_event(valid_event) is True
     
     # Invalid event (missing required field)
     invalid_event = valid_event.copy()
-    del invalid_event["data"]["publisher"]
+    del invalid_event["publisher"]
     
     assert wrapper.validate_canonical_event(invalid_event) is False
+    
+    # Invalid action (not CRUD)
+    invalid_action_event = valid_event.copy()
+    invalid_action_event["action"] = "opened"  # Should be "create"
+    
+    assert wrapper.validate_canonical_event(invalid_action_event) is False
 
 
 def test_wrap_and_validate():
@@ -83,26 +82,26 @@ def test_wrap_and_validate():
     
     canonical_data = {
         "publisher": "github",
-        "resource": "issue",
-        "action": "closed",
-        "key": "number",
-        "value": 456
+        "resource": {"type": "issue", "id": 456},
+        "action": "delete"
     }
     
     raw_payload = {"action": "closed", "issue": {"number": 456}}
     
-    event = wrapper.wrap_and_validate(
+    cloud_event = wrapper.wrap_and_validate(
         event_id="test-456",
         source="github",
         canonical_data=canonical_data,
         raw_payload=raw_payload
     )
     
-    # Should return a valid event
-    assert event is not None
-    assert event["id"] == "test-456"
-    assert event["data"]["action"] == "closed"
-    assert event["data"]["value"] == 456
+    # Should return a CloudEvents envelope
+    assert cloud_event is not None
+    assert cloud_event["id"] == "test-456"
+    assert cloud_event["type"] == "com.github.issue.delete"
+    assert cloud_event["subject"] == "issue/456"
+    assert cloud_event["data"]["action"] == "delete"
+    assert cloud_event["data"]["resource"]["id"] == 456
 
 
 if __name__ == "__main__":

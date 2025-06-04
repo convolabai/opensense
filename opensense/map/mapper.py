@@ -84,7 +84,7 @@ class MappingEngine:
             # Apply JSONata transformation using the transform function
             result = jsonata.transform(mapping_expr, raw_payload)
             
-            # Ensure result has required fields
+            # Ensure result has required fields for new canonical format
             if not isinstance(result, dict):
                 logger.error(
                     "Mapping result is not a dictionary",
@@ -93,7 +93,8 @@ class MappingEngine:
                 )
                 return None
             
-            required_fields = ['publisher', 'resource', 'action', 'key', 'value']
+            # Validate new canonical format requirements
+            required_fields = ['publisher', 'resource', 'action']
             missing_fields = [field for field in required_fields if field not in result]
             
             if missing_fields:
@@ -102,6 +103,45 @@ class MappingEngine:
                     source=source,
                     missing_fields=missing_fields,
                     result=result
+                )
+                return None
+            
+            # Validate resource structure
+            if not isinstance(result.get('resource'), dict):
+                logger.error(
+                    "Resource must be an object with type and id fields",
+                    source=source,
+                    resource=result.get('resource')
+                )
+                return None
+            
+            resource = result['resource']
+            if 'type' not in resource or 'id' not in resource:
+                logger.error(
+                    "Resource object missing type or id field",
+                    source=source,
+                    resource=resource
+                )
+                return None
+            
+            # Validate action is CRUD enum
+            valid_actions = ['create', 'read', 'update', 'delete']
+            if result['action'] not in valid_actions:
+                logger.error(
+                    "Invalid action - must be one of: create, read, update, delete",
+                    source=source,
+                    action=result['action']
+                )
+                return None
+            
+            # Validate atomic ID (no composite keys with /, #, or space)
+            resource_id = str(resource['id'])
+            invalid_chars = ['/', '#', ' ']
+            if any(char in resource_id for char in invalid_chars):
+                logger.error(
+                    "Resource ID contains invalid characters (/, #, space) - atomic IDs only",
+                    source=source,
+                    resource_id=resource_id
                 )
                 return None
             

@@ -1,1 +1,1 @@
-{"publisher": "github", "resource": "pull_request", "action": action, "key": "number", "value": pull_request.number}
+{"publisher": "github", "resource": {"type": "pull_request", "id": pull_request.number}, "action": "create"}

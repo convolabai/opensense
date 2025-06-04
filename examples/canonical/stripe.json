@@ -1,0 +1,21 @@
+{
+  "publisher": "stripe",
+  "resource": { "type": "payment_intent", "id": "pi_3OrFAb47..." },
+  "action": "create",
+  "timestamp": "2025-06-03T15:45:02Z",
+  "summary": "PaymentIntent pi_3OrFAb47... succeeded",
+  "raw": {
+    "id": "evt_1234567890",
+    "object": "event",
+    "type": "payment_intent.succeeded",
+    "data": {
+      "object": {
+        "id": "pi_3OrFAb47...",
+        "object": "payment_intent",
+        "amount": 1000,
+        "currency": "usd",
+        "status": "succeeded"
+      }
+    }
+  }
+}

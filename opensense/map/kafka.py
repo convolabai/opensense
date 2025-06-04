@@ -28,6 +28,8 @@ class MapKafkaProducer(BaseKafkaProducer):
             "Canonical event sent to Kafka",
             event_id=event["id"],
             publisher=event["data"]["publisher"],
+            resource_type=event["data"]["resource"]["type"],
+            action=event["data"]["action"]
         )
     
     async def send_mapping_failure(self, failure_event: Dict[str, Any]) -> None:

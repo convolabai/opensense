@@ -1,0 +1,17 @@
+{
+  "publisher": "shopify",
+  "resource": { "type": "product", "id": 827369201 },
+  "action": "delete",
+  "timestamp": "2025-06-03T15:45:02Z",
+  "summary": "Product 827369201 deleted",
+  "raw": {
+    "id": 827369201,
+    "title": "IPod Nano - 8GB",
+    "vendor": "Apple",
+    "product_type": "Electronics",
+    "handle": "ipod-nano",
+    "published_at": null,
+    "tags": "Emotive, Flash Memory, MP3, Music",
+    "status": "draft"
+  }
+}

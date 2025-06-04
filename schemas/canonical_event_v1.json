@@ -1,83 +1,58 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "OpenSense Canonical Event v1",
-  "description": "Schema for OpenSense canonical events in CloudEvents envelope",
+  "description": "Schema for OpenSense canonical events with REST-aligned structure",
   "type": "object",
   "required": [
-    "id",
-    "specversion", 
-    "source",
-    "type",
-    "time",
-    "schema_version",
-    "data"
+    "publisher",
+    "resource",
+    "action", 
+    "timestamp",
+    "raw"
   ],
   "properties": {
-    "id": {
+    "publisher": {
       "type": "string",
-      "description": "Unique event identifier (UUID)"
+      "pattern": "^[a-z0-9_]+$",
+      "description": "Lowercase slug of the system (github, stripe, etc.)"
     },
-    "specversion": {
-      "type": "string",
-      "const": "1.0",
-      "description": "CloudEvents specification version"
-    },
-    "source": {
-      "type": "string",
-      "pattern": "^/[a-zA-Z0-9_-]+$",
-      "description": "Source identifier in format /{publisher}"
-    },
-    "type": {
-      "type": "string",
-      "const": "com.opensense.event",
-      "description": "Event type"
-    },
-    "time": {
-      "type": "string",
-      "format": "date-time",
-      "description": "Event timestamp in ISO 8601 format"
-    },
-    "schema_version": {
-      "type": "integer",
-      "const": 1,
-      "description": "Schema version for forward compatibility"
-    },
-    "data": {
+    "resource": {
       "type": "object",
-      "required": [
-        "publisher",
-        "resource", 
-        "action",
-        "key",
-        "value",
-        "raw"
-      ],
+      "required": ["type", "id"],
       "properties": {
-        "publisher": {
+        "type": {
           "type": "string",
-          "description": "Publisher/source system identifier"
+          "description": "Singular noun (pull_request, issue, payment_intent)"
         },
-        "resource": {
-          "type": "string", 
-          "description": "Main domain object (e.g., pull_request, issue)"
-        },
-        "action": {
-          "type": "string",
-          "description": "CRUD-ish verb (opened, approved, deleted, etc.)"
-        },
-        "key": {
-          "type": "string",
-          "description": "Unique identifier field name"
-        },
-        "value": {
-          "description": "Unique identifier value (string, number, etc.)"
-        },
-        "raw": {
-          "type": "object",
-          "description": "Original raw payload from webhook"
+        "id": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "integer"}
+          ],
+          "description": "Atomic identifier - no composite keys"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "One logical entity"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["create", "read", "update", "delete"],
+      "description": "CRUD action enum"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp in UTC (YYYY-MM-DDTHH:mm:ssZ)"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 120,
+      "description": "≤120-char human sentence (optional)"
+    },
+    "raw": {
+      "type": "object",
+      "description": "Entire original payload - no filtering"
     }
   },
   "additionalProperties": false

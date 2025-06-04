@@ -150,7 +150,8 @@ class MappingService:
                 event_id=event_id,
                 source=source,
                 publisher=canonical_data["publisher"],
-                resource=canonical_data["resource"],
+                resource_type=canonical_data["resource"]["type"],
+                resource_id=canonical_data["resource"]["id"],
                 action=canonical_data["action"],
                 processing_time_ms=round(duration * 1000, 2)
             )

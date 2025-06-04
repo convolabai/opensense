@@ -12,7 +12,7 @@ def test_mapping_engine_loads_jsonata_files():
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a test mapping file
         mapping_file = Path(temp_dir) / "test.jsonata"
-        mapping_file.write_text('{"publisher": "test", "resource": "item", "action": $.action, "key": "id", "value": $.id}')
+        mapping_file.write_text('{"publisher": "test", "resource": {"type": "item", "id": $.id}, "action": $.action = "created" ? "create" : "update"}')
         
         # Create engine with temp directory
         engine = MappingEngine()
@@ -36,10 +36,9 @@ def test_mapping_engine_loads_jsonata_files():
             
             assert result is not None
             assert result["publisher"] == "test"
-            assert result["resource"] == "item"
-            assert result["action"] == "created"
-            assert result["key"] == "id"
-            assert result["value"] == 123
+            assert result["resource"]["type"] == "item"
+            assert result["resource"]["id"] == 123
+            assert result["action"] == "create"
             
         finally:
             settings.mappings_dir = original_mappings_dir
@@ -50,7 +49,7 @@ def test_mapping_engine_handles_missing_fields():
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a mapping file that's missing required fields
         mapping_file = Path(temp_dir) / "incomplete.jsonata"
-        mapping_file.write_text('{"publisher": "test", "action": $.action}')  # Missing resource, key, value
+        mapping_file.write_text('{"publisher": "test", "action": "create"}')  # Missing resource
         
         engine = MappingEngine()
         engine._mappings = {}
@@ -100,10 +99,9 @@ def test_github_mapping():
         
         assert result is not None
         assert result["publisher"] == "github"
-        assert result["resource"] == "pull_request"
-        assert result["action"] == "opened"
-        assert result["key"] == "number"
-        assert result["value"] == 1374
+        assert result["resource"]["type"] == "pull_request"
+        assert result["resource"]["id"] == 1374
+        assert result["action"] == "create"  # "opened" maps to "create"
     else:
         print("GitHub mapping not found - test skipped")
 

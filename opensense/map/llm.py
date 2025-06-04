@@ -97,21 +97,26 @@ class LLMSuggestionService:
 Your task is to analyze webhook JSON payloads and create JSONata expressions that transform them into a canonical format.
 
 The canonical format has these required fields:
-- publisher: upstream slug/identifier (string)
-- resource: main domain object name (string, e.g., "pull_request", "issue", "invoice")
-- action: CRUD verb (string, e.g., "created", "read", "updated", "deleted")
-- key: unique identifier field name (string, e.g., "number", "id", "uuid")
-- value: unique identifier value (any type, e.g., 1374, "abc123")
+- publisher: upstream slug/identifier (string, lowercase snake_case)
+- resource: object with "type" (singular noun) and "id" (atomic identifier) fields  
+- action: CRUD verb (string, must be one of: "create", "read", "update", "delete")
+- summary: optional human-readable sentence ≤120 chars describing the event
 
 Guidelines:
 1. Analyze the payload structure to identify the main resource and action
-2. Find the most appropriate unique identifier
-3. Use JSONata syntax to extract and transform the data
-4. Return ONLY the JSONata expression, no explanations or code blocks
-5. The expression should produce a JSON object with exactly the 5 required fields
+2. Map webhook actions to CRUD verbs: opened/created→create, closed/deleted→delete, edited/updated→update, viewed→read
+3. Extract atomic resource ID (no composite keys with /, #, or spaces)
+4. Use JSONata syntax to extract and transform the data
+5. Return ONLY the JSONata expression, no explanations or code blocks
+6. The expression should produce a JSON object with the required fields
 
 Example JSONata expression:
-{"publisher": "github", "resource": "pull_request", "action": action, "key": "number", "value": pull_request.number}"""
+{
+  "publisher": "github",
+  "resource": {"type": "pull_request", "id": pull_request.number},
+  "action": action = "opened" ? "create" : action = "closed" ? "delete" : "update",
+  "summary": "PR " & $string(pull_request.number) & " " & action & " by " & pull_request.user.login
+}"""
     
     def _create_user_prompt(self, source: str, raw_payload: Dict[str, Any]) -> str:
         """Create the user prompt with the specific payload to analyze."""
