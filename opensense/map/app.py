@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from opensense.map.config import settings
 from opensense.map.llm import llm_service
 from opensense.map.service import mapping_service
+from opensense.map.metrics import metrics
 
 logger = structlog.get_logger()
 
@@ -117,18 +118,27 @@ async def suggest_mapping(request: SuggestMapRequest) -> SuggestMapResponse:
         )
 
 
-@app.get("/metrics", response_model=MetricsResponse)
-async def get_metrics() -> MetricsResponse:
+@app.get("/metrics")
+async def get_prometheus_metrics():
     """Get Prometheus-style metrics for monitoring."""
-    metrics = mapping_service.get_metrics()
+    from fastapi import Response
+    
+    metrics_text = metrics.get_metrics_text()
+    return Response(content=metrics_text, media_type="text/plain")
+
+
+@app.get("/metrics/json", response_model=MetricsResponse)
+async def get_json_metrics() -> MetricsResponse:
+    """Get metrics in JSON format for easy consumption."""
+    service_metrics = mapping_service.get_metrics()
     
     return MetricsResponse(
-        events_processed=metrics["events_processed"],
-        events_mapped=metrics["events_mapped"],
-        events_failed=metrics["events_failed"],
-        llm_invocations=metrics["llm_invocations"],
-        mapping_success_rate=metrics["mapping_success_rate"],
-        llm_usage_rate=metrics["llm_usage_rate"]
+        events_processed=service_metrics["events_processed"],
+        events_mapped=service_metrics["events_mapped"],
+        events_failed=service_metrics["events_failed"],
+        llm_invocations=service_metrics["llm_invocations"],
+        mapping_success_rate=service_metrics["mapping_success_rate"],
+        llm_usage_rate=service_metrics["llm_usage_rate"]
     )
 
 

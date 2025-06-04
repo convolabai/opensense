@@ -3,8 +3,6 @@
 from typing import Any, Dict, Optional
 
 import structlog
-from langchain.schema import HumanMessage, SystemMessage
-from langchain.chat_models import ChatOpenAI
 
 from opensense.map.config import settings
 
@@ -15,20 +13,21 @@ class LLMSuggestionService:
     """Service for generating JSONata mapping suggestions using LLM."""
     
     def __init__(self) -> None:
-        self.llm: Optional[ChatOpenAI] = None
-        self._initialize_llm()
-    
-    def _initialize_llm(self) -> None:
-        """Initialize the LLM client."""
+        self.llm_available = False
         if settings.openai_api_key:
             try:
+                # Import and initialize LLM only if API key is available
+                from langchain.chat_models import ChatOpenAI
                 self.llm = ChatOpenAI(
                     openai_api_key=settings.openai_api_key,
                     model_name="gpt-4",
-                    temperature=0.1,  # Low temperature for consistent output
+                    temperature=0.1,
                     max_tokens=1000,
                 )
+                self.llm_available = True
                 logger.info("OpenAI LLM initialized")
+            except ImportError:
+                logger.warning("LangChain not available, LLM suggestions disabled")
             except Exception as e:
                 logger.error(
                     "Failed to initialize OpenAI LLM",
@@ -36,11 +35,11 @@ class LLMSuggestionService:
                     exc_info=True
                 )
         else:
-            logger.warning("No OpenAI API key provided, LLM suggestions disabled")
+            logger.info("No OpenAI API key provided, LLM suggestions disabled")
     
     def is_available(self) -> bool:
         """Check if LLM service is available."""
-        return self.llm is not None
+        return self.llm_available
     
     async def suggest_mapping(self, source: str, raw_payload: Dict[str, Any]) -> Optional[str]:
         """
@@ -58,6 +57,9 @@ class LLMSuggestionService:
             return None
         
         try:
+            # Import here to avoid errors if langchain is not installed
+            from langchain.schema import HumanMessage, SystemMessage
+            
             # Create the prompt
             system_prompt = self._create_system_prompt()
             user_prompt = self._create_user_prompt(source, raw_payload)
@@ -109,13 +111,7 @@ Guidelines:
 5. The expression should produce a JSON object with exactly the 5 required fields
 
 Example JSONata expression:
-{
-  "publisher": "github",
-  "resource": "pull_request", 
-  "action": action,
-  "key": "number",
-  "value": pull_request.number
-}"""
+{"publisher": "github", "resource": "pull_request", "action": action, "key": "number", "value": pull_request.number}"""
     
     def _create_user_prompt(self, source: str, raw_payload: Dict[str, Any]) -> str:
         """Create the user prompt with the specific payload to analyze."""

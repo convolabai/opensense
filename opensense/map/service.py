@@ -1,6 +1,7 @@
 """Main mapping service that processes raw events into canonical events."""
 
 import asyncio
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict
 
@@ -10,6 +11,7 @@ from opensense.map.cloudevents import cloud_event_wrapper
 from opensense.map.kafka import MapKafkaConsumer, map_producer
 from opensense.map.llm import llm_service
 from opensense.map.mapper import mapping_engine
+from opensense.map.metrics import metrics
 
 logger = structlog.get_logger()
 
@@ -21,7 +23,7 @@ class MappingService:
         self.consumer: MapKafkaConsumer | None = None
         self._running = False
         
-        # Metrics (basic counters for now)
+        # Legacy metrics (for backward compatibility)
         self.events_processed = 0
         self.events_mapped = 0
         self.events_failed = 0
@@ -30,6 +32,9 @@ class MappingService:
     async def start(self) -> None:
         """Start the mapping service."""
         logger.info("Starting OpenSense Canonicaliser", version="0.3.0")
+        
+        # Update active mappings count in metrics
+        metrics.update_active_mappings(len(mapping_engine._mappings))
         
         # Start Kafka producer
         await map_producer.start()
@@ -71,11 +76,15 @@ class MappingService:
         Args:
             raw_event: Raw event from Kafka in the format produced by svc-ingest
         """
-        self.events_processed += 1
+        start_time = time.time()
         
         event_id = raw_event.get("id")
         source = raw_event.get("source")
         payload = raw_event.get("payload", {})
+        
+        # Record metrics
+        self.events_processed += 1
+        metrics.record_event_processed(source or "unknown")
         
         logger.debug(
             "Processing raw event",
@@ -98,6 +107,7 @@ class MappingService:
                     )
                     
                     self.llm_invocations += 1
+                    metrics.record_llm_invocation(source or "unknown")
                     
                     # For now, just log that we would use LLM
                     # In a full implementation, we would:
@@ -109,9 +119,11 @@ class MappingService:
                         raw_event,
                         "No mapping available and LLM suggestion not implemented"
                     )
+                    metrics.record_event_failed(source or "unknown", "no_mapping_llm_todo")
                     return
                 else:
                     await self._send_mapping_failure(raw_event, "No mapping available for source")
+                    metrics.record_event_failed(source or "unknown", "no_mapping")
                     return
             
             # Create canonical CloudEvent
@@ -125,7 +137,13 @@ class MappingService:
             # Send to canonical events topic
             await map_producer.send_canonical_event(canonical_event)
             
+            # Record success metrics
             self.events_mapped += 1
+            metrics.record_event_mapped(source or "unknown")
+            
+            # Record processing duration
+            duration = time.time() - start_time
+            metrics.record_mapping_duration(source or "unknown", duration)
             
             logger.info(
                 "Event mapped successfully",
@@ -133,11 +151,13 @@ class MappingService:
                 source=source,
                 publisher=canonical_data["publisher"],
                 resource=canonical_data["resource"],
-                action=canonical_data["action"]
+                action=canonical_data["action"],
+                processing_time_ms=round(duration * 1000, 2)
             )
             
         except Exception as e:
             self.events_failed += 1
+            metrics.record_event_failed(source or "unknown", "processing_error")
             await self._send_mapping_failure(raw_event, f"Mapping error: {str(e)}")
             
             logger.error(

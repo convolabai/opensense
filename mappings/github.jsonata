@@ -1,14 +1,1 @@
-{
-  "publisher": "github",
-  "resource": $contains($.action, "pull_request") ? "pull_request" : 
-              $contains($.action, "issue") ? "issue" :
-              $exists($.pull_request) ? "pull_request" :
-              $exists($.issue) ? "issue" : "repository",
-  "action": $.action,
-  "key": $exists($.pull_request) ? "number" : 
-         $exists($.issue) ? "number" : 
-         $exists($.repository) ? "id" : "id",
-  "value": $exists($.pull_request) ? $.pull_request.number : 
-           $exists($.issue) ? $.issue.number :
-           $exists($.repository) ? $.repository.id : $.id
-}
+{"publisher": "github", "resource": "pull_request", "action": action, "key": "number", "value": pull_request.number}
