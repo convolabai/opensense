@@ -1,4 +1,23 @@
-# Multi-stage build for OpenSense Ingest Gateway
+# Multi-stage build for OpenSense Services
+FROM node:18-slim as frontend-builder
+
+# Set working directory for frontend
+WORKDIR /app/frontend
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy frontend source
+COPY frontend/src ./src
+COPY frontend/public ./public
+COPY frontend/tsconfig.json ./
+
+# Build frontend
+RUN npm run build
+
 FROM python:3.12-slim as builder
 
 # Install build dependencies
@@ -39,6 +58,11 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY opensense/ ./opensense/
+COPY mappings/ ./mappings/
+COPY schemas/ ./schemas/
+
+# Copy built frontend from frontend-builder
+COPY --from=frontend-builder /app/frontend/build ./frontend/build
 
 # Set ownership
 RUN chown -R opensense:opensense /app
@@ -57,5 +81,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-# Run the application
-CMD ["python", "-m", "opensense.ingest.main"]
+# Run the consolidated application
+CMD ["python", "-m", "opensense.main"]

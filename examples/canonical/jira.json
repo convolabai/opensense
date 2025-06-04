@@ -1,0 +1,22 @@
+{
+  "publisher": "jira",
+  "resource": { "type": "issue", "id": "PAY-432" },
+  "action": "update",
+  "timestamp": "2025-06-03T15:45:02Z",
+  "summary": "Issue PAY-432 transitioned to Done",
+  "raw": {
+    "timestamp": 1622736302000,
+    "webhookEvent": "jira:issue_updated",
+    "issue": {
+      "key": "PAY-432",
+      "fields": {
+        "status": {
+          "name": "Done",
+          "statusCategory": {
+            "key": "done"
+          }
+        }
+      }
+    }
+  }
+}

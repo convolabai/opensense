@@ -1,0 +1,12 @@
+{
+  "publisher": "github",
+  "resource": { "type": "pull_request", "id": 1374 },
+  "action": "update",
+  "timestamp": "2025-06-03T15:45:02Z",
+  "summary": "PR 1374 approved by Alice",
+  "raw": {
+    "action": "submitted",
+    "review": { "state": "approved", "user": { "login": "alice" } },
+    "pull_request": { "number": 1374, "title": "Add new feature" }
+  }
+}

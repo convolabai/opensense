@@ -1,0 +1,19 @@
+{
+  "publisher": "slack",
+  "resource": { "type": "file", "id": "F06A2G45T" },
+  "action": "read",
+  "timestamp": "2025-06-03T15:45:02Z",
+  "summary": "File F06A2G45T shared to #design",
+  "raw": {
+    "token": "verification_token",
+    "team_id": "T0G9PQBBK",
+    "api_app_id": "A0118NKPB",
+    "event": {
+      "type": "file_shared",
+      "file_id": "F06A2G45T",
+      "user_id": "U024BE7LH",
+      "channels": ["C0T8SE4AU"]
+    },
+    "type": "event_callback"
+  }
+}

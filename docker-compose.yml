@@ -50,12 +50,12 @@ services:
       timeout: 10s
       retries: 5
 
-  # OpenSense Ingest Gateway
-  svc-ingest:
+  # OpenSense Services (consolidated ingest + map)
+  opensense:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: opensense-svc-ingest
+    container_name: opensense-services
     ports:
       - "8000:8000"
     environment:
@@ -65,6 +65,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - MAX_BODY_BYTES=1048576
       - RATE_LIMIT=200/minute
+      - MAPPINGS_DIR=/app/mappings
     env_file:
       - .env.ingest
     depends_on:
