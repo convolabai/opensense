@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OpenSense Canonical Event v1",
+  "description": "Schema for OpenSense canonical events in CloudEvents envelope",
+  "type": "object",
+  "required": [
+    "id",
+    "specversion", 
+    "source",
+    "type",
+    "time",
+    "schema_version",
+    "data"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique event identifier (UUID)"
+    },
+    "specversion": {
+      "type": "string",
+      "const": "1.0",
+      "description": "CloudEvents specification version"
+    },
+    "source": {
+      "type": "string",
+      "pattern": "^/[a-zA-Z0-9_-]+$",
+      "description": "Source identifier in format /{publisher}"
+    },
+    "type": {
+      "type": "string",
+      "const": "com.opensense.event",
+      "description": "Event type"
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event timestamp in ISO 8601 format"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for forward compatibility"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "publisher",
+        "resource", 
+        "action",
+        "key",
+        "value",
+        "raw"
+      ],
+      "properties": {
+        "publisher": {
+          "type": "string",
+          "description": "Publisher/source system identifier"
+        },
+        "resource": {
+          "type": "string", 
+          "description": "Main domain object (e.g., pull_request, issue)"
+        },
+        "action": {
+          "type": "string",
+          "description": "CRUD-ish verb (opened, approved, deleted, etc.)"
+        },
+        "key": {
+          "type": "string",
+          "description": "Unique identifier field name"
+        },
+        "value": {
+          "description": "Unique identifier value (string, number, etc.)"
+        },
+        "raw": {
+          "type": "object",
+          "description": "Original raw payload from webhook"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "opensense"
-version = "0.2.0"
+version = "0.3.0"
 description = "OpenSense - Make any event from anywhere instantly understandable and actionable by anyone"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -28,6 +28,13 @@ dependencies = [
     "structlog>=23.0.0",
     "aiokafka>=0.8.0",
     "redis[hiredis]>=5.0.0",
+    # Epic 2 dependencies
+    "jsonata>=0.2.0",
+    "cloudevents>=1.11.0",
+    "jsonschema>=4.0.0",
+    "langchain>=0.1.0",
+    "prometheus-client>=0.16.0",
+    "openai>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -43,6 +50,7 @@ dev = [
 [project.scripts]
 opensense-dlq-show = "opensense.cli.dlq_show:main"
 opensense-ingest = "opensense.ingest.main:main"
+opensense-map = "opensense.map.main:main"
 
 [project.urls]
 Homepage = "https://github.com/convolabai/opensense"
