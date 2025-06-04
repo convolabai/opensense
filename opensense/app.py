@@ -1,12 +1,16 @@
 """Consolidated FastAPI application for OpenSense services."""
 
 import json
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from opensense.core.fastapi import global_exception_handler, add_request_id_header, create_health_endpoint
@@ -85,6 +89,39 @@ app.add_middleware(RateLimitMiddleware)
 
 # Add global exception handler
 app.add_exception_handler(Exception, global_exception_handler)
+
+# Frontend demo routes
+frontend_path = Path(__file__).parent.parent / "frontend" / "build"
+if frontend_path.exists():
+    app.mount("/static", StaticFiles(directory=str(frontend_path / "static")), name="static")
+    
+    @app.get("/demo")
+    async def demo():
+        """Serve the React demo application."""
+        index_path = frontend_path / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
+        raise HTTPException(status_code=404, detail="Demo not available - frontend not built")
+    
+    @app.get("/demo/{path:path}")
+    async def demo_assets(path: str):
+        """Serve demo assets."""
+        file_path = frontend_path / path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        # For React Router, serve index.html for any unmatched routes
+        index_path = frontend_path / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
+        raise HTTPException(status_code=404, detail="File not found")
+else:
+    @app.get("/demo")
+    async def demo_not_available():
+        """Demo not available when frontend is not built."""
+        return {
+            "message": "Demo not available",
+            "instructions": "To build the frontend demo:\n1. cd frontend\n2. npm install\n3. npm run build"
+        }
 
 
 # ================================
