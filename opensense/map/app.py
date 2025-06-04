@@ -4,9 +4,11 @@ import json
 from typing import Any, Dict
 
 import structlog
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, status
+from fastapi import Response
 from pydantic import BaseModel
 
+from opensense.core.fastapi import global_exception_handler, create_health_endpoint
 from opensense.map.config import settings
 from opensense.map.llm import llm_service
 from opensense.map.service import mapping_service
@@ -40,14 +42,6 @@ class MetricsResponse(BaseModel):
     llm_usage_rate: float
 
 
-class HealthResponse(BaseModel):
-    """Health check response model."""
-    
-    status: str
-    service: str
-    version: str
-
-
 # Create FastAPI app
 app = FastAPI(
     title="OpenSense Canonicaliser",
@@ -57,15 +51,12 @@ app = FastAPI(
     redoc_url="/redoc" if settings.debug else None,
 )
 
+# Add global exception handler
+app.add_exception_handler(Exception, global_exception_handler)
 
-@app.get("/health/", response_model=HealthResponse)
-async def health_check() -> HealthResponse:
-    """Health check endpoint for readiness probes."""
-    return HealthResponse(
-        status="up",
-        service="svc-map",
-        version="0.3.0"
-    )
+# Add health check endpoint
+health_endpoint = create_health_endpoint("svc-map", "0.3.0")
+app.get("/health/")(health_endpoint)
 
 
 @app.post("/suggest-map", response_model=SuggestMapResponse)
@@ -121,8 +112,6 @@ async def suggest_mapping(request: SuggestMapRequest) -> SuggestMapResponse:
 @app.get("/metrics")
 async def get_prometheus_metrics():
     """Get Prometheus-style metrics for monitoring."""
-    from fastapi import Response
-    
     metrics_text = metrics.get_metrics_text()
     return Response(content=metrics_text, media_type="text/plain")
 

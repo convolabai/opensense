@@ -99,7 +99,7 @@ Your task is to analyze webhook JSON payloads and create JSONata expressions tha
 The canonical format has these required fields:
 - publisher: upstream slug/identifier (string)
 - resource: main domain object name (string, e.g., "pull_request", "issue", "invoice")
-- action: CRUD-like verb (string, e.g., "opened", "approved", "deleted", "paid")
+- action: CRUD verb (string, e.g., "created", "read", "updated", "deleted")
 - key: unique identifier field name (string, e.g., "number", "id", "uuid")
 - value: unique identifier value (any type, e.g., 1374, "abc123")
 

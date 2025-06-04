@@ -1,15 +1,14 @@
 """FastAPI application for the ingest gateway service."""
 
 import json
-import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request, Response, status
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from opensense.core.fastapi import global_exception_handler, add_request_id_header, create_health_endpoint
 from opensense.ingest.config import settings
 from opensense.ingest.kafka import kafka_producer
 from opensense.ingest.security import verify_signature
@@ -43,7 +42,7 @@ async def lifespan(app):
     )
     
     logger = structlog.get_logger()
-    logger.info("Starting OpenSense Ingest Gateway", version="0.2.0")
+    logger.info("Starting OpenSense Ingest Gateway", version="0.3.0")
     
     # Start Kafka producer
     await kafka_producer.start()
@@ -58,7 +57,7 @@ async def lifespan(app):
 app = FastAPI(
     title="OpenSense Ingest Gateway",
     description="Secure webhook receiver that accepts and forwards events to the event bus",
-    version="0.2.0",
+    version="0.3.0",
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
     lifespan=lifespan,
@@ -67,11 +66,8 @@ app = FastAPI(
 # Add rate limiting middleware
 app.add_middleware(RateLimitMiddleware)
 
-
-class HealthResponse(BaseModel):
-    """Health check response model."""
-    
-    status: str
+# Add global exception handler
+app.add_exception_handler(Exception, global_exception_handler)
 
 
 class IngestResponse(BaseModel):
@@ -81,10 +77,9 @@ class IngestResponse(BaseModel):
     request_id: str
 
 
-@app.get("/health/", response_model=HealthResponse)
-async def health_check() -> HealthResponse:
-    """Health check endpoint for readiness probes."""
-    return HealthResponse(status="up")
+# Add health check endpoint
+health_endpoint = create_health_endpoint("svc-ingest", "0.3.0")
+app.get("/health/")(health_endpoint)
 
 
 @app.post("/ingest/{source}", response_model=IngestResponse)
@@ -107,8 +102,7 @@ async def ingest_webhook(
     Raises:
         HTTPException: For various error conditions (400, 401, 413, 429)
     """
-    request_id = str(uuid.uuid4())
-    response.headers["X-Request-ID"] = request_id
+    request_id = add_request_id_header(response)
     
     # Get request headers and body
     headers = dict(request.headers)
@@ -221,29 +215,6 @@ async def send_to_dlq(
     }
     
     await kafka_producer.send_dlq(dlq_message)
-
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Global exception handler for unhandled errors."""
-    request_id = str(uuid.uuid4())
-    logger.error(
-        "Unhandled exception",
-        request_id=request_id,
-        path=request.url.path,
-        method=request.method,
-        error=str(exc),
-        exc_info=True,
-    )
-    
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "detail": "Internal server error",
-            "request_id": request_id,
-        },
-        headers={"X-Request-ID": request_id},
-    )
 
 
 if __name__ == "__main__":
