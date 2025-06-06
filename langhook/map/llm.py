@@ -4,7 +4,7 @@ from typing import Any
 
 import structlog
 
-from opensense.map.config import settings
+from langhook.map.config import settings
 
 logger = structlog.get_logger()
 

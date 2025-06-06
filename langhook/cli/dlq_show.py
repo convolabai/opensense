@@ -8,7 +8,7 @@ import sys
 import structlog
 from aiokafka import AIOKafkaConsumer
 
-from opensense.ingest.config import settings
+from langhook.ingest.config import settings
 
 logger = structlog.get_logger()
 
@@ -100,7 +100,7 @@ def main() -> None:
     """CLI entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="View OpenSense DLQ messages")
+    parser = argparse.ArgumentParser(description="View LangHook DLQ messages")
     parser.add_argument(
         "--count", "-c",
         type=int,

@@ -8,7 +8,7 @@ import structlog
 from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from opensense.ingest.config import settings
+from langhook.ingest.config import settings
 
 logger = structlog.get_logger()
 

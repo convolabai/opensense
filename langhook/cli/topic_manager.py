@@ -33,8 +33,8 @@ class TopicManager:
             self.admin_client = None
             logger.info("Topic manager stopped")
 
-    async def create_opensense_topics(self) -> None:
-        """Create all OpenSense core topics with proper configuration."""
+    async def create_langhook_topics(self) -> None:
+        """Create all LangHook core topics with proper configuration."""
         if not self.admin_client:
             raise RuntimeError("Admin client not started")
 
@@ -50,7 +50,7 @@ class TopicManager:
                     'segment.ms': str(24 * 60 * 60 * 1000),  # 24 hours
                 }
             },
-            'opensense.events': {
+            'langhook.events': {
                 'partitions': 3,
                 'replication_factor': 1,
                 'config': {
@@ -60,7 +60,7 @@ class TopicManager:
                     'segment.ms': str(24 * 60 * 60 * 1000),  # 24 hours
                 }
             },
-            'opensense.matches': {
+            'langhook.matches': {
                 'partitions': 3,
                 'replication_factor': 1,
                 'config': {
@@ -72,7 +72,7 @@ class TopicManager:
                     'delete.retention.ms': str(24 * 60 * 60 * 1000),  # 24 hours
                 }
             },
-            'opensense.dlq': {
+            'langhook.dlq': {
                 'partitions': 1,
                 'replication_factor': 1,
                 'config': {
@@ -82,7 +82,7 @@ class TopicManager:
                     'segment.ms': str(24 * 60 * 60 * 1000),  # 24 hours
                 }
             },
-            'opensense.map_fail': {
+            'langhook.map_fail': {
                 'partitions': 1,
                 'replication_factor': 1,
                 'config': {
@@ -133,7 +133,7 @@ class TopicManager:
                 logger.error("Failed to create topics", error=str(e))
                 raise
         else:
-            logger.info("All OpenSense topics already exist")
+            logger.info("All LangHook topics already exist")
 
     async def list_topics(self) -> list[str]:
         """List all existing topics."""
@@ -188,12 +188,12 @@ class TopicManager:
 
 
 async def create_topics(brokers: str) -> None:
-    """Create all OpenSense topics."""
+    """Create all LangHook topics."""
     manager = TopicManager(brokers)
     try:
         await manager.start()
-        await manager.create_opensense_topics()
-        print("✅ OpenSense topics created successfully")
+        await manager.create_langhook_topics()
+        print("✅ LangHook topics created successfully")
     except Exception as e:
         logger.error("Failed to create topics", error=str(e))
         print(f"❌ Failed to create topics: {e}")
@@ -249,7 +249,7 @@ def main() -> None:
     """CLI entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Manage OpenSense Kafka topics")
+    parser = argparse.ArgumentParser(description="Manage LangHook Kafka topics")
     parser.add_argument(
         "--brokers", "-b",
         default="localhost:19092",
@@ -259,7 +259,7 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
     # Create topics command
-    create_parser = subparsers.add_parser('create', help='Create OpenSense topics')
+    create_parser = subparsers.add_parser('create', help='Create LangHook topics')
 
     # List topics command
     list_parser = subparsers.add_parser('list', help='List all topics')

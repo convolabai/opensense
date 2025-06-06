@@ -15,8 +15,8 @@ class Settings(BaseModel):
     # Kafka settings
     kafka_brokers: str = Field(default="redpanda:9092", env="KAFKA_BROKERS")
     kafka_topic_raw_ingest: str = Field(default="raw_ingest", env="KAFKA_TOPIC_RAW_INGEST")
-    kafka_topic_canonical: str = Field(default="opensense.events", env="KAFKA_TOPIC_CANONICAL")
-    kafka_topic_map_fail: str = Field(default="opensense.map_fail", env="KAFKA_TOPIC_MAP_FAIL")
+    kafka_topic_canonical: str = Field(default="langhook.events", env="KAFKA_TOPIC_CANONICAL")
+    kafka_topic_map_fail: str = Field(default="langhook.map_fail", env="KAFKA_TOPIC_MAP_FAIL")
 
     # Kafka consumer settings
     kafka_consumer_group: str = Field(default="svc-map", env="KAFKA_CONSUMER_GROUP")
@@ -60,8 +60,8 @@ def load_settings() -> Settings:
         'LOG_LEVEL': os.getenv('LOG_LEVEL', 'INFO'),
         'KAFKA_BROKERS': os.getenv('KAFKA_BROKERS', 'redpanda:9092'),
         'KAFKA_TOPIC_RAW_INGEST': os.getenv('KAFKA_TOPIC_RAW_INGEST', 'raw_ingest'),
-        'KAFKA_TOPIC_CANONICAL': os.getenv('KAFKA_TOPIC_CANONICAL', 'opensense.events'),
-        'KAFKA_TOPIC_MAP_FAIL': os.getenv('KAFKA_TOPIC_MAP_FAIL', 'opensense.map_fail'),
+        'KAFKA_TOPIC_CANONICAL': os.getenv('KAFKA_TOPIC_CANONICAL', 'langhook.events'),
+        'KAFKA_TOPIC_MAP_FAIL': os.getenv('KAFKA_TOPIC_MAP_FAIL', 'langhook.map_fail'),
         'KAFKA_CONSUMER_GROUP': os.getenv('KAFKA_CONSUMER_GROUP', 'svc-map'),
         'MAPPINGS_DIR': os.getenv('MAPPINGS_DIR', '/app/mappings'),
         'OPENAI_API_KEY': os.getenv('OPENAI_API_KEY'),

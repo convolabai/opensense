@@ -6,11 +6,11 @@ from typing import Any
 
 import structlog
 
-from opensense.map.cloudevents import cloud_event_wrapper
-from opensense.map.kafka import MapKafkaConsumer, map_producer
-from opensense.map.llm import llm_service
-from opensense.map.mapper import mapping_engine
-from opensense.map.metrics import metrics
+from langhook.map.cloudevents import cloud_event_wrapper
+from langhook.map.kafka import MapKafkaConsumer, map_producer
+from langhook.map.llm import llm_service
+from langhook.map.mapper import mapping_engine
+from langhook.map.metrics import metrics
 
 logger = structlog.get_logger()
 

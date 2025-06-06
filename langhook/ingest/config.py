@@ -19,7 +19,7 @@ class Settings(BaseModel):
     # Kafka settings
     kafka_brokers: str = Field(default="redpanda:9092", env="KAFKA_BROKERS")
     kafka_topic_raw_ingest: str = Field(default="raw_ingest", env="KAFKA_TOPIC_RAW_INGEST")
-    kafka_topic_dlq: str = Field(default="opensense.dlq", env="KAFKA_TOPIC_DLQ")
+    kafka_topic_dlq: str = Field(default="langhook.dlq", env="KAFKA_TOPIC_DLQ")
 
     # Redis settings (for rate limiting)
     redis_url: str = Field(default="redis://redis:6379", env="REDIS_URL")
@@ -61,7 +61,7 @@ def load_settings() -> Settings:
         'RATE_LIMIT': os.getenv('RATE_LIMIT', '200/minute'),
         'KAFKA_BROKERS': os.getenv('KAFKA_BROKERS', 'redpanda:9092'),
         'KAFKA_TOPIC_RAW_INGEST': os.getenv('KAFKA_TOPIC_RAW_INGEST', 'raw_ingest'),
-        'KAFKA_TOPIC_DLQ': os.getenv('KAFKA_TOPIC_DLQ', 'opensense.dlq'),
+        'KAFKA_TOPIC_DLQ': os.getenv('KAFKA_TOPIC_DLQ', 'langhook.dlq'),
         'REDIS_URL': os.getenv('REDIS_URL', 'redis://redis:6379'),
         'GITHUB_SECRET': os.getenv('GITHUB_SECRET'),
         'STRIPE_SECRET': os.getenv('STRIPE_SECRET'),

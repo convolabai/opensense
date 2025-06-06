@@ -4,8 +4,8 @@ from typing import Any
 
 import structlog
 
-from opensense.core.kafka import BaseKafkaProducer
-from opensense.ingest.config import settings
+from langhook.core.kafka import BaseKafkaProducer
+from langhook.ingest.config import settings
 
 logger = structlog.get_logger()
 

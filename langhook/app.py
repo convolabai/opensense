@@ -12,18 +12,18 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from opensense.core.fastapi import (
+from langhook.core.fastapi import (
     add_request_id_header,
     global_exception_handler,
 )
-from opensense.ingest.config import settings as ingest_settings
-from opensense.ingest.kafka import kafka_producer
-from opensense.ingest.middleware import RateLimitMiddleware
-from opensense.ingest.security import verify_signature
-from opensense.map.config import settings as map_settings
-from opensense.map.llm import llm_service
-from opensense.map.metrics import metrics
-from opensense.map.service import mapping_service
+from langhook.ingest.config import settings as ingest_settings
+from langhook.ingest.kafka import kafka_producer
+from langhook.ingest.middleware import RateLimitMiddleware
+from langhook.ingest.security import verify_signature
+from langhook.map.config import settings as map_settings
+from langhook.map.llm import llm_service
+from langhook.map.metrics import metrics
+from langhook.map.service import mapping_service
 
 logger = structlog.get_logger()
 
