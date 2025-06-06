@@ -60,6 +60,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY opensense/ ./opensense/
 COPY mappings/ ./mappings/
 COPY schemas/ ./schemas/
+COPY scripts/ ./scripts/
 
 # Copy built frontend from frontend-builder
 COPY --from=frontend-builder /app/frontend/build ./frontend/build
