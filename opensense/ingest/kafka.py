@@ -1,6 +1,6 @@
 """Kafka producer for sending events to the event bus."""
 
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -12,11 +12,11 @@ logger = structlog.get_logger()
 
 class KafkaEventProducer(BaseKafkaProducer):
     """Kafka producer for sending events to raw_ingest and DLQ topics."""
-    
+
     def __init__(self) -> None:
         super().__init__(settings.kafka_brokers)
-    
-    async def send_event(self, event: Dict[str, Any]) -> None:
+
+    async def send_event(self, event: dict[str, Any]) -> None:
         """Send event to the raw_ingest topic."""
         await self.send_message(
             settings.kafka_topic_raw_ingest,
@@ -29,8 +29,8 @@ class KafkaEventProducer(BaseKafkaProducer):
             event_id=event["id"],
             source=event["source"],
         )
-    
-    async def send_dlq(self, dlq_event: Dict[str, Any]) -> None:
+
+    async def send_dlq(self, dlq_event: dict[str, Any]) -> None:
         """Send malformed event to the dead letter queue."""
         try:
             await self.send_message(

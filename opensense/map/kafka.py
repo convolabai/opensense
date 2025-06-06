@@ -1,10 +1,10 @@
 """Kafka consumer and producer for the mapping service."""
 
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
-from opensense.core.kafka import BaseKafkaProducer, BaseKafkaConsumer
+from opensense.core.kafka import BaseKafkaConsumer, BaseKafkaProducer
 from opensense.map.config import settings
 
 logger = structlog.get_logger()
@@ -12,11 +12,11 @@ logger = structlog.get_logger()
 
 class MapKafkaProducer(BaseKafkaProducer):
     """Kafka producer for sending canonical events and DLQ messages."""
-    
+
     def __init__(self) -> None:
         super().__init__(settings.kafka_brokers)
-    
-    async def send_canonical_event(self, event: Dict[str, Any]) -> None:
+
+    async def send_canonical_event(self, event: dict[str, Any]) -> None:
         """Send canonical event to the opensense.events topic."""
         await self.send_message(
             settings.kafka_topic_canonical,
@@ -31,8 +31,8 @@ class MapKafkaProducer(BaseKafkaProducer):
             resource_type=event["data"]["resource"]["type"],
             action=event["data"]["action"]
         )
-    
-    async def send_mapping_failure(self, failure_event: Dict[str, Any]) -> None:
+
+    async def send_mapping_failure(self, failure_event: dict[str, Any]) -> None:
         """Send mapping failure to the opensense.map_fail topic."""
         try:
             await self.send_message(
@@ -59,7 +59,7 @@ class MapKafkaProducer(BaseKafkaProducer):
 
 class MapKafkaConsumer(BaseKafkaConsumer):
     """Kafka consumer for reading raw events from raw_ingest topic."""
-    
+
     def __init__(self, message_handler) -> None:
         super().__init__(
             topics=[settings.kafka_topic_raw_ingest],

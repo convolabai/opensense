@@ -3,23 +3,21 @@
 
 import asyncio
 import sys
-from typing import Dict, List, Optional
 
-from aiokafka import AIOKafkaProducer
+import structlog
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from aiokafka.admin.config_resource import ConfigResource, ConfigResourceType
-import structlog
 
 logger = structlog.get_logger()
 
 
 class TopicManager:
     """Manages Kafka topic creation and configuration."""
-    
+
     def __init__(self, brokers: str):
         self.brokers = brokers.split(',')
-        self.admin_client: Optional[AIOKafkaAdminClient] = None
-        
+        self.admin_client: AIOKafkaAdminClient | None = None
+
     async def start(self) -> None:
         """Start the admin client."""
         self.admin_client = AIOKafkaAdminClient(
@@ -27,19 +25,19 @@ class TopicManager:
         )
         await self.admin_client.start()
         logger.info("Topic manager started", brokers=self.brokers)
-        
+
     async def stop(self) -> None:
         """Stop the admin client."""
         if self.admin_client:
             await self.admin_client.close()
             self.admin_client = None
             logger.info("Topic manager stopped")
-    
+
     async def create_opensense_topics(self) -> None:
         """Create all OpenSense core topics with proper configuration."""
         if not self.admin_client:
             raise RuntimeError("Admin client not started")
-            
+
         # Epic 3 core topics configuration
         topics_config = {
             'raw_ingest': {
@@ -95,10 +93,10 @@ class TopicManager:
                 }
             }
         }
-        
+
         # Check existing topics
         existing_topics = await self.list_topics()
-        
+
         # Create new topics
         new_topics = []
         for topic_name, config in topics_config.items():
@@ -113,7 +111,7 @@ class TopicManager:
                 logger.info("Will create topic", topic=topic_name, config=config)
             else:
                 logger.info("Topic already exists", topic=topic_name)
-        
+
         if new_topics:
             try:
                 result = await self.admin_client.create_topics(new_topics)
@@ -136,12 +134,12 @@ class TopicManager:
                 raise
         else:
             logger.info("All OpenSense topics already exist")
-    
-    async def list_topics(self) -> List[str]:
+
+    async def list_topics(self) -> list[str]:
         """List all existing topics."""
         if not self.admin_client:
             raise RuntimeError("Admin client not started")
-            
+
         metadata = await self.admin_client.list_topics()
         # Handle different return types from aiokafka
         if hasattr(metadata, 'topics'):
@@ -149,12 +147,12 @@ class TopicManager:
         else:
             # If metadata is a list or set of topic names
             return list(metadata)
-    
-    async def describe_topic(self, topic_name: str) -> Dict:
+
+    async def describe_topic(self, topic_name: str) -> dict:
         """Describe a specific topic."""
         if not self.admin_client:
             raise RuntimeError("Admin client not started")
-            
+
         metadata = await self.admin_client.describe_topics([topic_name])
         if topic_name in metadata.topics:
             topic = metadata.topics[topic_name]
@@ -173,15 +171,15 @@ class TopicManager:
             }
         else:
             raise ValueError(f"Topic {topic_name} not found")
-    
-    async def get_topic_config(self, topic_name: str) -> Dict[str, str]:
+
+    async def get_topic_config(self, topic_name: str) -> dict[str, str]:
         """Get configuration for a specific topic."""
         if not self.admin_client:
             raise RuntimeError("Admin client not started")
-            
+
         resources = [ConfigResource(ConfigResourceType.TOPIC, topic_name)]
         result = await self.admin_client.describe_configs(resources)
-        
+
         if resources[0] in result:
             config_entries = result[resources[0]]
             return {entry.name: entry.value for entry in config_entries}
@@ -228,17 +226,17 @@ async def describe_topic(brokers: str, topic_name: str) -> None:
         await manager.start()
         info = await manager.describe_topic(topic_name)
         config = await manager.get_topic_config(topic_name)
-        
+
         print(f"Topic: {info['name']}")
         print(f"Partitions: {info['partitions']}")
         print("\nPartition Details:")
         for p in info['partition_details']:
             print(f"  Partition {p['partition']}: Leader={p['leader']}, Replicas={p['replicas']}, ISR={p['isr']}")
-        
+
         print("\nConfiguration:")
         for key, value in sorted(config.items()):
             print(f"  {key} = {value}")
-            
+
     except Exception as e:
         logger.error("Failed to describe topic", topic=topic_name, error=str(e))
         print(f"❌ Failed to describe topic: {e}")
@@ -250,32 +248,32 @@ async def describe_topic(brokers: str, topic_name: str) -> None:
 def main() -> None:
     """CLI entry point."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Manage OpenSense Kafka topics")
     parser.add_argument(
         "--brokers", "-b",
         default="localhost:19092",
         help="Kafka brokers (default: localhost:19092)"
     )
-    
+
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
-    
+
     # Create topics command
     create_parser = subparsers.add_parser('create', help='Create OpenSense topics')
-    
+
     # List topics command
     list_parser = subparsers.add_parser('list', help='List all topics')
-    
+
     # Describe topic command
     describe_parser = subparsers.add_parser('describe', help='Describe a topic')
     describe_parser.add_argument('topic', help='Topic name to describe')
-    
+
     args = parser.parse_args()
-    
+
     if not args.command:
         parser.print_help()
         sys.exit(1)
-    
+
     try:
         if args.command == 'create':
             asyncio.run(create_topics(args.brokers))

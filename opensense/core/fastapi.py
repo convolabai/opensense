@@ -1,7 +1,6 @@
 """Shared FastAPI utilities and components."""
 
 import uuid
-from typing import Any, Dict
 
 import structlog
 from fastapi import Request, Response
@@ -13,7 +12,7 @@ logger = structlog.get_logger()
 
 class HealthResponse(BaseModel):
     """Standard health check response model."""
-    
+
     status: str
     service: str
     version: str
@@ -42,7 +41,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         error=str(exc),
         exc_info=True,
     )
-    
+
     return JSONResponse(
         status_code=500,
         content={

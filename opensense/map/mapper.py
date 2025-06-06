@@ -1,12 +1,10 @@
 """JSONata mapping engine for transforming raw events to canonical format."""
 
-import json
-import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
-import structlog
 import jsonata
+import structlog
 
 from opensense.map.config import settings
 
@@ -15,11 +13,11 @@ logger = structlog.get_logger()
 
 class MappingEngine:
     """Engine for loading and applying JSONata mappings."""
-    
+
     def __init__(self) -> None:
-        self._mappings: Dict[str, str] = {}
+        self._mappings: dict[str, str] = {}
         self._load_mappings()
-    
+
     def _load_mappings(self) -> None:
         """Load all JSONata mapping files from the mappings directory."""
         mappings_path = Path(settings.mappings_dir)
@@ -29,16 +27,16 @@ class MappingEngine:
                 mappings_dir=settings.mappings_dir
             )
             return
-        
+
         for mapping_file in mappings_path.glob("*.jsonata"):
             source = mapping_file.stem  # filename without extension
             try:
-                with open(mapping_file, 'r') as f:
+                with open(mapping_file) as f:
                     jsonata_expression = f.read().strip()
-                
+
                 # Store the JSONata expression string
                 self._mappings[source] = jsonata_expression
-                
+
                 logger.info(
                     "Loaded mapping",
                     source=source,
@@ -52,16 +50,16 @@ class MappingEngine:
                     error=str(e),
                     exc_info=True
                 )
-    
-    def get_mapping(self, source: str) -> Optional[str]:
+
+    def get_mapping(self, source: str) -> str | None:
         """Get JSONata mapping expression for a source."""
         return self._mappings.get(source)
-    
+
     def has_mapping(self, source: str) -> bool:
         """Check if mapping exists for a source."""
         return source in self._mappings
-    
-    def apply_mapping(self, source: str, raw_payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+
+    def apply_mapping(self, source: str, raw_payload: dict[str, Any]) -> dict[str, Any] | None:
         """
         Apply JSONata mapping to transform raw payload to canonical format.
         
@@ -79,11 +77,11 @@ class MappingEngine:
                 source=source
             )
             return None
-        
+
         try:
             # Apply JSONata transformation using the transform function
             result = jsonata.transform(mapping_expr, raw_payload)
-            
+
             # Ensure result has required fields for new canonical format
             if not isinstance(result, dict):
                 logger.error(
@@ -92,11 +90,11 @@ class MappingEngine:
                     result_type=type(result).__name__
                 )
                 return None
-            
+
             # Validate new canonical format requirements
             required_fields = ['publisher', 'resource', 'action']
             missing_fields = [field for field in required_fields if field not in result]
-            
+
             if missing_fields:
                 logger.error(
                     "Mapping result missing required fields",
@@ -105,7 +103,7 @@ class MappingEngine:
                     result=result
                 )
                 return None
-            
+
             # Validate resource structure
             if not isinstance(result.get('resource'), dict):
                 logger.error(
@@ -114,7 +112,7 @@ class MappingEngine:
                     resource=result.get('resource')
                 )
                 return None
-            
+
             resource = result['resource']
             if 'type' not in resource or 'id' not in resource:
                 logger.error(
@@ -123,7 +121,7 @@ class MappingEngine:
                     resource=resource
                 )
                 return None
-            
+
             # Validate action is CRUD enum
             valid_actions = ['create', 'read', 'update', 'delete']
             if result['action'] not in valid_actions:
@@ -133,7 +131,7 @@ class MappingEngine:
                     action=result['action']
                 )
                 return None
-            
+
             # Validate atomic ID (no composite keys with /, #, or space)
             resource_id = str(resource['id'])
             invalid_chars = ['/', '#', ' ']
@@ -144,15 +142,15 @@ class MappingEngine:
                     resource_id=resource_id
                 )
                 return None
-            
+
             logger.debug(
                 "Mapping applied successfully",
                 source=source,
                 result=result
             )
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(
                 "Failed to apply mapping",
@@ -161,7 +159,7 @@ class MappingEngine:
                 exc_info=True
             )
             return None
-    
+
     def reload_mappings(self) -> None:
         """Reload all mappings from disk."""
         self._mappings.clear()

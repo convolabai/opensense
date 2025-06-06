@@ -1,34 +1,32 @@
 """CloudEvents wrapper and schema validation."""
 
 import json
-import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import jsonschema
 import structlog
-from cloudevents.http import CloudEvent
 
 logger = structlog.get_logger()
 
 
 class CloudEventWrapper:
     """Wrapper for creating and validating CloudEvents."""
-    
+
     def __init__(self) -> None:
         self._schema = self._load_schema()
-    
-    def _load_schema(self) -> Dict[str, Any]:
+
+    def _load_schema(self) -> dict[str, Any]:
         """Load the canonical event JSON schema."""
-        # Get the project root directory 
+        # Get the project root directory
         current_file = Path(__file__)
         # opensense/map/cloudevents.py -> opensense/map -> opensense -> project_root -> schemas
         project_root = current_file.parent.parent.parent
         schema_path = project_root / "schemas" / "canonical_event_v1.json"
-        
+
         try:
-            with open(schema_path, 'r') as f:
+            with open(schema_path) as f:
                 schema = json.load(f)
             logger.info("Loaded canonical event schema", schema_path=str(schema_path))
             return schema
@@ -40,14 +38,14 @@ class CloudEventWrapper:
                 exc_info=True
             )
             raise
-    
+
     def create_canonical_event(
         self,
         event_id: str,
         source: str,
-        canonical_data: Dict[str, Any],
-        raw_payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        canonical_data: dict[str, Any],
+        raw_payload: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Create a canonical event in the new v1 format.
         
@@ -60,28 +58,27 @@ class CloudEventWrapper:
         Returns:
             Canonical event as dictionary (not CloudEvents wrapped)
         """
-        from datetime import datetime, timezone
-        
+
         # Create the canonical event in the new format
         canonical_event = {
             "publisher": canonical_data["publisher"],
             "resource": canonical_data["resource"],  # Now an object with type and id
             "action": canonical_data["action"],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "raw": raw_payload
         }
-        
+
         # Add optional summary if provided
         if "summary" in canonical_data:
             canonical_event["summary"] = canonical_data["summary"]
-        
+
         return canonical_event
-    
+
     def create_cloudevents_envelope(
         self,
         event_id: str,
-        canonical_event: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        canonical_event: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Wrap canonical event in CloudEvents envelope for CNCF compatibility.
         
@@ -96,7 +93,7 @@ class CloudEventWrapper:
         publisher = canonical_event["publisher"]
         resource = canonical_event["resource"]
         action = canonical_event["action"]
-        
+
         # Create CloudEvent envelope
         cloud_event = {
             "id": event_id,
@@ -107,10 +104,10 @@ class CloudEventWrapper:
             "time": canonical_event["timestamp"],
             "data": canonical_event
         }
-        
+
         return cloud_event
-    
-    def validate_canonical_event(self, event: Dict[str, Any]) -> bool:
+
+    def validate_canonical_event(self, event: dict[str, Any]) -> bool:
         """
         Validate a canonical event against the JSON schema.
         
@@ -140,14 +137,14 @@ class CloudEventWrapper:
                 exc_info=True
             )
             return False
-    
+
     def wrap_and_validate(
         self,
         event_id: str,
         source: str,
-        canonical_data: Dict[str, Any],
-        raw_payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        canonical_data: dict[str, Any],
+        raw_payload: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Create and validate a canonical event, then wrap in CloudEvents envelope.
         
@@ -165,14 +162,14 @@ class CloudEventWrapper:
         """
         # Create canonical event
         canonical_event = self.create_canonical_event(event_id, source, canonical_data, raw_payload)
-        
+
         # Validate canonical event
         if not self.validate_canonical_event(canonical_event):
             raise ValueError("Failed to validate canonical event")
-        
+
         # Wrap in CloudEvents envelope
         cloud_event = self.create_cloudevents_envelope(event_id, canonical_event)
-        
+
         return cloud_event
 
 

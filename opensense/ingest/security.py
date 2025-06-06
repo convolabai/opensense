@@ -2,7 +2,7 @@
 
 import hashlib
 import hmac
-from typing import Any, Dict, Optional
+from typing import Any
 
 import structlog
 
@@ -14,8 +14,8 @@ logger = structlog.get_logger()
 async def verify_signature(
     source: str,
     body_bytes: bytes,
-    headers: Dict[str, Any],
-) -> Optional[bool]:
+    headers: dict[str, Any],
+) -> bool | None:
     """
     Verify HMAC signature for a webhook request.
     
@@ -31,15 +31,15 @@ async def verify_signature(
     if not secret:
         logger.debug("No HMAC secret configured for source", source=source)
         return None
-    
+
     # GitHub-style signature verification
     if source.lower() == "github":
         return _verify_github_signature(body_bytes, headers, secret)
-    
+
     # Stripe-style signature verification
     elif source.lower() == "stripe":
         return _verify_stripe_signature(body_bytes, headers, secret)
-    
+
     # Generic signature verification
     else:
         return _verify_generic_signature(body_bytes, headers, secret)
@@ -47,7 +47,7 @@ async def verify_signature(
 
 def _verify_github_signature(
     body_bytes: bytes,
-    headers: Dict[str, Any],
+    headers: dict[str, Any],
     secret: str,
 ) -> bool:
     """Verify GitHub-style HMAC signature."""
@@ -59,7 +59,7 @@ def _verify_github_signature(
         if not signature_header:
             logger.warning("No GitHub signature header found")
             return False
-        
+
         # SHA-1 verification
         expected_sig = "sha1=" + hmac.new(
             secret.encode(),
@@ -73,13 +73,13 @@ def _verify_github_signature(
             body_bytes,
             hashlib.sha256,
         ).hexdigest()
-    
+
     return hmac.compare_digest(signature_header, expected_sig)
 
 
 def _verify_stripe_signature(
     body_bytes: bytes,
-    headers: Dict[str, Any],
+    headers: dict[str, Any],
     secret: str,
 ) -> bool:
     """Verify Stripe-style HMAC signature."""
@@ -88,20 +88,20 @@ def _verify_stripe_signature(
     if not signature_header:
         logger.warning("No Stripe signature header found")
         return False
-    
+
     # Parse Stripe signature format: t=timestamp,v1=signature
     sig_elements = {}
     for element in signature_header.split(","):
         key, value = element.split("=", 1)
         sig_elements[key] = value
-    
+
     timestamp = sig_elements.get("t")
     signature = sig_elements.get("v1")
-    
+
     if not timestamp or not signature:
         logger.warning("Invalid Stripe signature format")
         return False
-    
+
     # Stripe payload is timestamp + "." + body
     payload = f"{timestamp}.{body_bytes.decode()}"
     expected_sig = hmac.new(
@@ -109,13 +109,13 @@ def _verify_stripe_signature(
         payload.encode(),
         hashlib.sha256,
     ).hexdigest()
-    
+
     return hmac.compare_digest(signature, expected_sig)
 
 
 def _verify_generic_signature(
     body_bytes: bytes,
-    headers: Dict[str, Any],
+    headers: dict[str, Any],
     secret: str,
 ) -> bool:
     """Verify generic HMAC signature."""
@@ -125,11 +125,11 @@ def _verify_generic_signature(
         headers.get("x-signature") or
         headers.get("signature")
     )
-    
+
     if not signature_header:
         logger.warning("No signature header found for generic verification")
         return False
-    
+
     # Try SHA-256 first
     if signature_header.startswith("sha256="):
         expected_sig = "sha256=" + hmac.new(
@@ -138,7 +138,7 @@ def _verify_generic_signature(
             hashlib.sha256,
         ).hexdigest()
         return hmac.compare_digest(signature_header, expected_sig)
-    
+
     # Try SHA-1
     elif signature_header.startswith("sha1="):
         expected_sig = "sha1=" + hmac.new(
@@ -147,7 +147,7 @@ def _verify_generic_signature(
             hashlib.sha1,
         ).hexdigest()
         return hmac.compare_digest(signature_header, expected_sig)
-    
+
     # Direct hex comparison (assume SHA-256)
     else:
         expected_sig = hmac.new(
