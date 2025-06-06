@@ -1,4 +1,4 @@
-"""Consolidated FastAPI application for OpenSense services."""
+"""Consolidated FastAPI application for EventScribe services."""
 
 import json
 import os
@@ -51,7 +51,7 @@ async def lifespan(app):
     )
     
     logger = structlog.get_logger()
-    logger.info("Starting OpenSense Services", version="0.3.0")
+    logger.info("Starting EventScribe Services", version="0.3.0")
     
     # Start Kafka producer (for ingest)
     await kafka_producer.start()
@@ -62,7 +62,7 @@ async def lifespan(app):
     yield
     
     # Shutdown
-    logger.info("Shutting down OpenSense Services")
+    logger.info("Shutting down EventScribe Services")
     
     # Cancel mapping service
     mapping_task.cancel()
@@ -76,8 +76,8 @@ async def lifespan(app):
 
 
 app = FastAPI(
-    title="OpenSense Services",
-    description="Unified API for OpenSense ingest gateway and canonicaliser services",
+    title="EventScribe Services",
+    description="Unified API for EventScribe ingest gateway and canonicaliser services",
     version="0.3.0",
     docs_url="/docs" if (ingest_settings.debug or map_settings.debug) else None,
     redoc_url="/redoc" if (ingest_settings.debug or map_settings.debug) else None,

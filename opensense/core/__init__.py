@@ -1,1 +1,1 @@
-"""Core shared components for OpenSense services."""
+"""Core shared components for EventScribe services."""

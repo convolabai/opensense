@@ -1,4 +1,4 @@
-# Multi-stage build for OpenSense Services
+# Multi-stage build for EventScribe Services
 FROM node:18-slim as frontend-builder
 
 # Set working directory for frontend
@@ -50,7 +50,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN groupadd -r opensense && useradd -r -g opensense opensense
+RUN groupadd -r eventscribe && useradd -r -g eventscribe eventscribe
 
 # Set working directory
 WORKDIR /app
@@ -69,10 +69,10 @@ COPY scripts/ ./scripts/
 COPY --from=frontend-builder /app/frontend/build ./frontend/build
 
 # Set ownership
-RUN chown -R opensense:opensense /app
+RUN chown -R eventscribe:eventscribe /app
 
 # Switch to non-root user
-USER opensense
+USER eventscribe
 
 # Expose port
 EXPOSE 8000

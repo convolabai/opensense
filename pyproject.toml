@@ -3,13 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "opensense"
+name = "eventscribe"
 version = "0.3.0"
-description = "OpenSense - Make any event from anywhere instantly understandable and actionable by anyone"
+description = "EventScribe - Make any event from anywhere instantly understandable and actionable by anyone"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
-    {name = "OpenSense Team", email = "team@opensense.dev"},
+    {name = "EventScribe Team", email = "team@eventscribe.dev"},
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -48,14 +48,14 @@ dev = [
 ]
 
 [project.scripts]
-opensense-dlq-show = "opensense.cli.dlq_show:main"
-opensense-topics = "opensense.cli.topic_manager:main"
-opensense = "opensense.main:main"
+eventscribe-dlq-show = "opensense.cli.dlq_show:main"
+eventscribe-topics = "opensense.cli.topic_manager:main"
+eventscribe = "opensense.main:main"
 
 [project.urls]
-Homepage = "https://github.com/convolabai/opensense"
-Repository = "https://github.com/convolabai/opensense"
-Issues = "https://github.com/convolabai/opensense/issues"
+Homepage = "https://github.com/convolabai/eventscribe"
+Repository = "https://github.com/convolabai/eventscribe"
+Issues = "https://github.com/convolabai/eventscribe/issues"
 
 [tool.ruff]
 target-version = "py312"

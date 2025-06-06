@@ -1,4 +1,4 @@
-"""Main entry point for the consolidated OpenSense services."""
+"""Main entry point for the consolidated EventScribe services."""
 
 import signal
 import sys
@@ -16,7 +16,7 @@ def signal_handler(signum: int, frame) -> None:
 
 
 def main() -> None:
-    """Run the consolidated OpenSense services."""
+    """Run the consolidated EventScribe services."""
     # Register signal handlers
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)

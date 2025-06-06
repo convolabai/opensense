@@ -1,1 +1,1 @@
-"""CLI package for OpenSense tools."""
+"""CLI package for EventScribe tools."""

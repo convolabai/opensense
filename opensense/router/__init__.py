@@ -1,1 +1,1 @@
-"""Router service package - rule engine for OpenSense events."""
+"""Router service package - rule engine for EventScribe events."""

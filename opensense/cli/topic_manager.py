@@ -35,8 +35,8 @@ class TopicManager:
             self.admin_client = None
             logger.info("Topic manager stopped")
     
-    async def create_opensense_topics(self) -> None:
-        """Create all OpenSense core topics with proper configuration."""
+    async def create_eventscribe_topics(self) -> None:
+        """Create all EventScribe core topics with proper configuration."""
         if not self.admin_client:
             raise RuntimeError("Admin client not started")
             
@@ -52,7 +52,7 @@ class TopicManager:
                     'segment.ms': str(24 * 60 * 60 * 1000),  # 24 hours
                 }
             },
-            'opensense.events': {
+            'eventscribe.events': {
                 'partitions': 3,
                 'replication_factor': 1,
                 'config': {
@@ -62,7 +62,7 @@ class TopicManager:
                     'segment.ms': str(24 * 60 * 60 * 1000),  # 24 hours
                 }
             },
-            'opensense.matches': {
+            'eventscribe.matches': {
                 'partitions': 3,
                 'replication_factor': 1,
                 'config': {
@@ -74,7 +74,7 @@ class TopicManager:
                     'delete.retention.ms': str(24 * 60 * 60 * 1000),  # 24 hours
                 }
             },
-            'opensense.dlq': {
+            'eventscribe.dlq': {
                 'partitions': 1,
                 'replication_factor': 1,
                 'config': {
@@ -84,7 +84,7 @@ class TopicManager:
                     'segment.ms': str(24 * 60 * 60 * 1000),  # 24 hours
                 }
             },
-            'opensense.map_fail': {
+            'eventscribe.map_fail': {
                 'partitions': 1,
                 'replication_factor': 1,
                 'config': {
@@ -194,7 +194,7 @@ async def create_topics(brokers: str) -> None:
     manager = TopicManager(brokers)
     try:
         await manager.start()
-        await manager.create_opensense_topics()
+        await manager.create_eventscribe_topics()
         print("✅ OpenSense topics created successfully")
     except Exception as e:
         logger.error("Failed to create topics", error=str(e))
