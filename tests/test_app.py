@@ -103,18 +103,6 @@ def test_ingest_endpoint_different_sources(client):
         assert response.status_code == 202
 
 
-def test_map_suggest_endpoint_unavailable(client):
-    """Test map suggest endpoint when LLM is unavailable."""
-    with patch('langhook.map.llm.llm_service') as mock_llm:
-        mock_llm.is_available.return_value = False
-        
-        payload = {"source": "github", "payload": {"action": "opened"}}
-        response = client.post("/map/suggest-map", json=payload)
-        
-        assert response.status_code == 503
-        assert "LLM service not available" in response.json()["detail"]
-
-
 def test_map_metrics_endpoint(client):
     """Test map metrics endpoint."""
     with patch('langhook.map.service.mapping_service') as mock_service:

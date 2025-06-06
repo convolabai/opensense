@@ -305,20 +305,6 @@ async def send_to_dlq(
 # MAP ENDPOINTS
 # ================================
 
-class SuggestMapRequest(BaseModel):
-    """Request model for mapping suggestion endpoint."""
-
-    source: str
-    payload: dict[str, Any]
-
-
-class SuggestMapResponse(BaseModel):
-    """Response model for mapping suggestion endpoint."""
-
-    jsonata: str
-    source: str
-
-
 class MetricsResponse(BaseModel):
     """Response model for metrics endpoint."""
 
@@ -328,56 +314,6 @@ class MetricsResponse(BaseModel):
     llm_invocations: int
     mapping_success_rate: float
     llm_usage_rate: float
-
-
-@app.post("/map/suggest-map", response_model=SuggestMapResponse)
-async def suggest_mapping(request: SuggestMapRequest) -> SuggestMapResponse:
-    """
-    Generate JSONata mapping suggestion using LLM.
-    
-    This endpoint is for development/testing purposes to help create
-    mapping files manually.
-    """
-    if not llm_service.is_available():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="LLM service not available"
-        )
-
-    try:
-        suggestion = await llm_service.suggest_mapping(
-            source=request.source,
-            raw_payload=request.payload
-        )
-
-        if suggestion is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to generate mapping suggestion"
-            )
-
-        logger.info(
-            "Mapping suggestion generated via API",
-            source=request.source,
-            suggestion_length=len(suggestion)
-        )
-
-        return SuggestMapResponse(
-            jsonata=suggestion,
-            source=request.source
-        )
-
-    except Exception as e:
-        logger.error(
-            "Error in suggest-map endpoint",
-            source=request.source,
-            error=str(e),
-            exc_info=True
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
 
 
 @app.get("/map/metrics")
