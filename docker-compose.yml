@@ -64,8 +64,11 @@ services:
     command: ["bash", "/app/scripts/init-topics.sh"]
     restart: "no"
 
-  # LangHook Services (consolidated ingest + map)
+  # OpenSense Services (consolidated ingest + map)
   langhook:
+    container_name: langhook-services
+    profiles:
+      - docker
     build:
       context: .
       dockerfile: Dockerfile
@@ -81,7 +84,7 @@ services:
       - RATE_LIMIT=200/minute
       - MAPPINGS_DIR=/app/mappings
     env_file:
-      - .env.ingest
+      - .env
     depends_on:
       redpanda:
         condition: service_healthy

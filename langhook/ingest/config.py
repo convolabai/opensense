@@ -17,13 +17,13 @@ class Settings(BaseModel):
     rate_limit: str = Field(default="200/minute", env="RATE_LIMIT")
 
     # Kafka settings
-    kafka_brokers: str = Field(default="redpanda:9092", env="KAFKA_BROKERS")
+    kafka_brokers: str = Field(default="localhost:19092", env="KAFKA_BROKERS")
     kafka_topic_raw_ingest: str = Field(default="raw_ingest", env="KAFKA_TOPIC_RAW_INGEST")
     kafka_topic_dlq: str = Field(default="langhook.dlq", env="KAFKA_TOPIC_DLQ")
 
     # Redis settings (for rate limiting)
-    redis_url: str = Field(default="redis://redis:6379", env="REDIS_URL")
-
+    redis_url: str = Field(default="redis://localhost:16379", env="REDIS_URL")
+    
     # HMAC secrets for different sources
     github_secret: str | None = Field(default=None, env="GITHUB_SECRET")
     stripe_secret: str | None = Field(default=None, env="STRIPE_SECRET")

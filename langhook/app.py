@@ -1,5 +1,9 @@
 """Consolidated FastAPI application for OpenSense services."""
 
+# init dotenv
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 import json
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime

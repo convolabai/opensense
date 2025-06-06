@@ -20,20 +20,36 @@ LangHook transforms chaotic webhook payloads into standardized CloudEvents with 
    cd opensense
    ```
 
-2. **Start the stack:**
+2. **Start the core stack (without the `opensense` service):**
    ```bash
    docker-compose up -d
    ```
 
-3. **Install LangHook:**
+   **To include and start the `langhook` service container**, enable its Compose profile:
+
+   ```bash
+   docker-compose --profile docker up -d
+   ```
+
+3. **Install LangHook into your Python environment:**
    ```bash
    pip install -e .
    ```
 
-4. **Run the services:**
+4. **Build the frontend demo (optional):**
+   ```bash
+   cd frontend
+   npm install
+   npm run build
+   cd ..
+   ```
+
+5. **Run the OpenSense service:**
    ```bash
    langhook
    ```
+
+   > If you prefer to debug or develop against your local Python process instead of the container, simply skip the `--profile docker` option above and start with `opensense` after installing.
 
 The API server will be available at `http://localhost:8000` with:
 - Webhook ingestion at `/ingest/{source}`
