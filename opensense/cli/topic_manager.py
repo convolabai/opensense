@@ -135,7 +135,12 @@ class TopicManager:
             raise RuntimeError("Admin client not started")
             
         metadata = await self.admin_client.list_topics()
-        return list(metadata.topics.keys())
+        # Handle different return types from aiokafka
+        if hasattr(metadata, 'topics'):
+            return list(metadata.topics.keys())
+        else:
+            # If metadata is a list or set of topic names
+            return list(metadata)
     
     async def describe_topic(self, topic_name: str) -> Dict:
         """Describe a specific topic."""
