@@ -1,8 +1,8 @@
-# OpenSense
+# LangHook
 
 > **Make any event from anywhere instantly understandable and actionable by anyone.**
 
-OpenSense transforms chaotic webhook payloads into standardized CloudEvents with a canonical format that both humans and machines can understand. Create smart event routing with natural language - no JSON wrangling required.
+LangHook transforms chaotic webhook payloads into standardized CloudEvents with a canonical format that both humans and machines can understand. Create smart event routing with natural language - no JSON wrangling required.
 
 ## 🚀 Quick Start
 
@@ -25,14 +25,14 @@ OpenSense transforms chaotic webhook payloads into standardized CloudEvents with
    docker-compose up -d
    ```
 
-3. **Install OpenSense:**
+3. **Install LangHook:**
    ```bash
    pip install -e .
    ```
 
 4. **Run the services:**
    ```bash
-   opensense
+   langhook
    ```
 
 The API server will be available at `http://localhost:8000` with:
@@ -61,7 +61,7 @@ The API server will be available at `http://localhost:8000` with:
 
 ## 📊 Canonical Event Format
 
-OpenSense transforms any webhook into a standardized five-tuple format:
+LangHook transforms any webhook into a standardized five-tuple format:
 
 ```json
 {
@@ -130,15 +130,15 @@ Visit `http://localhost:8000/demo` to:
 
 ## ⚙ Configuration
 
-OpenSense is configured via environment variables:
+LangHook is configured via environment variables:
 
 ### Core Settings
 ```bash
 # Kafka Configuration
 KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 KAFKA_TOPIC_RAW=raw_ingest
-KAFKA_TOPIC_CANONICAL=opensense.events
-KAFKA_TOPIC_DLQ=opensense.dlq
+KAFKA_TOPIC_CANONICAL=langhook.events
+KAFKA_TOPIC_DLQ=langhook.dlq
 
 # Service Settings
 LOG_LEVEL=info
@@ -171,7 +171,7 @@ REDIS_URL=redis://localhost:6379
 
 ## 📈 Performance
 
-OpenSense is designed for high throughput:
+LangHook is designed for high throughput:
 
 - **≥ 2,000 events/second** (single 2-core container)
 - **≤ 40ms p95 latency** for event transformation
@@ -185,7 +185,7 @@ graph TD
     A[Webhooks] --> B[svc-ingest]
     B --> C[Kafka: raw_ingest]
     C --> D[svc-map]
-    D --> E[Kafka: opensense.events]
+    D --> E[Kafka: langhook.events]
     E --> F[Rule Engine]
     F --> G[Channels]
     H[JSONata Mappings] --> D
@@ -231,20 +231,20 @@ We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md)
 pip install -e ".[dev]"
 
 # Run linting
-ruff check opensense/
-ruff format opensense/
+ruff check langhook/
+ruff format langhook/
 
 # Run type checking
-mypy opensense/
+mypy langhook/
 ```
 
 ## 📄 License
 
-OpenSense is licensed under the [MIT License](./LICENSE).
+LangHook is licensed under the [MIT License](./LICENSE).
 
-## 🌟 Why OpenSense?
+## 🌟 Why LangHook?
 
-| Traditional Integration | OpenSense |
+| Traditional Integration | LangHook |
 |------------------------|-----------|
 | Write custom parsers for each webhook | Single canonical format |
 | Maintain brittle glue code | JSONata mappings + LLM fallback |

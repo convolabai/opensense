@@ -2,7 +2,7 @@ services:
   # Redpanda (Kafka-compatible message broker)
   redpanda:
     image: docker.redpanda.com/redpandadata/redpanda:latest
-    container_name: opensense-redpanda
+    container_name: langhook-redpanda
     command:
       - redpanda
       - start
@@ -24,7 +24,7 @@ services:
     volumes:
       - redpanda-data:/var/lib/redpanda/data
     networks:
-      - opensense
+      - langhook
     healthcheck:
       test: ["CMD-SHELL", "rpk cluster health"]
       interval: 30s
@@ -34,13 +34,13 @@ services:
   # Redis (for rate limiting)
   redis:
     image: redis:7-alpine
-    container_name: opensense-redis
+    container_name: langhook-redis
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
-      - opensense
+      - langhook
     command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -49,27 +49,27 @@ services:
       retries: 5
 
   # Topic initialization service
-  opensense-topics:
+  langhook-topics:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: opensense-topics-init
+    container_name: langhook-topics-init
     environment:
       - KAFKA_BROKERS=redpanda:9092
     depends_on:
       redpanda:
         condition: service_healthy
     networks:
-      - opensense
+      - langhook
     command: ["bash", "/app/scripts/init-topics.sh"]
     restart: "no"
 
-  # OpenSense Services (consolidated ingest + map)
-  opensense:
+  # LangHook Services (consolidated ingest + map)
+  langhook:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: opensense-services
+    container_name: langhook-services
     ports:
       - "8000:8000"
     environment:
@@ -87,16 +87,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      opensense-topics:
+      langhook-topics:
         condition: service_completed_successfully
     networks:
-      - opensense
+      - langhook
     restart: unless-stopped
 
   # Redpanda Console (optional - for development)
   redpanda-console:
     image: docker.redpanda.com/redpandadata/console:latest
-    container_name: opensense-redpanda-console
+    container_name: langhook-redpanda-console
     entrypoint: /bin/sh
     command: -c 'echo "$$CONSOLE_CONFIG_FILE" > /tmp/config.yml; /app/console'
     environment:
@@ -118,7 +118,7 @@ services:
     depends_on:
       - redpanda
     networks:
-      - opensense
+      - langhook
     profiles:
       - dev
 
@@ -127,5 +127,5 @@ volumes:
   redis-data:
 
 networks:
-  opensense:
+  langhook:
     driver: bridge

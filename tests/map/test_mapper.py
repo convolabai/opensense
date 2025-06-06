@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from opensense.map.mapper import MappingEngine
+from langhook.map.mapper import MappingEngine
 
 
 def test_mapping_engine_loads_jsonata_files():
@@ -22,7 +22,7 @@ def test_mapping_engine_loads_jsonata_files():
         original_dir = engine.mappings_dir if hasattr(engine, 'mappings_dir') else None
         
         # Manually load from temp directory
-        from opensense.map.config import settings
+        from langhook.map.config import settings
         original_mappings_dir = settings.mappings_dir
         settings.mappings_dir = temp_dir
         
@@ -54,7 +54,7 @@ def test_mapping_engine_handles_missing_fields():
         engine = MappingEngine()
         engine._mappings = {}
         
-        from opensense.map.config import settings
+        from langhook.map.config import settings
         original_mappings_dir = settings.mappings_dir
         settings.mappings_dir = temp_dir
         

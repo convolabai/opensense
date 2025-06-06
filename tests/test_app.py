@@ -4,14 +4,14 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
 
-from opensense.app import app
+from langhook.app import app
 
 
 @pytest.fixture
 def client():
     """Create a test client for the consolidated FastAPI app."""
-    with patch('opensense.ingest.kafka.kafka_producer') as mock_kafka, \
-         patch('opensense.map.service.mapping_service') as mock_mapping:
+    with patch('langhook.ingest.kafka.kafka_producer') as mock_kafka, \
+         patch('langhook.map.service.mapping_service') as mock_mapping:
         mock_kafka.start = AsyncMock()
         mock_kafka.stop = AsyncMock()
         mock_kafka.send_event = AsyncMock()
@@ -38,7 +38,7 @@ def test_health_endpoint(client):
 
 def test_ingest_endpoint_valid_json(client):
     """Test ingesting valid JSON payload."""
-    with patch('opensense.ingest.kafka.kafka_producer') as mock_kafka:
+    with patch('langhook.ingest.kafka.kafka_producer') as mock_kafka:
         mock_kafka.send_event = AsyncMock()
         
         payload = {"test": "data", "value": 123}
@@ -56,7 +56,7 @@ def test_ingest_endpoint_valid_json(client):
 
 def test_ingest_endpoint_invalid_json(client):
     """Test ingesting invalid JSON payload."""
-    with patch('opensense.ingest.kafka.kafka_producer') as mock_kafka:
+    with patch('langhook.ingest.kafka.kafka_producer') as mock_kafka:
         mock_kafka.send_dlq = AsyncMock()
         
         response = client.post(
@@ -85,7 +85,7 @@ def test_ingest_endpoint_body_too_large(client):
 
 def test_ingest_endpoint_different_sources(client):
     """Test that different sources are handled correctly."""
-    with patch('opensense.ingest.kafka.kafka_producer') as mock_kafka:
+    with patch('langhook.ingest.kafka.kafka_producer') as mock_kafka:
         mock_kafka.send_event = AsyncMock()
         
         payload = {"test": "data"}
@@ -105,7 +105,7 @@ def test_ingest_endpoint_different_sources(client):
 
 def test_map_suggest_endpoint_unavailable(client):
     """Test map suggest endpoint when LLM is unavailable."""
-    with patch('opensense.map.llm.llm_service') as mock_llm:
+    with patch('langhook.map.llm.llm_service') as mock_llm:
         mock_llm.is_available.return_value = False
         
         payload = {"source": "github", "payload": {"action": "opened"}}
@@ -117,7 +117,7 @@ def test_map_suggest_endpoint_unavailable(client):
 
 def test_map_metrics_endpoint(client):
     """Test map metrics endpoint."""
-    with patch('opensense.map.service.mapping_service') as mock_service:
+    with patch('langhook.map.service.mapping_service') as mock_service:
         mock_service.get_metrics.return_value = {
             "events_processed": 100,
             "events_mapped": 95,

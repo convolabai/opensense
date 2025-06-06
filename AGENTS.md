@@ -1,4 +1,4 @@
-# PRODUCT.md · **OpenSense**
+# PRODUCT.md · **LangHook**
 
 **Version:** 0.1  
 **Date:**  3 June 2025  
@@ -9,7 +9,7 @@
 ## 1 · Vision ✦  
 > **“Make any event from anywhere instantly understandable and actionable by anyone.”**
 
-OpenSense turns the chaotic world of bespoke web-hooks into a **single, intelligible event language** that both humans and machines can subscribe to in plain English.  
+LangHook turns the chaotic world of bespoke web-hooks into a **single, intelligible event language** that both humans and machines can subscribe to in plain English.  
 We want an engineer, product manager, or support rep to describe *what they care about* (“Notify me when PR 1374 is approved”) and get the right signal—without ever touching JSON, queues, or custom code.
 
 ---
@@ -68,7 +68,7 @@ We want an engineer, product manager, or support rep to describe *what they care
 | Trigger.dev | Code-first—still requires writing TypeScript for every mapping + rule. |
 | Microsoft Power Automate | M365-locked, pricey at scale, Windows-only connectors. |
 
-OpenSense is **domain-agnostic**, **LLM-assisted**, and **fully open**.
+LangHook is **domain-agnostic**, **LLM-assisted**, and **fully open**.
 
 ---
 
