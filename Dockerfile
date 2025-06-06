@@ -8,7 +8,7 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install --only=production
 
 # Copy frontend source
 COPY frontend/src ./src
@@ -33,7 +33,10 @@ RUN pip install uv
 WORKDIR /app
 
 # Copy dependency files
-COPY pyproject.toml ./
+COPY pyproject.toml LICENSE README.md ./
+
+# Copy source code
+COPY opensense/ ./opensense/
 
 # Install dependencies
 RUN uv pip install --system -e .

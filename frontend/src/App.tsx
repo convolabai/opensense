@@ -119,12 +119,17 @@ function App() {
       }
 
       // Send to ingest endpoint
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (selectedSource === 'github') {
+        headers['X-GitHub-Event'] = 'pull_request';
+      }
+      
       const response = await fetch(`/ingest/${selectedSource}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-GitHub-Event': selectedSource === 'github' ? 'pull_request' : undefined,
-        },
+        headers,
         body: JSON.stringify(payload)
       });
 

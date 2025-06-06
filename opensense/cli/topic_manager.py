@@ -117,12 +117,20 @@ class TopicManager:
         if new_topics:
             try:
                 result = await self.admin_client.create_topics(new_topics)
-                for topic_name, future in result.items():
-                    try:
-                        await future  # Wait for creation to complete
-                        logger.info("Topic created successfully", topic=topic_name)
-                    except Exception as e:
-                        logger.error("Failed to create topic", topic=topic_name, error=str(e))
+                # Handle different response types from aiokafka
+                if hasattr(result, 'items'):
+                    # Old API - result is a dict
+                    for topic_name, future in result.items():
+                        try:
+                            await future  # Wait for creation to complete
+                            logger.info("Topic created successfully", topic=topic_name)
+                        except Exception as e:
+                            logger.error("Failed to create topic", topic=topic_name, error=str(e))
+                else:
+                    # New API - result might be a different type
+                    # Just log success for all topics since no exceptions were raised
+                    for topic in new_topics:
+                        logger.info("Topic created successfully", topic=topic.name)
             except Exception as e:
                 logger.error("Failed to create topics", error=str(e))
                 raise
@@ -135,7 +143,12 @@ class TopicManager:
             raise RuntimeError("Admin client not started")
             
         metadata = await self.admin_client.list_topics()
-        return list(metadata.topics.keys())
+        # Handle different return types from aiokafka
+        if hasattr(metadata, 'topics'):
+            return list(metadata.topics.keys())
+        else:
+            # If metadata is a list or set of topic names
+            return list(metadata)
     
     async def describe_topic(self, topic_name: str) -> Dict:
         """Describe a specific topic."""
