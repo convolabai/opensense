@@ -1,7 +1,7 @@
 """Test the CloudEvents wrapper functionality."""
 
 import json
-from opensense.map.cloudevents import CloudEventWrapper
+from langhook.map.cloudevents import CloudEventWrapper
 
 
 def test_canonical_event_creation():

@@ -1,27 +1,29 @@
 """Consolidated FastAPI application for OpenSense services."""
 
 import json
-import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request, Response, status
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from opensense.core.fastapi import global_exception_handler, add_request_id_header, create_health_endpoint
-from opensense.ingest.config import settings as ingest_settings
-from opensense.ingest.kafka import kafka_producer
-from opensense.ingest.security import verify_signature
-from opensense.ingest.middleware import RateLimitMiddleware
-from opensense.map.config import settings as map_settings
-from opensense.map.llm import llm_service
-from opensense.map.service import mapping_service
-from opensense.map.metrics import metrics
+from langhook.core.fastapi import (
+    add_request_id_header,
+    global_exception_handler,
+)
+from langhook.ingest.config import settings as ingest_settings
+from langhook.ingest.kafka import kafka_producer
+from langhook.ingest.middleware import RateLimitMiddleware
+from langhook.ingest.security import verify_signature
+from langhook.map.config import settings as map_settings
+from langhook.map.llm import llm_service
+from langhook.map.metrics import metrics
+from langhook.map.service import mapping_service
 
 logger = structlog.get_logger()
 
@@ -30,7 +32,7 @@ logger = structlog.get_logger()
 async def lifespan(app):
     """FastAPI lifespan context manager for both services."""
     import asyncio
-    
+
     # Startup
     structlog.configure(
         processors=[
@@ -49,28 +51,28 @@ async def lifespan(app):
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-    
+
     logger = structlog.get_logger()
     logger.info("Starting OpenSense Services", version="0.3.0")
-    
+
     # Start Kafka producer (for ingest)
     await kafka_producer.start()
-    
+
     # Start mapping service (Kafka consumer for map) in background
     mapping_task = asyncio.create_task(mapping_service.run())
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down OpenSense Services")
-    
+
     # Cancel mapping service
     mapping_task.cancel()
     try:
         await asyncio.wait_for(mapping_task, timeout=5.0)
-    except (asyncio.CancelledError, asyncio.TimeoutError):
+    except (TimeoutError, asyncio.CancelledError):
         logger.info("Mapping service stopped")
-    
+
     # Stop Kafka producer
     await kafka_producer.stop()
 
@@ -94,7 +96,7 @@ app.add_exception_handler(Exception, global_exception_handler)
 frontend_path = Path(__file__).parent.parent / "frontend" / "build"
 if frontend_path.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_path / "static")), name="static")
-    
+
     @app.get("/demo")
     async def demo():
         """Serve the React demo application."""
@@ -102,7 +104,7 @@ if frontend_path.exists():
         if index_path.exists():
             return FileResponse(str(index_path))
         raise HTTPException(status_code=404, detail="Demo not available - frontend not built")
-    
+
     @app.get("/demo/{path:path}")
     async def demo_assets(path: str):
         """Serve demo assets."""
@@ -130,9 +132,9 @@ else:
 
 class HealthResponse(BaseModel):
     """Health check response model."""
-    
+
     status: str
-    services: Dict[str, str]
+    services: dict[str, str]
     version: str
 
 
@@ -155,7 +157,7 @@ async def health_check() -> HealthResponse:
 
 class IngestResponse(BaseModel):
     """Ingest endpoint response model."""
-    
+
     message: str
     request_id: str
 
@@ -181,14 +183,14 @@ async def ingest_webhook(
         HTTPException: For various error conditions (400, 401, 413, 429)
     """
     request_id = add_request_id_header(response)
-    
+
     # Get request headers and body
     headers = dict(request.headers)
-    
+
     try:
         # Read request body
         body_bytes = await request.body()
-        
+
         # Check body size limit
         if len(body_bytes) > ingest_settings.max_body_bytes:
             logger.warning(
@@ -202,7 +204,7 @@ async def ingest_webhook(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail="Request body too large"
             )
-        
+
         # Parse JSON payload
         try:
             payload = json.loads(body_bytes)
@@ -219,7 +221,7 @@ async def ingest_webhook(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid JSON payload"
             )
-        
+
         # Verify HMAC signature if configured for this source
         signature_valid = await verify_signature(source, body_bytes, headers)
         if signature_valid is False:
@@ -232,33 +234,33 @@ async def ingest_webhook(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid signature"
             )
-        
+
         # Create event message for Kafka
         event_message = {
             "id": request_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "source": source,
             "signature_valid": signature_valid,
             "headers": headers,
             "payload": payload,
         }
-        
+
         # Send to Kafka
         await kafka_producer.send_event(event_message)
-        
+
         logger.info(
             "Event ingested successfully",
             source=source,
             request_id=request_id,
             signature_valid=signature_valid,
         )
-        
+
         response.status_code = status.HTTP_202_ACCEPTED
         return IngestResponse(
             message="Event accepted",
             request_id=request_id,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -280,18 +282,18 @@ async def send_to_dlq(
     request_id: str,
     body_bytes: bytes,
     error: str,
-    headers: Dict[str, Any],
+    headers: dict[str, Any],
 ) -> None:
     """Send malformed event to dead letter queue."""
     dlq_message = {
         "id": request_id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "source": source,
         "error": error,
         "headers": headers,
         "payload": body_bytes.decode("utf-8", errors="replace"),
     }
-    
+
     await kafka_producer.send_dlq(dlq_message)
 
 
@@ -301,21 +303,21 @@ async def send_to_dlq(
 
 class SuggestMapRequest(BaseModel):
     """Request model for mapping suggestion endpoint."""
-    
+
     source: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
 
 
 class SuggestMapResponse(BaseModel):
     """Response model for mapping suggestion endpoint."""
-    
+
     jsonata: str
     source: str
 
 
 class MetricsResponse(BaseModel):
     """Response model for metrics endpoint."""
-    
+
     events_processed: int
     events_mapped: int
     events_failed: int
@@ -337,30 +339,30 @@ async def suggest_mapping(request: SuggestMapRequest) -> SuggestMapResponse:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="LLM service not available"
         )
-    
+
     try:
         suggestion = await llm_service.suggest_mapping(
             source=request.source,
             raw_payload=request.payload
         )
-        
+
         if suggestion is None:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to generate mapping suggestion"
             )
-        
+
         logger.info(
             "Mapping suggestion generated via API",
             source=request.source,
             suggestion_length=len(suggestion)
         )
-        
+
         return SuggestMapResponse(
             jsonata=suggestion,
             source=request.source
         )
-        
+
     except Exception as e:
         logger.error(
             "Error in suggest-map endpoint",
@@ -385,7 +387,7 @@ async def get_prometheus_metrics():
 async def get_json_metrics() -> MetricsResponse:
     """Get metrics in JSON format for easy consumption."""
     service_metrics = mapping_service.get_metrics()
-    
+
     return MetricsResponse(
         events_processed=service_metrics["events_processed"],
         events_mapped=service_metrics["events_mapped"],

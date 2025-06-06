@@ -3,7 +3,7 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from opensense.map.service import MappingService
+from langhook.map.service import MappingService
 
 
 async def test_end_to_end_mapping():
@@ -11,7 +11,7 @@ async def test_end_to_end_mapping():
     print("Testing end-to-end mapping service...")
     
     # Mock the Kafka producer to avoid connection errors
-    with patch('opensense.map.kafka.map_producer') as mock_producer:
+    with patch('langhook.map.kafka.map_producer') as mock_producer:
         mock_producer.send_canonical_event = AsyncMock()
         mock_producer.send_mapping_failure = AsyncMock()
         
@@ -78,7 +78,7 @@ async def test_missing_mapping():
     """Test handling of events with no mapping available."""
     print("\nTesting missing mapping handling...")
     
-    with patch('opensense.map.kafka.map_producer') as mock_producer:
+    with patch('langhook.map.kafka.map_producer') as mock_producer:
         mock_producer.send_canonical_event = AsyncMock()
         mock_producer.send_mapping_failure = AsyncMock()
         

@@ -1,1 +1,0 @@
-"""Ingest Gateway package"""

@@ -1,4 +1,4 @@
-# Multi-stage build for OpenSense Services
+# Multi-stage build for LangHook Services
 FROM node:18-slim as frontend-builder
 
 # Set working directory for frontend
@@ -50,7 +50,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN groupadd -r opensense && useradd -r -g opensense opensense
+RUN groupadd -r langhook && useradd -r -g langhook langhook
 
 # Set working directory
 WORKDIR /app
@@ -60,7 +60,7 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
-COPY opensense/ ./opensense/
+COPY langhook/ ./langhook/
 COPY mappings/ ./mappings/
 COPY schemas/ ./schemas/
 COPY scripts/ ./scripts/
@@ -69,10 +69,10 @@ COPY scripts/ ./scripts/
 COPY --from=frontend-builder /app/frontend/build ./frontend/build
 
 # Set ownership
-RUN chown -R opensense:opensense /app
+RUN chown -R langhook:langhook /app
 
 # Switch to non-root user
-USER opensense
+USER langhook
 
 # Expose port
 EXPOSE 8000
@@ -86,4 +86,4 @@ ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
 # Run the consolidated application
-CMD ["python", "-m", "opensense.main"]
+CMD ["python", "-m", "langhook.main"]

@@ -1,4 +1,4 @@
-# OpenSense Ingest Gateway
+# LangHook Ingest Gateway
 
 A lightweight FastAPI-based webhook receiver that replaces Svix with a secure, catch-all HTTPS endpoint for webhook ingestion.
 
@@ -20,7 +20,7 @@ A lightweight FastAPI-based webhook receiver that replaces Svix with a secure, c
 ```bash
 # Clone and setup
 git clone <repository>
-cd opensense
+cd langhook
 
 # Copy environment template
 cp .env.ingest.example .env.ingest
@@ -54,7 +54,7 @@ export KAFKA_BROKERS=localhost:19092
 export REDIS_URL=redis://localhost:6379
 
 # Run the service
-opensense-ingest
+langhook-ingest
 ```
 
 ## Configuration
@@ -136,13 +136,13 @@ View malformed events that couldn't be processed:
 
 ```bash
 # Show last 10 DLQ messages
-opensense-dlq-show
+langhook-dlq-show
 
 # Show last 50 DLQ messages
-opensense-dlq-show --count 50
+langhook-dlq-show --count 50
 
 # Custom Kafka brokers
-opensense-dlq-show --kafka-brokers localhost:19092
+langhook-dlq-show --kafka-brokers localhost:19092
 ```
 
 ## HMAC Signature Verification
@@ -198,8 +198,8 @@ pytest tests/
 ### Linting
 ```bash
 pip install ruff mypy
-ruff check opensense/
-mypy opensense/
+ruff check langhook/
+mypy langhook/
 ```
 
 ## Architecture

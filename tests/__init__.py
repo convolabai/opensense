@@ -1,1 +1,1 @@
-"""Tests for the OpenSense ingest gateway."""
+"""Tests for the LangHook ingest gateway."""

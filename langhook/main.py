@@ -1,12 +1,12 @@
-"""Main entry point for the consolidated OpenSense services."""
+"""Main entry point for the consolidated LangHook services."""
 
 import signal
 import sys
 
 import uvicorn
 
-from opensense.ingest.config import settings as ingest_settings
-from opensense.map.config import settings as map_settings
+from langhook.ingest.config import settings as ingest_settings
+from langhook.map.config import settings as map_settings
 
 
 def signal_handler(signum: int, frame) -> None:
@@ -16,24 +16,24 @@ def signal_handler(signum: int, frame) -> None:
 
 
 def main() -> None:
-    """Run the consolidated OpenSense services."""
+    """Run the consolidated LangHook services."""
     # Register signal handlers
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    
+
     # Use debug mode if either service has it enabled
     debug_mode = ingest_settings.debug or map_settings.debug
-    
+
     # Use the most verbose log level from either service
     log_level = "debug" if debug_mode else min(
         ingest_settings.log_level.lower(),
         map_settings.log_level.lower(),
         key=lambda x: {"debug": 0, "info": 1, "warning": 2, "error": 3}.get(x, 1)
     )
-    
+
     # Run the server
     uvicorn.run(
-        "opensense.app:app",
+        "langhook.app:app",
         host="0.0.0.0",
         port=8000,  # Single port for all services
         reload=debug_mode,
