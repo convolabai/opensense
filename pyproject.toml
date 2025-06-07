@@ -33,9 +33,14 @@ dependencies = [
     "cloudevents>=1.11.0",
     "jsonschema>=4.0.0",
     "langchain>=0.1.0",
+    "langchain-openai>=0.2.0",
     "prometheus-client>=0.16.0",
     "openai>=1.0.0",
     "python-dotenv>=1.1.0",
+    # Subscription API dependencies
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    "pyjwt>=2.8.0",
 ]
 
 [project.optional-dependencies]

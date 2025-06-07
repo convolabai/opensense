@@ -31,6 +31,7 @@ from langhook.ingest.security import verify_signature
 from langhook.map.config import settings as map_settings
 from langhook.map.metrics import metrics
 from langhook.map.service import mapping_service
+from langhook.subscriptions.routes import router as subscriptions_router
 
 logger = structlog.get_logger("langhook")
 
@@ -76,6 +77,14 @@ async def lifespan(app):
     # Start mapping service (Kafka consumer for map) in background
     mapping_task = asyncio.create_task(mapping_service.run())
 
+    # Initialize subscription database tables
+    try:
+        from langhook.subscriptions.database import db_service
+        db_service.create_tables()
+        logger.info("Subscription database initialized")
+    except Exception as e:
+        logger.warning("Failed to initialize subscription database", error=str(e))
+
     yield
 
     # Shutdown
@@ -106,6 +115,9 @@ app.add_middleware(RateLimitMiddleware)
 
 # Add global exception handler
 app.add_exception_handler(Exception, global_exception_handler)
+
+# Include subscription API routes
+app.include_router(subscriptions_router)
 
 # Frontend demo routes
 frontend_path = Path(__file__).parent.parent / "frontend" / "build"
