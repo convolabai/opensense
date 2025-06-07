@@ -54,28 +54,28 @@ tests/e2e/
 cp .env.example .env
 
 # 2. Start services
-docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
+docker compose -f docker compose.yml -f docker compose.test.yml up -d --build
 
 # 3. Wait for services to be ready (check health)
 curl http://localhost:8000/health/
 
 # 4. Run tests
-docker-compose -f docker-compose.yml -f docker-compose.test.yml run --rm test-runner
+docker compose -f docker compose.yml -f docker compose.test.yml run --rm test-runner
 
 # 5. Clean up
-docker-compose -f docker-compose.yml -f docker-compose.test.yml down -v
+docker compose -f docker compose.yml -f docker compose.test.yml down -v
 ```
 
 #### Running Specific Tests
 ```bash
 # Run only subscription CRUD tests
-docker-compose -f docker-compose.yml -f docker-compose.test.yml run --rm test-runner python -m pytest tests/e2e/test_subscriptions_crud.py -v
+docker compose -f docker compose.yml -f docker compose.test.yml run --rm test-runner python -m pytest tests/e2e/test_subscriptions_crud.py -v
 
 # Run only ingestion flow tests
-docker-compose -f docker-compose.yml -f docker-compose.test.yml run --rm test-runner python -m pytest tests/e2e/test_ingestion_flow.py -v
+docker compose -f docker compose.yml -f docker compose.test.yml run --rm test-runner python -m pytest tests/e2e/test_ingestion_flow.py -v
 
 # Run with debug output
-docker-compose -f docker-compose.yml -f docker-compose.test.yml run --rm test-runner python -m pytest tests/e2e/ -v -s
+docker compose -f docker compose.yml -f docker compose.test.yml run --rm test-runner python -m pytest tests/e2e/ -v -s
 ```
 
 ### CI/CD Pipeline
@@ -104,7 +104,7 @@ POSTGRES_DSN=postgresql://...             # PostgreSQL connection
 ```
 
 ### Service Configuration
-The `docker-compose.test.yml` override provides:
+The `docker compose.test.yml` override provides:
 - Faster health check intervals for quicker startup
 - Debug logging enabled
 - Higher rate limits for testing
@@ -177,10 +177,10 @@ The `E2ETestUtils` class provides:
 #### Services Not Starting
 ```bash
 # Check service logs
-docker-compose -f docker-compose.yml -f docker-compose.test.yml logs <service-name>
+docker compose -f docker compose.yml -f docker compose.test.yml logs <service-name>
 
 # Check service status
-docker-compose -f docker-compose.yml -f docker-compose.test.yml ps
+docker compose -f docker compose.yml -f docker compose.test.yml ps
 ```
 
 #### Tests Timing Out
@@ -191,16 +191,16 @@ docker-compose -f docker-compose.yml -f docker-compose.test.yml ps
 #### Database Connection Issues
 ```bash
 # Check PostgreSQL logs
-docker-compose -f docker-compose.yml -f docker-compose.test.yml logs postgres
+docker compose -f docker compose.yml -f docker compose.test.yml logs postgres
 
 # Test database connection
-docker-compose -f docker-compose.yml -f docker-compose.test.yml exec postgres psql -U langhook -d langhook -c "\dt"
+docker compose -f docker compose.yml -f docker compose.test.yml exec postgres psql -U langhook -d langhook -c "\dt"
 ```
 
 #### NATS Connection Issues
 ```bash
 # Check NATS logs
-docker-compose -f docker-compose.yml -f docker-compose.test.yml logs nats
+docker compose -f docker compose.yml -f docker compose.test.yml logs nats
 
 # Test NATS connectivity
 curl http://localhost:8222/varz
@@ -215,7 +215,7 @@ echo "DEBUG=true" >> .env
 echo "LOG_LEVEL=DEBUG" >> .env
 
 # Run with debug output
-docker-compose -f docker-compose.yml -f docker-compose.test.yml run --rm test-runner python -m pytest tests/e2e/ -v -s --log-cli-level=DEBUG
+docker compose -f docker compose.yml -f docker compose.test.yml run --rm test-runner python -m pytest tests/e2e/ -v -s --log-cli-level=DEBUG
 ```
 
 ## Contributing
