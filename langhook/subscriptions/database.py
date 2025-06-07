@@ -17,7 +17,16 @@ class DatabaseService:
     """Service for managing subscription database operations."""
 
     def __init__(self) -> None:
-        self.engine = create_engine(subscription_settings.postgres_dsn)
+        # Create engine with connection pool settings suitable for Docker environments
+        self.engine = create_engine(
+            subscription_settings.postgres_dsn,
+            pool_pre_ping=True,  # Validate connections before use
+            pool_recycle=3600,   # Recreate connections after 1 hour
+            connect_args={
+                "connect_timeout": 10,
+                "application_name": "langhook_subscriptions",
+            }
+        )
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
 
     def create_tables(self) -> None:
@@ -49,6 +58,9 @@ class DatabaseService:
             session.add(subscription)
             session.commit()
             session.refresh(subscription)
+
+            # Parse the channel_config JSON back to dict for response
+            subscription.channel_config = json.loads(subscription.channel_config)
 
             logger.info(
                 "Subscription created",

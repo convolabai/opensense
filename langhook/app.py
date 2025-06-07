@@ -77,14 +77,26 @@ async def lifespan(app):
     # Start mapping service (Kafka consumer for map) in background
     mapping_task = asyncio.create_task(mapping_service.run())
 
-    # Initialize subscription database tables
-    try:
-        from langhook.subscriptions.database import db_service
-        db_service.create_tables()
-        logger.info("Subscription database initialized successfully")
-    except Exception as e:
-        logger.error("Failed to initialize subscription database", error=str(e), exc_info=True)
-        raise RuntimeError(f"Cannot start application - database initialization failed: {e}") from e
+    # Initialize subscription database tables with retry logic
+    import time
+    max_retries = 10
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            from langhook.subscriptions.database import db_service
+            db_service.create_tables()
+            logger.info("Subscription database initialized successfully", attempt=attempt + 1)
+            break
+        except Exception as e:
+            if attempt == max_retries - 1:
+                logger.error("Failed to initialize subscription database after max retries", 
+                           error=str(e), attempts=max_retries, exc_info=True)
+                raise RuntimeError(f"Cannot start application - database initialization failed after {max_retries} attempts: {e}") from e
+            else:
+                logger.warning("Database initialization failed, retrying", 
+                             error=str(e), attempt=attempt + 1, max_retries=max_retries)
+                await asyncio.sleep(retry_delay)
 
     yield
 

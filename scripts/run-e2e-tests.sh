@@ -35,9 +35,26 @@ print_status "Starting LangHook End-to-End Test Suite"
 
 # Create .env file if it doesn't exist
 if [ ! -f .env ]; then
-    print_status "Creating .env file from example"
-    cp .env.example .env
-    echo "TEST_MODE=true" >> .env
+    print_status "Creating basic .env file for testing"
+    cat > .env << 'EOF'
+# LangHook Environment Configuration
+DEBUG=true
+LOG_LEVEL=DEBUG
+TEST_MODE=true
+
+# Service URLs for Docker Compose
+NATS_URL=nats://nats:4222
+REDIS_URL=redis://redis:6379
+POSTGRES_DSN=postgresql://langhook:langhook@postgres:5432/langhook
+
+# Application settings
+MAX_BODY_BYTES=1048576
+RATE_LIMIT=1000/minute
+MAPPINGS_DIR=/app/mappings
+NATS_STREAM_EVENTS=events
+NATS_CONSUMER_GROUP=svc-map
+MAX_EVENTS_PER_SECOND=2000
+EOF
 fi
 
 # Clean up any existing containers
