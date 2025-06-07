@@ -1,11 +1,10 @@
 """Database service for subscription management."""
 
 import json
-from typing import List, Optional
 
 import structlog
-from sqlalchemy import create_engine, and_
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy import and_, create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from langhook.subscriptions.config import subscription_settings
 from langhook.subscriptions.models import Base, Subscription
@@ -20,7 +19,7 @@ class DatabaseService:
     def __init__(self) -> None:
         self.engine = create_engine(subscription_settings.postgres_dsn)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-        
+
     def create_tables(self) -> None:
         """Create database tables."""
         Base.metadata.create_all(bind=self.engine)
@@ -31,9 +30,9 @@ class DatabaseService:
         return self.SessionLocal()
 
     async def create_subscription(
-        self, 
-        subscriber_id: str, 
-        pattern: str, 
+        self,
+        subscriber_id: str,
+        pattern: str,
         subscription_data: SubscriptionCreate
     ) -> Subscription:
         """Create a new subscription."""
@@ -46,21 +45,21 @@ class DatabaseService:
                 channel_config=json.dumps(subscription_data.channel_config),
                 active=True
             )
-            
+
             session.add(subscription)
             session.commit()
             session.refresh(subscription)
-            
+
             logger.info(
                 "Subscription created",
                 subscription_id=subscription.id,
                 subscriber_id=subscriber_id,
                 pattern=pattern
             )
-            
+
             return subscription
 
-    async def get_subscription(self, subscription_id: int, subscriber_id: str) -> Optional[Subscription]:
+    async def get_subscription(self, subscription_id: int, subscriber_id: str) -> Subscription | None:
         """Get a subscription by ID for a specific subscriber."""
         with self.get_session() as session:
             subscription = session.query(Subscription).filter(
@@ -69,39 +68,39 @@ class DatabaseService:
                     Subscription.subscriber_id == subscriber_id
                 )
             ).first()
-            
+
             if subscription:
                 # Parse the channel_config JSON
                 subscription.channel_config = json.loads(subscription.channel_config)
-                
+
             return subscription
 
     async def get_subscriber_subscriptions(
-        self, 
-        subscriber_id: str, 
-        skip: int = 0, 
+        self,
+        subscriber_id: str,
+        skip: int = 0,
         limit: int = 100
-    ) -> tuple[List[Subscription], int]:
+    ) -> tuple[list[Subscription], int]:
         """Get all subscriptions for a subscriber with pagination."""
         with self.get_session() as session:
             query = session.query(Subscription).filter(Subscription.subscriber_id == subscriber_id)
-            
+
             total = query.count()
             subscriptions = query.offset(skip).limit(limit).all()
-            
+
             # Parse channel_config JSON for each subscription
             for subscription in subscriptions:
                 subscription.channel_config = json.loads(subscription.channel_config)
-            
+
             return subscriptions, total
 
     async def update_subscription(
-        self, 
-        subscription_id: int, 
-        subscriber_id: str, 
-        pattern: Optional[str],
+        self,
+        subscription_id: int,
+        subscriber_id: str,
+        pattern: str | None,
         update_data: SubscriptionUpdate
-    ) -> Optional[Subscription]:
+    ) -> Subscription | None:
         """Update a subscription."""
         with self.get_session() as session:
             subscription = session.query(Subscription).filter(
@@ -110,10 +109,10 @@ class DatabaseService:
                     Subscription.subscriber_id == subscriber_id
                 )
             ).first()
-            
+
             if not subscription:
                 return None
-                
+
             # Update fields
             if update_data.description is not None:
                 subscription.description = update_data.description
@@ -125,19 +124,19 @@ class DatabaseService:
                 subscription.channel_config = json.dumps(update_data.channel_config)
             if update_data.active is not None:
                 subscription.active = update_data.active
-                
+
             session.commit()
             session.refresh(subscription)
-            
+
             # Parse the channel_config JSON
             subscription.channel_config = json.loads(subscription.channel_config)
-            
+
             logger.info(
                 "Subscription updated",
                 subscription_id=subscription.id,
                 subscriber_id=subscriber_id
             )
-            
+
             return subscription
 
     async def delete_subscription(self, subscription_id: int, subscriber_id: str) -> bool:
@@ -149,32 +148,32 @@ class DatabaseService:
                     Subscription.subscriber_id == subscriber_id
                 )
             ).first()
-            
+
             if not subscription:
                 return False
-                
+
             session.delete(subscription)
             session.commit()
-            
+
             logger.info(
                 "Subscription deleted",
                 subscription_id=subscription.id,
                 subscriber_id=subscriber_id
             )
-            
+
             return True
 
-    async def get_all_active_subscriptions(self) -> List[Subscription]:
+    async def get_all_active_subscriptions(self) -> list[Subscription]:
         """Get all active subscriptions for consumer management."""
         with self.get_session() as session:
             subscriptions = session.query(Subscription).filter(
-                Subscription.active == True
+                Subscription.active
             ).all()
-            
+
             # Parse channel_config JSON for each subscription
             for subscription in subscriptions:
                 subscription.channel_config = json.loads(subscription.channel_config)
-            
+
             return subscriptions
 
 

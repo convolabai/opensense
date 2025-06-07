@@ -1,8 +1,7 @@
 """Large Language Model service for converting descriptions to NATS filter patterns."""
 
-import json
 import re
-from typing import Optional, Any
+from typing import Any
 
 import structlog
 
@@ -16,11 +15,11 @@ class LLMPatternService:
 
     def __init__(self) -> None:
         self.llm_available = False
-        self.llm: Optional[Any] = None
-        
+        self.llm: Any | None = None
+
         # Support legacy OpenAI API key for backward compatibility
         api_key = subscription_settings.llm_api_key or subscription_settings.openai_api_key
-        
+
         if api_key:
             try:
                 self.llm = self._initialize_llm(api_key)
@@ -47,10 +46,10 @@ class LLMPatternService:
         else:
             logger.info("No LLM API key provided, pattern service using fallback")
 
-    def _initialize_llm(self, api_key: str) -> Optional[Any]:
+    def _initialize_llm(self, api_key: str) -> Any | None:
         """Initialize the appropriate LLM based on provider configuration."""
         provider = subscription_settings.llm_provider.lower()
-        
+
         try:
             if provider == "openai":
                 from langchain_openai import ChatOpenAI
@@ -101,7 +100,7 @@ class LLMPatternService:
             else:
                 logger.error(f"Unsupported LLM provider: {provider}")
                 return None
-                
+
         except ImportError as e:
             logger.error(
                 f"Failed to import LLM provider {provider}",
@@ -117,10 +116,10 @@ class LLMPatternService:
     async def convert_to_pattern(self, description: str) -> str:
         """
         Convert natural language description to NATS filter pattern.
-        
+
         Args:
             description: Natural language description like "Notify me when PR 1374 is approved"
-            
+
         Returns:
             NATS filter pattern like "github.pull_request.1374.update"
         """
@@ -152,7 +151,7 @@ class LLMPatternService:
 
             # Parse the response to extract the pattern
             pattern = self._extract_pattern_from_response(response_text)
-            
+
             if pattern:
                 logger.info(
                     "LLM pattern conversion completed",
@@ -209,36 +208,36 @@ Respond with just the pattern, nothing else."""
 
 Pattern:"""
 
-    def _extract_pattern_from_response(self, response: str) -> Optional[str]:
+    def _extract_pattern_from_response(self, response: str) -> str | None:
         """Extract the NATS pattern from the LLM response."""
         # Look for a pattern that matches the NATS subject format
         pattern_regex = r'([a-z0-9_\-*>]+\.){3}[a-z0-9_\-*>]+'
-        
+
         match = re.search(pattern_regex, response.lower())
         if match:
             return match.group(0)
-        
+
         # If no pattern found, check if the entire response looks like a pattern
         cleaned = response.strip().lower()
         if re.match(r'^([a-z0-9_\-*>]+\.){3}[a-z0-9_\-*>]+$', cleaned):
             return cleaned
-            
+
         return None
 
     def _fallback_pattern_conversion(self, description: str) -> str:
         """
         Fallback pattern conversion using simple text matching.
-        
+
         This provides basic functionality when LLM is not available.
         """
         description_lower = description.lower()
-        
+
         # Extract common patterns
         publisher = "*"
         resource_type = "*"
         resource_id = "*"
         action = "*"
-        
+
         # Try to detect publisher
         if "github" in description_lower or "pr" in description_lower or "pull request" in description_lower:
             publisher = "github"
@@ -252,12 +251,12 @@ Pattern:"""
             publisher = "slack"
         elif "jira" in description_lower:
             publisher = "jira"
-            
+
         # Try to extract specific IDs
         id_match = re.search(r'\b(\d+)\b', description)
         if id_match:
             resource_id = id_match.group(1)
-            
+
         # Try to detect action
         if any(word in description_lower for word in ["create", "created", "new"]):
             action = "create"
@@ -267,15 +266,15 @@ Pattern:"""
             action = "delete"
         elif any(word in description_lower for word in ["approve", "approved"]):
             action = "update"  # Approval is typically an update action
-            
+
         pattern = f"{publisher}.{resource_type}.{resource_id}.{action}"
-        
+
         logger.info(
             "Fallback pattern conversion completed",
             description=description,
             pattern=pattern
         )
-        
+
         return pattern
 
 

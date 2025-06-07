@@ -1,32 +1,31 @@
 """Configuration for subscription service."""
 
 import os
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
 
 class SubscriptionSettings(BaseModel):
     """Settings for subscription management."""
-    
+
     # Database settings
     postgres_dsn: str = Field(default="postgresql://langhook:langhook@localhost:5432/langhook", env="POSTGRES_DSN")
-    
+
     # JWT settings
     jwt_secret: str = Field(default="dev-secret-key", env="JWT_SECRET")
     jwt_algorithm: str = Field(default="HS256", env="JWT_ALGORITHM")
-    
+
     # LLM service settings
     llm_provider: str = Field(default="openai", env="LLM_PROVIDER")  # openai, azure_openai, anthropic, google, local
-    llm_api_key: Optional[str] = Field(default=None, env="LLM_API_KEY")
-    llm_model: str = Field(default="gpt-4", env="LLM_MODEL") 
-    llm_base_url: Optional[str] = Field(default=None, env="LLM_BASE_URL")  # For local LLMs or custom endpoints
+    llm_api_key: str | None = Field(default=None, env="LLM_API_KEY")
+    llm_model: str = Field(default="gpt-4", env="LLM_MODEL")
+    llm_base_url: str | None = Field(default=None, env="LLM_BASE_URL")  # For local LLMs or custom endpoints
     llm_temperature: float = Field(default=0.1, env="LLM_TEMPERATURE")
     llm_max_tokens: int = Field(default=500, env="LLM_MAX_TOKENS")
-    
+
     # Legacy OpenAI support (deprecated - use LLM_* settings)
-    openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    
+    openai_api_key: str | None = Field(default=None, env="OPENAI_API_KEY")
+
     model_config = {
         "env_file": ".env.subscriptions",
         "env_file_encoding": "utf-8"

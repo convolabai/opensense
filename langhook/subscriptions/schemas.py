@@ -1,7 +1,7 @@
 """Pydantic schemas for subscription API."""
 
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -14,7 +14,7 @@ class ChannelConfig(BaseModel):
 class WebhookChannelConfig(ChannelConfig):
     """Webhook channel configuration."""
     url: str
-    headers: Optional[Dict[str, str]] = None
+    headers: dict[str, str] | None = None
     method: str = "POST"
 
 
@@ -22,8 +22,8 @@ class SubscriptionCreate(BaseModel):
     """Schema for creating a new subscription."""
     description: str = Field(..., description="Natural language description of what to watch for")
     channel_type: str = Field(..., description="Type of notification channel")
-    channel_config: Dict[str, Any] = Field(..., description="Configuration for the notification channel")
-    
+    channel_config: dict[str, Any] = Field(..., description="Configuration for the notification channel")
+
     @field_validator('channel_type')
     @classmethod
     def validate_channel_type(cls, v):
@@ -34,11 +34,11 @@ class SubscriptionCreate(BaseModel):
 
 class SubscriptionUpdate(BaseModel):
     """Schema for updating a subscription."""
-    description: Optional[str] = None
-    channel_type: Optional[str] = None
-    channel_config: Optional[Dict[str, Any]] = None
-    active: Optional[bool] = None
-    
+    description: str | None = None
+    channel_type: str | None = None
+    channel_config: dict[str, Any] | None = None
+    active: bool | None = None
+
     @field_validator('channel_type')
     @classmethod
     def validate_channel_type(cls, v):
@@ -54,10 +54,10 @@ class SubscriptionResponse(BaseModel):
     description: str
     pattern: str
     channel_type: str
-    channel_config: Dict[str, Any]
+    channel_config: dict[str, Any]
     active: bool
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
     class Config:
         from_attributes = True

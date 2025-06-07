@@ -1,9 +1,7 @@
 """Database models for subscription management."""
 
-from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 
@@ -12,9 +10,9 @@ Base = declarative_base()
 
 class Subscription(Base):
     """Database model for natural language subscriptions."""
-    
+
     __tablename__ = "subscriptions"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     subscriber_id = Column(String(255), nullable=False, index=True)  # JWT sub claim or other subscriber identifier
     description = Column(Text, nullable=False)  # Natural language description
