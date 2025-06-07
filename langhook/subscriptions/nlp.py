@@ -1,46 +1,117 @@
-"""Natural Language Processing service for converting descriptions to NATS filter patterns."""
+"""Large Language Model service for converting descriptions to NATS filter patterns."""
 
 import json
 import re
-from typing import Optional
+from typing import Optional, Any
 
 import structlog
-from langchain_openai import ChatOpenAI
-from langchain.schema import HumanMessage, SystemMessage
 
 from langhook.subscriptions.config import subscription_settings
 
 logger = structlog.get_logger("langhook")
 
 
-class NLPPatternService:
-    """Service for converting natural language descriptions to NATS filter patterns."""
+class LLMPatternService:
+    """Service for converting natural language descriptions to NATS filter patterns using LLM."""
 
     def __init__(self) -> None:
         self.llm_available = False
-        if subscription_settings.openai_api_key:
+        self.llm: Optional[Any] = None
+        
+        # Support legacy OpenAI API key for backward compatibility
+        api_key = subscription_settings.llm_api_key or subscription_settings.openai_api_key
+        
+        if api_key:
             try:
-                self.llm = ChatOpenAI(
-                    openai_api_key=subscription_settings.openai_api_key,
-                    model_name="gpt-4",
-                    temperature=0.1,
-                    max_tokens=500,
+                self.llm = self._initialize_llm(api_key)
+                if self.llm:
+                    self.llm_available = True
+                    logger.info(
+                        "LLM initialized for pattern service",
+                        provider=subscription_settings.llm_provider,
+                        model=subscription_settings.llm_model
+                    )
+            except ImportError as e:
+                logger.warning(
+                    "LLM dependencies not available, pattern service disabled",
+                    provider=subscription_settings.llm_provider,
+                    error=str(e)
                 )
-                self.llm_available = True
-                logger.info("OpenAI LLM initialized for NLP pattern service")
-            except ImportError:
-                logger.warning("LangChain not available, NLP pattern service disabled")
             except Exception as e:
                 logger.error(
-                    "Failed to initialize OpenAI LLM for NLP pattern service",
+                    "Failed to initialize LLM for pattern service",
+                    provider=subscription_settings.llm_provider,
                     error=str(e),
                     exc_info=True
                 )
         else:
-            logger.info("No OpenAI API key provided, NLP pattern service using fallback")
+            logger.info("No LLM API key provided, pattern service using fallback")
+
+    def _initialize_llm(self, api_key: str) -> Optional[Any]:
+        """Initialize the appropriate LLM based on provider configuration."""
+        provider = subscription_settings.llm_provider.lower()
+        
+        try:
+            if provider == "openai":
+                from langchain_openai import ChatOpenAI
+                return ChatOpenAI(
+                    openai_api_key=api_key,
+                    model_name=subscription_settings.llm_model,
+                    temperature=subscription_settings.llm_temperature,
+                    max_tokens=subscription_settings.llm_max_tokens,
+                    base_url=subscription_settings.llm_base_url,
+                )
+            elif provider == "azure_openai":
+                from langchain_openai import AzureChatOpenAI
+                return AzureChatOpenAI(
+                    openai_api_key=api_key,
+                    model_name=subscription_settings.llm_model,
+                    temperature=subscription_settings.llm_temperature,
+                    max_tokens=subscription_settings.llm_max_tokens,
+                    azure_endpoint=subscription_settings.llm_base_url,
+                )
+            elif provider == "anthropic":
+                from langchain_anthropic import ChatAnthropic
+                return ChatAnthropic(
+                    anthropic_api_key=api_key,
+                    model=subscription_settings.llm_model,
+                    temperature=subscription_settings.llm_temperature,
+                    max_tokens=subscription_settings.llm_max_tokens,
+                )
+            elif provider == "google":
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                return ChatGoogleGenerativeAI(
+                    google_api_key=api_key,
+                    model=subscription_settings.llm_model,
+                    temperature=subscription_settings.llm_temperature,
+                    max_output_tokens=subscription_settings.llm_max_tokens,
+                )
+            elif provider == "local":
+                # For local LLMs using OpenAI-compatible API
+                from langchain_openai import ChatOpenAI
+                if not subscription_settings.llm_base_url:
+                    raise ValueError("LLM_BASE_URL is required for local LLM provider")
+                return ChatOpenAI(
+                    openai_api_key=api_key or "dummy-key",  # Local LLMs often don't need real API keys
+                    model_name=subscription_settings.llm_model,
+                    temperature=subscription_settings.llm_temperature,
+                    max_tokens=subscription_settings.llm_max_tokens,
+                    base_url=subscription_settings.llm_base_url,
+                )
+            else:
+                logger.error(f"Unsupported LLM provider: {provider}")
+                return None
+                
+        except ImportError as e:
+            logger.error(
+                f"Failed to import LLM provider {provider}",
+                error=str(e),
+                provider=provider
+            )
+            return None
 
     def is_available(self) -> bool:
-        """Check if NLP service is available."""
+        """Check if LLM service is available."""
         return self.llm_available
 
     async def convert_to_pattern(self, description: str) -> str:
@@ -60,20 +131,31 @@ class NLPPatternService:
             system_prompt = self._get_system_prompt()
             user_prompt = self._create_user_prompt(description)
 
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt)
-            ]
-
-            response = await self.llm.agenerate([messages])
-            response_text = response.generations[0][0].text.strip()
+            # Create messages in a format compatible with different LLM providers
+            if hasattr(self.llm, 'agenerate'):
+                # LangChain-style interface
+                from langchain.schema import HumanMessage, SystemMessage
+                messages = [
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=user_prompt)
+                ]
+                response = await self.llm.agenerate([messages])
+                response_text = response.generations[0][0].text.strip()
+            else:
+                # Direct interface for some LLM providers
+                full_prompt = f"{system_prompt}\n\nUser: {user_prompt}\n\nAssistant:"
+                response_text = await self.llm.ainvoke(full_prompt)
+                if hasattr(response_text, 'content'):
+                    response_text = response_text.content.strip()
+                else:
+                    response_text = str(response_text).strip()
 
             # Parse the response to extract the pattern
             pattern = self._extract_pattern_from_response(response_text)
             
             if pattern:
                 logger.info(
-                    "NLP pattern conversion completed",
+                    "LLM pattern conversion completed",
                     description=description,
                     pattern=pattern
                 )
@@ -197,5 +279,5 @@ Pattern:"""
         return pattern
 
 
-# Global NLP service instance
-nlp_service = NLPPatternService()
+# Global LLM service instance
+llm_service = LLMPatternService()

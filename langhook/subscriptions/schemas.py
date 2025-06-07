@@ -11,24 +11,11 @@ class ChannelConfig(BaseModel):
     pass
 
 
-class SlackChannelConfig(ChannelConfig):
-    """Slack channel configuration."""
-    webhook_url: str
-    channel: Optional[str] = None
-    username: Optional[str] = "LangHook"
-
-
 class WebhookChannelConfig(ChannelConfig):
     """Webhook channel configuration."""
     url: str
     headers: Optional[Dict[str, str]] = None
     method: str = "POST"
-
-
-class EmailChannelConfig(ChannelConfig):
-    """Email channel configuration."""
-    to: str
-    subject_template: Optional[str] = "LangHook Notification: {summary}"
 
 
 class SubscriptionCreate(BaseModel):
@@ -40,8 +27,8 @@ class SubscriptionCreate(BaseModel):
     @field_validator('channel_type')
     @classmethod
     def validate_channel_type(cls, v):
-        if v not in ['slack', 'webhook', 'email']:
-            raise ValueError('channel_type must be one of: slack, webhook, email')
+        if v not in ['webhook']:
+            raise ValueError('channel_type must be: webhook')
         return v
 
 
@@ -55,15 +42,15 @@ class SubscriptionUpdate(BaseModel):
     @field_validator('channel_type')
     @classmethod
     def validate_channel_type(cls, v):
-        if v is not None and v not in ['slack', 'webhook', 'email']:
-            raise ValueError('channel_type must be one of: slack, webhook, email')
+        if v is not None and v not in ['webhook']:
+            raise ValueError('channel_type must be: webhook')
         return v
 
 
 class SubscriptionResponse(BaseModel):
     """Schema for subscription response."""
     id: int
-    user_id: str
+    subscriber_id: str
     description: str
     pattern: str
     channel_type: str

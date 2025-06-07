@@ -16,10 +16,10 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String(255), nullable=False, index=True)  # JWT sub claim
+    subscriber_id = Column(String(255), nullable=False, index=True)  # JWT sub claim or other subscriber identifier
     description = Column(Text, nullable=False)  # Natural language description
     pattern = Column(String(255), nullable=False)  # Generated NATS filter subject pattern
-    channel_type = Column(String(50), nullable=False)  # 'slack', 'webhook', 'email'
+    channel_type = Column(String(50), nullable=False)  # 'webhook'
     channel_config = Column(Text, nullable=False)  # JSON config for channel
     active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -32,14 +32,14 @@ class DatabaseService:
 
     async def create_subscription(
         self, 
-        user_id: str, 
+        subscriber_id: str, 
         pattern: str, 
         subscription_data: SubscriptionCreate
     ) -> Subscription:
         """Create a new subscription."""
         with self.get_session() as session:
             subscription = Subscription(
-                user_id=user_id,
+                subscriber_id=subscriber_id,
                 description=subscription_data.description,
                 pattern=pattern,
                 channel_type=subscription_data.channel_type,
@@ -54,19 +54,19 @@ class DatabaseService:
             logger.info(
                 "Subscription created",
                 subscription_id=subscription.id,
-                user_id=user_id,
+                subscriber_id=subscriber_id,
                 pattern=pattern
             )
             
             return subscription
 
-    async def get_subscription(self, subscription_id: int, user_id: str) -> Optional[Subscription]:
-        """Get a subscription by ID for a specific user."""
+    async def get_subscription(self, subscription_id: int, subscriber_id: str) -> Optional[Subscription]:
+        """Get a subscription by ID for a specific subscriber."""
         with self.get_session() as session:
             subscription = session.query(Subscription).filter(
                 and_(
                     Subscription.id == subscription_id,
-                    Subscription.user_id == user_id
+                    Subscription.subscriber_id == subscriber_id
                 )
             ).first()
             
@@ -76,15 +76,15 @@ class DatabaseService:
                 
             return subscription
 
-    async def get_user_subscriptions(
+    async def get_subscriber_subscriptions(
         self, 
-        user_id: str, 
+        subscriber_id: str, 
         skip: int = 0, 
         limit: int = 100
     ) -> tuple[List[Subscription], int]:
-        """Get all subscriptions for a user with pagination."""
+        """Get all subscriptions for a subscriber with pagination."""
         with self.get_session() as session:
-            query = session.query(Subscription).filter(Subscription.user_id == user_id)
+            query = session.query(Subscription).filter(Subscription.subscriber_id == subscriber_id)
             
             total = query.count()
             subscriptions = query.offset(skip).limit(limit).all()
@@ -98,7 +98,7 @@ class DatabaseService:
     async def update_subscription(
         self, 
         subscription_id: int, 
-        user_id: str, 
+        subscriber_id: str, 
         pattern: Optional[str],
         update_data: SubscriptionUpdate
     ) -> Optional[Subscription]:
@@ -107,7 +107,7 @@ class DatabaseService:
             subscription = session.query(Subscription).filter(
                 and_(
                     Subscription.id == subscription_id,
-                    Subscription.user_id == user_id
+                    Subscription.subscriber_id == subscriber_id
                 )
             ).first()
             
@@ -135,18 +135,18 @@ class DatabaseService:
             logger.info(
                 "Subscription updated",
                 subscription_id=subscription.id,
-                user_id=user_id
+                subscriber_id=subscriber_id
             )
             
             return subscription
 
-    async def delete_subscription(self, subscription_id: int, user_id: str) -> bool:
+    async def delete_subscription(self, subscription_id: int, subscriber_id: str) -> bool:
         """Delete a subscription."""
         with self.get_session() as session:
             subscription = session.query(Subscription).filter(
                 and_(
                     Subscription.id == subscription_id,
-                    Subscription.user_id == user_id
+                    Subscription.subscriber_id == subscriber_id
                 )
             ).first()
             
@@ -159,7 +159,7 @@ class DatabaseService:
             logger.info(
                 "Subscription deleted",
                 subscription_id=subscription.id,
-                user_id=user_id
+                subscriber_id=subscriber_id
             )
             
             return True
