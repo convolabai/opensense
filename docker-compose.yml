@@ -1,32 +1,18 @@
 services:
-  # Redpanda (Kafka-compatible message broker)
-  redpanda:
-    image: docker.redpanda.com/redpandadata/redpanda:latest
-    container_name: langhook-redpanda
-    command:
-      - redpanda
-      - start
-      - --smp=1
-      - --reserve-memory=0M
-      - --overprovisioned
-      - --node-id=0
-      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
-      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
-      - --pandaproxy-addr=internal://0.0.0.0:8082,external://0.0.0.0:18082
-      - --advertise-pandaproxy-addr=internal://redpanda:8082,external://localhost:18082
-      - --schema-registry-addr=internal://0.0.0.0:8081,external://0.0.0.0:18081
-      - --rpc-addr=redpanda:33145
-      - --advertise-rpc-addr=redpanda:33145
+  # NATS JetStream (message broker)
+  nats:
+    image: nats:2.10
+    container_name: langhook-nats
+    command: ["-js", "-m", "8222"]
     ports:
-      - "19092:19092"  # Kafka API
-      - "18081:18081"  # Schema Registry
-      - "18082:18082"  # REST Proxy
+      - "4222:4222"  # NATS API
+      - "8222:8222"  # Monitoring
     volumes:
-      - redpanda-data:/var/lib/redpanda/data
+      - nats-data:/data
     networks:
       - langhook
     healthcheck:
-      test: ["CMD-SHELL", "rpk cluster health"]
+      test: ["CMD", "nats", "server", "check", "jetstream"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -48,20 +34,20 @@ services:
       timeout: 10s
       retries: 5
 
-  # Topic initialization service
-  langhook-topics:
+  # Stream initialization service
+  langhook-streams:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: langhook-topics-init
+    container_name: langhook-streams-init
     environment:
-      - KAFKA_BROKERS=redpanda:9092
+      - NATS_URL=nats://nats:4222
     depends_on:
-      redpanda:
+      nats:
         condition: service_healthy
     networks:
       - langhook
-    command: ["bash", "/app/scripts/init-topics.sh"]
+    command: ["bash", "/app/scripts/init-streams.sh"]
     restart: "no"
 
   # LangHook Services (consolidated ingest + map)
@@ -77,7 +63,7 @@ services:
     environment:
       - DEBUG=false
       - LOG_LEVEL=INFO
-      - KAFKA_BROKERS=redpanda:9092
+      - NATS_URL=nats://nats:4222
       - REDIS_URL=redis://redis:6379
       - MAX_BODY_BYTES=1048576
       - RATE_LIMIT=200/minute
@@ -85,47 +71,19 @@ services:
     env_file:
       - .env
     depends_on:
-      redpanda:
+      nats:
         condition: service_healthy
       redis:
         condition: service_healthy
-      langhook-topics:
+      langhook-streams:
         condition: service_completed_successfully
     networks:
       - langhook
     restart: unless-stopped
 
-  # Redpanda Console (optional - for development)
-  redpanda-console:
-    image: docker.redpanda.com/redpandadata/console:latest
-    container_name: langhook-redpanda-console
-    entrypoint: /bin/sh
-    command: -c 'echo "$$CONSOLE_CONFIG_FILE" > /tmp/config.yml; /app/console'
-    environment:
-      CONFIG_FILEPATH: /tmp/config.yml
-      CONSOLE_CONFIG_FILE: |
-        kafka:
-          brokers: ["redpanda:9092"]
-          schemaRegistry:
-            enabled: true
-            urls: ["http://redpanda:8081"]
-        redpanda:
-          adminApi:
-            enabled: true
-            urls: ["http://redpanda:9644"]
-        connect:
-          enabled: false
-    ports:
-      - "8080:8080"
-    depends_on:
-      - redpanda
-    networks:
-      - langhook
-    profiles:
-      - dev
 
 volumes:
-  redpanda-data:
+  nats-data:
   redis-data:
 
 networks:

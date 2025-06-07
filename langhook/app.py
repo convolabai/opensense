@@ -25,7 +25,7 @@ from langhook.core.fastapi import (
     global_exception_handler,
 )
 from langhook.ingest.config import settings as ingest_settings
-from langhook.ingest.kafka import kafka_producer
+from langhook.ingest.nats import nats_producer
 from langhook.ingest.middleware import RateLimitMiddleware
 from langhook.ingest.security import verify_signature
 from langhook.map.config import settings as map_settings
@@ -70,8 +70,8 @@ async def lifespan(app):
     logger = structlog.get_logger("langhook")
     logger.info("Starting OpenSense Services", version="0.3.0")
 
-    # Start Kafka producer (for ingest)
-    await kafka_producer.start()
+    # Start NATS producer (for ingest)
+    await nats_producer.start()
 
     # Start mapping service (Kafka consumer for map) in background
     mapping_task = asyncio.create_task(mapping_service.run())
@@ -88,8 +88,8 @@ async def lifespan(app):
     except (TimeoutError, asyncio.CancelledError):
         logger.info("Mapping service stopped")
 
-    # Stop Kafka producer
-    await kafka_producer.stop()
+    # Stop NATS producer
+    await nats_producer.stop()
 
 
 app = FastAPI(
@@ -260,8 +260,8 @@ async def ingest_webhook(
             "payload": payload,
         }
 
-        # Send to Kafka
-        await kafka_producer.send_event(event_message)
+        # Send to NATS
+        await nats_producer.send_raw_event(event_message)
 
         logger.info(
             "Event ingested successfully",
@@ -309,7 +309,7 @@ async def send_to_dlq(
         "payload": body_bytes.decode("utf-8", errors="replace"),
     }
 
-    await kafka_producer.send_dlq(dlq_message)
+    await nats_producer.send_dlq(dlq_message)
 
 
 # ================================

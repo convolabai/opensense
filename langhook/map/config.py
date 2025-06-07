@@ -12,14 +12,10 @@ class Settings(BaseModel):
     debug: bool = Field(default=False, env="DEBUG")
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
 
-    # Kafka settings
-    kafka_brokers: str = Field(default="localhost:19092", env="KAFKA_BROKERS")
-    kafka_topic_raw_ingest: str = Field(default="raw_ingest", env="KAFKA_TOPIC_RAW_INGEST")
-    kafka_topic_canonical: str = Field(default="langhook.events", env="KAFKA_TOPIC_CANONICAL")
-    kafka_topic_map_fail: str = Field(default="langhook.map_fail", env="KAFKA_TOPIC_MAP_FAIL")
-
-    # Kafka consumer settings
-    kafka_consumer_group: str = Field(default="svc-map", env="KAFKA_CONSUMER_GROUP")
+    # NATS settings
+    nats_url: str = Field(default="nats://localhost:4222", env="NATS_URL")
+    nats_stream_events: str = Field(default="events", env="NATS_STREAM_EVENTS")
+    nats_consumer_group: str = Field(default="svc-map", env="NATS_CONSUMER_GROUP")
 
     # Mappings directory
     mappings_dir: str = Field(default="/app/mappings", env="MAPPINGS_DIR")
@@ -58,11 +54,9 @@ def load_settings() -> Settings:
     env_vars.update({
         'DEBUG': os.getenv('DEBUG', 'false'),
         'LOG_LEVEL': os.getenv('LOG_LEVEL', 'INFO'),
-        'KAFKA_BROKERS': os.getenv('KAFKA_BROKERS', 'localhost:19092'),
-        'KAFKA_TOPIC_RAW_INGEST': os.getenv('KAFKA_TOPIC_RAW_INGEST', 'raw_ingest'),
-        'KAFKA_TOPIC_CANONICAL': os.getenv('KAFKA_TOPIC_CANONICAL', 'langhook.events'),
-        'KAFKA_TOPIC_MAP_FAIL': os.getenv('KAFKA_TOPIC_MAP_FAIL', 'langhook.map_fail'),
-        'KAFKA_CONSUMER_GROUP': os.getenv('KAFKA_CONSUMER_GROUP', 'svc-map'),
+        'NATS_URL': os.getenv('NATS_URL', 'nats://localhost:4222'),
+        'NATS_STREAM_EVENTS': os.getenv('NATS_STREAM_EVENTS', 'events'),
+        'NATS_CONSUMER_GROUP': os.getenv('NATS_CONSUMER_GROUP', 'svc-map'),
         'MAPPINGS_DIR': os.getenv('MAPPINGS_DIR', '/app/mappings'),
         'OPENAI_API_KEY': os.getenv('OPENAI_API_KEY'),
         'OLLAMA_BASE_URL': os.getenv('OLLAMA_BASE_URL'),
@@ -77,11 +71,9 @@ def load_settings() -> Settings:
     return Settings(
         debug=debug_val,
         log_level=env_vars['LOG_LEVEL'],
-        kafka_brokers=env_vars['KAFKA_BROKERS'],
-        kafka_topic_raw_ingest=env_vars['KAFKA_TOPIC_RAW_INGEST'],
-        kafka_topic_canonical=env_vars['KAFKA_TOPIC_CANONICAL'],
-        kafka_topic_map_fail=env_vars['KAFKA_TOPIC_MAP_FAIL'],
-        kafka_consumer_group=env_vars['KAFKA_CONSUMER_GROUP'],
+        nats_url=env_vars['NATS_URL'],
+        nats_stream_events=env_vars['NATS_STREAM_EVENTS'],
+        nats_consumer_group=env_vars['NATS_CONSUMER_GROUP'],
         mappings_dir=env_vars['MAPPINGS_DIR'],
         openai_api_key=env_vars.get('OPENAI_API_KEY'),
         ollama_base_url=env_vars.get('OLLAMA_BASE_URL'),

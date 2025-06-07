@@ -26,7 +26,7 @@ dependencies = [
     "uvicorn[standard]>=0.29.0",
     "pydantic>=2.0.0",
     "structlog>=23.0.0",
-    "aiokafka>=0.8.0",
+    "nats-py>=2.9.0",
     "redis[hiredis]>=5.0.0",
     # Epic 2 dependencies
     "jsonata>=0.2.0",
@@ -50,7 +50,7 @@ dev = [
 
 [project.scripts]
 langhook-dlq-show = "langhook.cli.dlq_show:main"
-langhook-topics = "langhook.cli.topic_manager:main"
+langhook-streams = "langhook.cli.stream_manager:main"
 langhook = "langhook.main:main"
 
 [project.urls]
