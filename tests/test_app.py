@@ -10,17 +10,37 @@ from langhook.app import app
 @pytest.fixture
 def client():
     """Create a test client for the consolidated FastAPI app."""
-    with patch('langhook.ingest.kafka.kafka_producer') as mock_kafka, \
-         patch('langhook.map.service.mapping_service') as mock_mapping:
-        mock_kafka.start = AsyncMock()
-        mock_kafka.stop = AsyncMock()
-        mock_kafka.send_event = AsyncMock()
-        mock_kafka.send_dlq = AsyncMock()
+    with patch('langhook.ingest.nats.nats_producer') as mock_nats, \
+         patch('langhook.map.service.mapping_service') as mock_mapping, \
+         patch('langhook.ingest.middleware.RateLimitMiddleware.is_rate_limited') as mock_rate_limit, \
+         patch('nats.connect') as mock_nats_connect:
+        mock_nats.start = AsyncMock()
+        mock_nats.stop = AsyncMock()
+        mock_nats.send_raw_event = AsyncMock()
+        mock_nats.send_dlq = AsyncMock()
         
         mock_mapping.run = AsyncMock()
         
-        # Override lifespan for testing
-        app.router.lifespan_context = None
+        # Mock rate limiting to always return False (not rate limited)
+        mock_rate_limit.return_value = False
+        
+        # Mock NATS connection
+        from unittest.mock import Mock
+        mock_nc = AsyncMock()
+        mock_js = Mock()  # JetStream should be sync mock
+        mock_js.publish = AsyncMock()
+        mock_nc.jetstream = Mock(return_value=mock_js)  # jetstream() should return sync
+        mock_nc.close = AsyncMock()
+        mock_nats_connect.return_value = mock_nc
+        
+        # Override lifespan for testing by creating a simple mock lifespan
+        from contextlib import asynccontextmanager
+        
+        @asynccontextmanager
+        async def mock_lifespan(app):
+            yield
+        
+        app.router.lifespan_context = mock_lifespan
         with TestClient(app) as client:
             yield client
 
@@ -38,8 +58,8 @@ def test_health_endpoint(client):
 
 def test_ingest_endpoint_valid_json(client):
     """Test ingesting valid JSON payload."""
-    with patch('langhook.ingest.kafka.kafka_producer') as mock_kafka:
-        mock_kafka.send_event = AsyncMock()
+    with patch('langhook.ingest.nats.nats_producer') as mock_nats:
+        mock_nats.send_raw_event = AsyncMock()
         
         payload = {"test": "data", "value": 123}
         response = client.post(
@@ -56,8 +76,8 @@ def test_ingest_endpoint_valid_json(client):
 
 def test_ingest_endpoint_invalid_json(client):
     """Test ingesting invalid JSON payload."""
-    with patch('langhook.ingest.kafka.kafka_producer') as mock_kafka:
-        mock_kafka.send_dlq = AsyncMock()
+    with patch('langhook.ingest.nats.nats_producer') as mock_nats:
+        mock_nats.send_dlq = AsyncMock()
         
         response = client.post(
             "/ingest/github",
@@ -85,8 +105,8 @@ def test_ingest_endpoint_body_too_large(client):
 
 def test_ingest_endpoint_different_sources(client):
     """Test that different sources are handled correctly."""
-    with patch('langhook.ingest.kafka.kafka_producer') as mock_kafka:
-        mock_kafka.send_event = AsyncMock()
+    with patch('langhook.ingest.nats.nats_producer') as mock_nats:
+        mock_nats.send_raw_event = AsyncMock()
         
         payload = {"test": "data"}
         
@@ -105,7 +125,7 @@ def test_ingest_endpoint_different_sources(client):
 
 def test_map_metrics_endpoint(client):
     """Test map metrics endpoint."""
-    with patch('langhook.map.service.mapping_service') as mock_service:
+    with patch('langhook.app.mapping_service') as mock_service:
         mock_service.get_metrics.return_value = {
             "events_processed": 100,
             "events_mapped": 95,
