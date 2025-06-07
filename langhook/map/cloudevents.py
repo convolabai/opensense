@@ -65,12 +65,8 @@ class CloudEventWrapper:
             "resource": canonical_data["resource"],  # Now an object with type and id
             "action": canonical_data["action"],
             "timestamp": datetime.now(UTC).isoformat(),
-            "raw": raw_payload
+            "payload": raw_payload
         }
-
-        # Add optional summary if provided
-        if "summary" in canonical_data:
-            canonical_event["summary"] = canonical_data["summary"]
 
         return canonical_event
 

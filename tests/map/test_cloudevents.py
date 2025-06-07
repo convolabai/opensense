@@ -11,8 +11,7 @@ def test_canonical_event_creation():
     canonical_data = {
         "publisher": "github",
         "resource": {"type": "pull_request", "id": 1374},
-        "action": "create",
-        "summary": "PR 1374 opened by user"
+        "action": "create"
     }
     
     raw_payload = {
@@ -32,8 +31,7 @@ def test_canonical_event_creation():
     assert canonical_event["resource"]["type"] == "pull_request"
     assert canonical_event["resource"]["id"] == 1374
     assert canonical_event["action"] == "create"
-    assert canonical_event["summary"] == "PR 1374 opened by user"
-    assert canonical_event["raw"] == raw_payload
+    assert canonical_event["payload"] == raw_payload
     assert "timestamp" in canonical_event
     
     # Test CloudEvents envelope creation
@@ -57,8 +55,7 @@ def test_event_validation():
         "resource": {"type": "pull_request", "id": 1374},
         "action": "create",
         "timestamp": "2025-06-03T15:45:02Z",
-        "summary": "PR 1374 opened",
-        "raw": {"test": "data"}
+        "payload": {"test": "data"}
     }
     
     assert wrapper.validate_canonical_event(valid_event) is True

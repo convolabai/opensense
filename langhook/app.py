@@ -2,6 +2,7 @@
 
 # init dotenv
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 import json
@@ -25,7 +26,6 @@ from langhook.ingest.kafka import kafka_producer
 from langhook.ingest.middleware import RateLimitMiddleware
 from langhook.ingest.security import verify_signature
 from langhook.map.config import settings as map_settings
-from langhook.map.llm import llm_service
 from langhook.map.metrics import metrics
 from langhook.map.service import mapping_service
 
@@ -101,17 +101,17 @@ frontend_path = Path(__file__).parent.parent / "frontend" / "build"
 if frontend_path.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_path / "static")), name="static")
 
-    @app.get("/demo")
-    async def demo():
-        """Serve the React demo application."""
+    @app.get("/console")
+    async def console():
+        """Serve the React console application."""
         index_path = frontend_path / "index.html"
         if index_path.exists():
             return FileResponse(str(index_path))
-        raise HTTPException(status_code=404, detail="Demo not available - frontend not built")
+        raise HTTPException(status_code=404, detail="Console not available - frontend not built")
 
-    @app.get("/demo/{path:path}")
-    async def demo_assets(path: str):
-        """Serve demo assets."""
+    @app.get("/console/{path:path}")
+    async def console_assets(path: str):
+        """Serve console assets."""
         file_path = frontend_path / path
         if file_path.exists() and file_path.is_file():
             return FileResponse(str(file_path))
@@ -121,12 +121,12 @@ if frontend_path.exists():
             return FileResponse(str(index_path))
         raise HTTPException(status_code=404, detail="File not found")
 else:
-    @app.get("/demo")
-    async def demo_not_available():
-        """Demo not available when frontend is not built."""
+    @app.get("/console")
+    async def console_not_available():
+        """Console not available when frontend is not built."""
         return {
-            "message": "Demo not available",
-            "instructions": "To build the frontend demo:\n1. cd frontend\n2. npm install\n3. npm run build"
+            "message": "Console not available",
+            "instructions": "To build the frontend console:\n1. cd frontend\n2. npm install\n3. npm run build"
         }
 
 
@@ -305,20 +305,6 @@ async def send_to_dlq(
 # MAP ENDPOINTS
 # ================================
 
-class SuggestMapRequest(BaseModel):
-    """Request model for mapping suggestion endpoint."""
-
-    source: str
-    payload: dict[str, Any]
-
-
-class SuggestMapResponse(BaseModel):
-    """Response model for mapping suggestion endpoint."""
-
-    jsonata: str
-    source: str
-
-
 class MetricsResponse(BaseModel):
     """Response model for metrics endpoint."""
 
@@ -328,56 +314,6 @@ class MetricsResponse(BaseModel):
     llm_invocations: int
     mapping_success_rate: float
     llm_usage_rate: float
-
-
-@app.post("/map/suggest-map", response_model=SuggestMapResponse)
-async def suggest_mapping(request: SuggestMapRequest) -> SuggestMapResponse:
-    """
-    Generate JSONata mapping suggestion using LLM.
-    
-    This endpoint is for development/testing purposes to help create
-    mapping files manually.
-    """
-    if not llm_service.is_available():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="LLM service not available"
-        )
-
-    try:
-        suggestion = await llm_service.suggest_mapping(
-            source=request.source,
-            raw_payload=request.payload
-        )
-
-        if suggestion is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to generate mapping suggestion"
-            )
-
-        logger.info(
-            "Mapping suggestion generated via API",
-            source=request.source,
-            suggestion_length=len(suggestion)
-        )
-
-        return SuggestMapResponse(
-            jsonata=suggestion,
-            source=request.source
-        )
-
-    except Exception as e:
-        logger.error(
-            "Error in suggest-map endpoint",
-            source=request.source,
-            error=str(e),
-            exc_info=True
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
 
 
 @app.get("/map/metrics")

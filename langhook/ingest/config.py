@@ -23,7 +23,7 @@ class Settings(BaseModel):
 
     # Redis settings (for rate limiting)
     redis_url: str = Field(default="redis://localhost:16379", env="REDIS_URL")
-    
+
     # HMAC secrets for different sources
     github_secret: str | None = Field(default=None, env="GITHUB_SECRET")
     stripe_secret: str | None = Field(default=None, env="STRIPE_SECRET")

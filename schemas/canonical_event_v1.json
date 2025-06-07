@@ -8,7 +8,7 @@
     "resource",
     "action", 
     "timestamp",
-    "raw"
+    "payload"
   ],
   "properties": {
     "publisher": {
@@ -45,12 +45,7 @@
       "format": "date-time",
       "description": "ISO-8601 timestamp in UTC (YYYY-MM-DDTHH:mm:ssZ)"
     },
-    "summary": {
-      "type": "string",
-      "maxLength": 120,
-      "description": "≤120-char human sentence (optional)"
-    },
-    "raw": {
+    "payload": {
       "type": "object",
       "description": "Entire original payload - no filtering"
     }

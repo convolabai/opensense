@@ -1,6 +1,7 @@
 """Main entry point for the consolidated LangHook services."""
 
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 import signal
