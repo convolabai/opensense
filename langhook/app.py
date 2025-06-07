@@ -81,9 +81,10 @@ async def lifespan(app):
     try:
         from langhook.subscriptions.database import db_service
         db_service.create_tables()
-        logger.info("Subscription database initialized")
+        logger.info("Subscription database initialized successfully")
     except Exception as e:
-        logger.warning("Failed to initialize subscription database", error=str(e))
+        logger.error("Failed to initialize subscription database", error=str(e), exc_info=True)
+        raise RuntimeError(f"Cannot start application - database initialization failed: {e}") from e
 
     yield
 
