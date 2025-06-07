@@ -4,11 +4,7 @@
 services:
   # Use lightweight, faster-starting containers for testing
   nats:
-    healthcheck:
-      interval: 5s
-      timeout: 5s
-      retries: 12
-      start_period: 10s
+    # NATS starts quickly and doesn't need curl/wget, so we use service_started condition
 
   redis:
     healthcheck:
@@ -39,6 +35,15 @@ services:
       - MAPPINGS_DIR=/app/mappings
       # Test environment variables
       - TEST_MODE=true
+    depends_on:
+      nats:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      langhook-streams:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
       interval: 10s
