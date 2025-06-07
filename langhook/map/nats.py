@@ -21,7 +21,7 @@ class MapNATSProducer(BaseNATSProducer):
         """
         Build NATS subject from canonical event data.
         
-        Subject pattern: <publisher>.<resource_type>.<resource_id>.<action>
+        Subject pattern: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>
         """
         publisher = canonical_data.get("publisher", "unknown")
         resource = canonical_data.get("resource", {})
@@ -32,7 +32,7 @@ class MapNATSProducer(BaseNATSProducer):
         # Clean up resource_id to be NATS-subject safe
         resource_id = resource_id.replace("/", "_").replace("#", "_").replace(" ", "_")
         
-        return f"{publisher}.{resource_type}.{resource_id}.{action}"
+        return f"langhook.events.{publisher}.{resource_type}.{resource_id}.{action}"
 
     async def send_canonical_event(self, event: Dict[str, Any]) -> None:
         """Send canonical event to the events stream using subject routing."""

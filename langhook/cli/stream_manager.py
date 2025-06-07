@@ -45,7 +45,7 @@ class StreamManager:
         # Create the main events stream
         stream_config = StreamConfig(
             name="events",
-            subjects=["*.*.*.*"],  # Subject pattern for canonical events
+            subjects=["langhook.events.>"],  # More specific subject pattern to avoid JetStream API conflicts
             storage=StorageType.FILE,
             retention=RetentionPolicy.LIMITS,
             max_age=7 * 24 * 60 * 60,  # 7 days in seconds
@@ -57,7 +57,7 @@ class StreamManager:
         try:
             await self.js.add_stream(stream_config)
             logger.info("Created stream 'events'", subjects=stream_config.subjects)
-            print("✅ Created stream 'events' with subjects *.*.*.*")
+            print("✅ Created stream 'events' with subjects langhook.events.>")
         except Exception as e:
             if "stream name already in use" in str(e).lower():
                 logger.info("Stream 'events' already exists")
@@ -72,17 +72,15 @@ class StreamManager:
             raise RuntimeError("Not connected to NATS")
 
         try:
-            streams = []
-            async for stream in self.js.streams_info():
-                streams.append(stream)
-
-            if not streams:
+            streams_info = await self.js.streams_info()
+            
+            if not streams_info:
                 print("No streams found")
                 return
 
             print("\nStreams:")
             print("-" * 50)
-            for stream in streams:
+            for stream in streams_info:
                 print(f"Name: {stream.config.name}")
                 print(f"Subjects: {stream.config.subjects}")
                 print(f"Messages: {stream.state.messages}")
