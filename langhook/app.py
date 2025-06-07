@@ -1,4 +1,4 @@
-"""Consolidated FastAPI application for OpenSense services."""
+"""Consolidated FastAPI application for LangHook services."""
 
 # init dotenv
 from dotenv import load_dotenv
@@ -69,7 +69,7 @@ async def lifespan(app):
     )
 
     logger = structlog.get_logger("langhook")
-    logger.info("Starting OpenSense Services", version="0.3.0")
+    logger.info("Starting LangHook Services", version="0.3.0")
 
     # Start NATS producer (for ingest)
     await nats_producer.start()
@@ -101,7 +101,7 @@ async def lifespan(app):
     yield
 
     # Shutdown
-    logger.info("Shutting down OpenSense Services")
+    logger.info("Shutting down LangHook Services")
 
     # Cancel mapping service
     mapping_task.cancel()
@@ -115,8 +115,8 @@ async def lifespan(app):
 
 
 app = FastAPI(
-    title="OpenSense Services",
-    description="Unified API for OpenSense ingest gateway and canonicaliser services",
+    title="LangHook Services",
+    description="Unified API for LangHook ingest gateway and canonicaliser services",
     version="0.3.0",
     docs_url="/docs" if (ingest_settings.debug or map_settings.debug) else None,
     redoc_url="/redoc" if (ingest_settings.debug or map_settings.debug) else None,
@@ -377,7 +377,7 @@ async def get_json_metrics() -> MetricsResponse:
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "opensense.app:app",
+        "langhook.app:app",
         host="0.0.0.0",
         port=8000,
         reload=ingest_settings.debug or map_settings.debug,

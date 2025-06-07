@@ -30,7 +30,7 @@ class MappingService:
 
     async def start(self) -> None:
         """Start the mapping service."""
-        logger.info("Starting OpenSense Canonicaliser", version="0.3.0")
+        logger.info("Starting LangHook Canonicaliser", version="0.3.0")
 
         # Update active mappings count in metrics
         metrics.update_active_mappings(len(mapping_engine._mappings))

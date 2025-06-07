@@ -17,7 +17,7 @@ class MapKafkaProducer(BaseKafkaProducer):
         super().__init__(settings.kafka_brokers)
 
     async def send_canonical_event(self, event: dict[str, Any]) -> None:
-        """Send canonical event to the opensense.events topic."""
+        """Send canonical event to the langhook.events topic."""
         await self.send_message(
             settings.kafka_topic_canonical,
             event,
@@ -33,7 +33,7 @@ class MapKafkaProducer(BaseKafkaProducer):
         )
 
     async def send_mapping_failure(self, failure_event: dict[str, Any]) -> None:
-        """Send mapping failure to the opensense.map_fail topic."""
+        """Send mapping failure to the langhook.map_fail topic."""
         try:
             await self.send_message(
                 settings.kafka_topic_map_fail,

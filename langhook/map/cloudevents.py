@@ -21,7 +21,7 @@ class CloudEventWrapper:
         """Load the canonical event JSON schema."""
         # Get the project root directory
         current_file = Path(__file__)
-        # opensense/map/cloudevents.py -> opensense/map -> opensense -> project_root -> schemas
+        # langhook/map/cloudevents.py -> langhook/map -> langhook -> project_root -> schemas
         project_root = current_file.parent.parent.parent
         schema_path = project_root / "schemas" / "canonical_event_v1.json"
 

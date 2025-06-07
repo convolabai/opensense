@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Complete feature demonstration and validation script for OpenSense Ingest Gateway.
+Complete feature demonstration and validation script for LangHook Ingest Gateway.
 
 This script validates all Epic 1 stories (OS-101 through OS-105) implementation.
 """
@@ -24,7 +24,7 @@ from opensense.ingest.config import settings
 
 def print_banner():
     """Print feature demonstration banner."""
-    print("🚀 OpenSense Ingest Gateway - Feature Demonstration")
+    print("🚀 LangHook Ingest Gateway - Feature Demonstration")
     print("=" * 60)
     print("Epic 1 Implementation Validation")
     print("Version: 0.3.0")
@@ -324,7 +324,7 @@ async def run_complete_demo():
         print("   OS-103: HMAC signature verification")
         print("   OS-104: Body size limits + IP rate limiting")
         print("   OS-105: Dead-letter queue with CLI tools")
-        print("\n🚀 OpenSense Ingest Gateway Ready for Production!")
+        print("\n🚀 LangHook Ingest Gateway Ready for Production!")
         print("\n📚 Quick Start:")
         print("   docker-compose up -d")
         print("   curl http://localhost:8000/health/")

@@ -249,7 +249,7 @@ function App() {
   return (
     <div className="container">
       <div className="header">
-        <h1>OpenSense Demo</h1>
+        <h1>LangHook Demo</h1>
         <p>Transform webhooks into canonical events with AI-powered mapping</p>
       </div>
 

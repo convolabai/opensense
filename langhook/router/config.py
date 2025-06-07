@@ -14,8 +14,8 @@ class Settings(BaseModel):
 
     # Kafka settings
     kafka_brokers: str = Field(default="localhost:19092", env="KAFKA_BROKERS")
-    kafka_topic_canonical: str = Field(default="opensense.events", env="KAFKA_TOPIC_CANONICAL")
-    kafka_topic_matches: str = Field(default="opensense.matches", env="KAFKA_TOPIC_MATCHES")
+    kafka_topic_canonical: str = Field(default="langhook.events", env="KAFKA_TOPIC_CANONICAL")
+    kafka_topic_matches: str = Field(default="langhook.matches", env="KAFKA_TOPIC_MATCHES")
 
     # Kafka consumer settings
     kafka_consumer_group: str = Field(default="svc-router", env="KAFKA_CONSUMER_GROUP")
@@ -51,8 +51,8 @@ def load_settings() -> Settings:
         'DEBUG': os.getenv('DEBUG', 'false'),
         'LOG_LEVEL': os.getenv('LOG_LEVEL', 'INFO'),
         'KAFKA_BROKERS': os.getenv('KAFKA_BROKERS', 'localhost:19092'),
-        'KAFKA_TOPIC_CANONICAL': os.getenv('KAFKA_TOPIC_CANONICAL', 'opensense.events'),
-        'KAFKA_TOPIC_MATCHES': os.getenv('KAFKA_TOPIC_MATCHES', 'opensense.matches'),
+        'KAFKA_TOPIC_CANONICAL': os.getenv('KAFKA_TOPIC_CANONICAL', 'langhook.events'),
+        'KAFKA_TOPIC_MATCHES': os.getenv('KAFKA_TOPIC_MATCHES', 'langhook.matches'),
         'KAFKA_CONSUMER_GROUP': os.getenv('KAFKA_CONSUMER_GROUP', 'svc-router'),
         'RULES_DIR': os.getenv('RULES_DIR', '/app/rules'),
         'MAX_EVENTS_PER_SECOND': os.getenv('MAX_EVENTS_PER_SECOND', '5000'),
