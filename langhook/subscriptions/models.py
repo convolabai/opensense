@@ -14,7 +14,7 @@ class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
-    subscriber_id = Column(String(255), nullable=False, index=True)  # JWT sub claim or other subscriber identifier
+    subscriber_id = Column(String(255), nullable=False, index=True)  # Subscriber identifier
     description = Column(Text, nullable=False)  # Natural language description
     pattern = Column(String(255), nullable=False)  # Generated NATS filter subject pattern
     channel_type = Column(String(50), nullable=False)  # 'webhook'

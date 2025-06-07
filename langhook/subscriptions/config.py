@@ -11,10 +11,6 @@ class SubscriptionSettings(BaseModel):
     # Database settings
     postgres_dsn: str = Field(default="postgresql://langhook:langhook@localhost:5432/langhook", env="POSTGRES_DSN")
 
-    # JWT settings
-    jwt_secret: str = Field(default="dev-secret-key", env="JWT_SECRET")
-    jwt_algorithm: str = Field(default="HS256", env="JWT_ALGORITHM")
-
     # LLM service settings
     llm_provider: str = Field(default="openai", env="LLM_PROVIDER")  # openai, azure_openai, anthropic, google, local
     llm_api_key: str | None = Field(default=None, env="LLM_API_KEY")
@@ -49,8 +45,6 @@ def load_subscription_settings() -> SubscriptionSettings:
     # Override with actual environment variables
     env_vars.update({
         'POSTGRES_DSN': os.getenv('POSTGRES_DSN', 'postgresql://langhook:langhook@localhost:5432/langhook'),
-        'JWT_SECRET': os.getenv('JWT_SECRET', 'dev-secret-key'),
-        'JWT_ALGORITHM': os.getenv('JWT_ALGORITHM', 'HS256'),
         'LLM_PROVIDER': os.getenv('LLM_PROVIDER', 'openai'),
         'LLM_API_KEY': os.getenv('LLM_API_KEY') or os.getenv('OPENAI_API_KEY'),  # Backward compatibility
         'LLM_MODEL': os.getenv('LLM_MODEL', 'gpt-4'),
@@ -62,8 +56,6 @@ def load_subscription_settings() -> SubscriptionSettings:
 
     return SubscriptionSettings(
         postgres_dsn=env_vars['POSTGRES_DSN'],
-        jwt_secret=env_vars['JWT_SECRET'],
-        jwt_algorithm=env_vars['JWT_ALGORITHM'],
         llm_provider=env_vars['LLM_PROVIDER'],
         llm_api_key=env_vars.get('LLM_API_KEY'),
         llm_model=env_vars['LLM_MODEL'],
