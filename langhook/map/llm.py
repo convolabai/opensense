@@ -20,20 +20,22 @@ class LLMSuggestionService:
                 from langchain.chat_models import ChatOpenAI
                 self.llm = ChatOpenAI(
                     openai_api_key=settings.openai_api_key,
-                    model_name="gpt-4",
+                    model_name="gpt-4.1-nano",
                     temperature=0.1,
                     max_tokens=1000,
                 )
                 self.llm_available = True
                 logger.info("OpenAI LLM initialized")
-            except ImportError:
+            except ImportError as e:
                 logger.warning("LangChain not available, LLM suggestions disabled")
+                raise e
             except Exception as e:
                 logger.error(
                     "Failed to initialize OpenAI LLM",
                     error=str(e),
                     exc_info=True
                 )
+                raise e
         else:
             logger.info("No OpenAI API key provided, LLM suggestions disabled")
 
