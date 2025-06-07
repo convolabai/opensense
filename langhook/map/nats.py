@@ -21,7 +21,7 @@ class MapNATSProducer(BaseNATSProducer):
         """
         Build NATS subject from canonical event data.
         
-        Subject pattern: <publisher>.<resource_type>.<resource_id>.<action>
+        Subject pattern: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>
         """
         publisher = canonical_data.get("publisher", "unknown")
         resource = canonical_data.get("resource", {})
@@ -32,7 +32,7 @@ class MapNATSProducer(BaseNATSProducer):
         # Clean up resource_id to be NATS-subject safe
         resource_id = resource_id.replace("/", "_").replace("#", "_").replace(" ", "_")
         
-        return f"{publisher}.{resource_type}.{resource_id}.{action}"
+        return f"langhook.events.{publisher}.{resource_type}.{resource_id}.{action}"
 
     async def send_canonical_event(self, event: Dict[str, Any]) -> None:
         """Send canonical event to the events stream using subject routing."""
@@ -94,14 +94,14 @@ class MapNATSProducer(BaseNATSProducer):
 
 
 class MapNATSConsumer(BaseNATSConsumer):
-    """NATS consumer for reading raw events from raw.* subjects."""
+    """NATS consumer for reading raw events from raw.> subjects."""
 
     def __init__(self, message_handler) -> None:
         super().__init__(
             nats_url=settings.nats_url,
             stream_name=settings.nats_stream_events,
             consumer_name=f"{settings.nats_consumer_group}_raw_processor",
-            filter_subject="raw.*",  # Listen to all raw events
+            filter_subject="raw.>",  # Listen to all raw events
             message_handler=message_handler,
             deliver_policy=DeliverPolicy.ALL,
         )

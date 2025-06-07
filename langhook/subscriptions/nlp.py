@@ -182,13 +182,13 @@ class LLMPatternService:
 
 Your job is to convert natural language descriptions into NATS subject filter patterns.
 
-NATS subject pattern format: <publisher>.<resource_type>.<resource_id>.<action>
+NATS subject pattern format: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>
 
 Examples:
-- "github.pull_request.1374.update" - GitHub PR 1374 updates
-- "stripe.payment_intent.*.create" - Any Stripe payment intent creation
-- "*.user.123.delete" - User 123 deletion from any system
-- "github.*.*.update" - Any GitHub resource updates
+- "langhook.events.github.pull_request.1374.update" - GitHub PR 1374 updates
+- "langhook.events.stripe.payment_intent.*.create" - Any Stripe payment intent creation
+- "langhook.events.*.user.123.delete" - User 123 deletion from any system
+- "langhook.events.github.*.*.update" - Any GitHub resource updates
 
 Wildcards:
 - "*" matches exactly one token
@@ -210,8 +210,8 @@ Pattern:"""
 
     def _extract_pattern_from_response(self, response: str) -> str | None:
         """Extract the NATS pattern from the LLM response."""
-        # Look for a pattern that matches the NATS subject format
-        pattern_regex = r'([a-z0-9_\-*>]+\.){3}[a-z0-9_\-*>]+'
+        # Look for a pattern that matches the new NATS subject format with langhook.events prefix
+        pattern_regex = r'langhook\.events\.([a-z0-9_\-*>]+\.){3}[a-z0-9_\-*>]+'
 
         match = re.search(pattern_regex, response.lower())
         if match:
@@ -219,7 +219,7 @@ Pattern:"""
 
         # If no pattern found, check if the entire response looks like a pattern
         cleaned = response.strip().lower()
-        if re.match(r'^([a-z0-9_\-*>]+\.){3}[a-z0-9_\-*>]+$', cleaned):
+        if re.match(r'^langhook\.events\.([a-z0-9_\-*>]+\.){3}[a-z0-9_\-*>]+$', cleaned):
             return cleaned
 
         return None
@@ -267,7 +267,7 @@ Pattern:"""
         elif any(word in description_lower for word in ["approve", "approved"]):
             action = "update"  # Approval is typically an update action
 
-        pattern = f"{publisher}.{resource_type}.{resource_id}.{action}"
+        pattern = f"langhook.events.{publisher}.{resource_type}.{resource_id}.{action}"
 
         logger.info(
             "Fallback pattern conversion completed",

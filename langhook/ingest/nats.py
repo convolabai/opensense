@@ -20,7 +20,7 @@ class NATSEventProducer(BaseNATSProducer):
         """
         Build NATS subject from canonical event data.
         
-        Subject pattern: <publisher>.<resource_type>.<resource_id>.<action>
+        Subject pattern: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>
         
         Args:
             canonical_data: Canonical event data with publisher, resource, action
@@ -38,7 +38,7 @@ class NATSEventProducer(BaseNATSProducer):
         # Replace any problematic characters with underscores
         resource_id = resource_id.replace("/", "_").replace("#", "_").replace(" ", "_")
         
-        return f"{publisher}.{resource_type}.{resource_id}.{action}"
+        return f"langhook.events.{publisher}.{resource_type}.{resource_id}.{action}"
 
     async def send_canonical_event(self, canonical_data: Dict[str, Any]) -> None:
         """

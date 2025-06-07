@@ -216,18 +216,42 @@ graph TD
 
 ## 🧪 Testing
 
-Run the test suite:
+LangHook includes comprehensive testing at multiple levels:
 
+### Unit Tests
 ```bash
-# Unit tests
-pytest tests/
+# Run all unit tests
+pytest tests/ --ignore=tests/e2e/
 
-# Integration tests with Docker Compose
-docker-compose -f docker-compose.test.yml up --abort-on-container-exit
-
-# Load testing
-python scripts/load_test.py
+# Run specific test files
+pytest tests/test_app.py -v
+pytest tests/map/test_mapper.py -v
 ```
+
+### End-to-End Tests
+```bash
+# Run complete E2E test suite (requires Docker)
+./scripts/run-e2e-tests.sh
+
+# Manual E2E testing
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
+docker-compose -f docker-compose.yml -f docker-compose.test.yml run --rm test-runner
+```
+
+The E2E test suite covers:
+- ✅ **Subscription API CRUD**: Create, read, update, delete subscriptions
+- ✅ **Event Ingestion**: Webhook processing from GitHub, Stripe, and custom sources
+- ✅ **Event Processing Flow**: Complete event transformation and routing
+- ✅ **Service Integration**: Multi-service Docker Compose orchestration
+- ✅ **Health Checks**: Service health monitoring and metrics
+
+See [tests/e2e/README.md](tests/e2e/README.md) for detailed documentation.
+
+### CI/CD Pipeline
+Tests run automatically on every PR via GitHub Actions:
+- Unit tests and linting
+- End-to-end integration tests
+- Security scanning
 
 ## 📚 Documentation
 

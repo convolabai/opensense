@@ -47,15 +47,30 @@ async def create_subscription(
         return SubscriptionResponse.from_orm(subscription)
 
     except Exception as e:
+        error_details = str(e)
+        # Log the full error with stack trace for debugging
         logger.error(
             "Failed to create subscription",
             subscriber_id=subscriber_id,
-            error=str(e),
+            description=subscription_data.description,
+            channel_type=subscription_data.channel_type,
+            error=error_details,
             exc_info=True
         )
+        
+        # Return a more specific error message based on error type
+        if "relation" in error_details.lower() and "does not exist" in error_details.lower():
+            detail = "Database not properly initialized - subscription tables missing"
+        elif "connection" in error_details.lower():
+            detail = "Database connection failed"
+        elif "permission" in error_details.lower():
+            detail = "Database permission denied"
+        else:
+            detail = f"Failed to create subscription: {error_details}"
+            
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create subscription"
+            detail=detail
         ) from e
 
 

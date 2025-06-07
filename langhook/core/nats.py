@@ -119,7 +119,6 @@ class BaseNATSConsumer:
                 name=self.consumer_name,
                 deliver_policy=self.deliver_policy,
                 filter_subject=self.filter_subject,
-                ack_explicit=True,
             )
             
             try:
@@ -178,7 +177,7 @@ class BaseNATSConsumer:
             # Subscribe to the consumer
             self._subscription = await self.js.pull_subscribe(
                 self.filter_subject,
-                consumer=self.consumer_name,
+                durable=self.consumer_name,
                 stream=self.stream_name,
             )
 

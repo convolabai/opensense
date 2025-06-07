@@ -1,0 +1,78 @@
+# Docker Compose override for end-to-end testing
+# Usage: docker compose -f docker-compose.yml -f docker-compose.test.yml up
+
+services:
+  # Use lightweight, faster-starting containers for testing
+  nats:
+    # NATS starts quickly and doesn't need curl/wget, so we use service_started condition
+
+  redis:
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  postgres:
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # Override LangHook service for testing
+  langhook:
+    profiles:
+      - test
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - NATS_URL=nats://nats:4222
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_DSN=postgresql://langhook:langhook@postgres:5432/langhook
+      - MAX_BODY_BYTES=1048576
+      - RATE_LIMIT=1000/minute
+      - MAPPINGS_DIR=/app/mappings
+      # Test environment variables
+      - TEST_MODE=true
+    depends_on:
+      nats:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      langhook-streams:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # Test runner container
+  test-runner:
+    profiles:
+      - test
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    container_name: langhook-test-runner
+    environment:
+      - LANGHOOK_BASE_URL=http://langhook:8000
+      - NATS_URL=nats://nats:4222
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_DSN=postgresql://langhook:langhook@postgres:5432/langhook
+      - PYTHONPATH=/app
+    depends_on:
+      langhook:
+        condition: service_healthy
+    networks:
+      - langhook
+    working_dir: /app
+    volumes:
+      - ./tests:/app/tests
+      - ./pyproject.toml:/app/pyproject.toml
+    command: ["python", "-m", "pytest", "tests/e2e/", "-v", "--tb=short"]
