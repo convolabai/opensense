@@ -57,15 +57,81 @@ jobs:
     
     - name: Start services
       run: |
-        docker compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
+        # Start infrastructure services first (without LangHook)
+        docker compose -f docker-compose.yml -f docker-compose.test.yml up -d --build nats redis postgres langhook-streams
         
     - name: Wait for services to be ready
       run: |
-        # Wait for services to be healthy
-        timeout 300 bash -c 'until docker compose -f docker-compose.yml -f docker-compose.test.yml ps | grep -E "(healthy|Up)"; do sleep 5; done'
+        echo "Waiting for services to be healthy..."
         
-        # Additional wait for LangHook service specifically
-        timeout 120 bash -c 'until curl -f http://localhost:8000/health/ 2>/dev/null; do sleep 5; done'
+        # Function to check if all required services are healthy
+        check_services_healthy() {
+          # Get status of each service we care about
+          redis_status=$(docker compose -f docker-compose.yml -f docker-compose.test.yml ps redis --format "{{.Health}}")
+          postgres_status=$(docker compose -f docker-compose.yml -f docker-compose.test.yml ps postgres --format "{{.Health}}")
+          streams_status=$(docker compose -f docker-compose.yml -f docker-compose.test.yml ps -a langhook-streams --format "{{.Status}}")
+          
+          echo "Redis: $redis_status, Postgres: $postgres_status, Streams: $streams_status"
+          
+          # Check if all are healthy/completed
+          [[ "$redis_status" == "healthy" ]] && \
+          [[ "$postgres_status" == "healthy" ]] && \
+          [[ "$streams_status" == *"Exited (0)"* ]]
+        }
+        
+        # Wait for infrastructure services to be healthy (max 5 minutes)
+        max_attempts=60
+        attempt=1
+        while [ $attempt -le $max_attempts ]; do
+          if check_services_healthy; then
+            echo "All infrastructure services are healthy!"
+            break
+          fi
+          
+          if [ $((attempt % 10)) -eq 0 ]; then
+            echo "Still waiting for services... (attempt $attempt/$max_attempts)"
+            docker compose -f docker-compose.yml -f docker-compose.test.yml ps
+          fi
+          
+          sleep 5
+          attempt=$((attempt + 1))
+        done
+        
+        if [ $attempt -gt $max_attempts ]; then
+          echo "Services failed to become healthy within 5 minutes"
+          docker compose -f docker-compose.yml -f docker-compose.test.yml ps
+          docker compose -f docker-compose.yml -f docker-compose.test.yml logs
+          exit 1
+        fi
+        
+        # Now start the main LangHook service
+        echo "Starting LangHook service..."
+        docker compose -f docker-compose.yml -f docker-compose.test.yml up -d langhook
+        
+        # Wait for LangHook service to be healthy (max 3 minutes)
+        echo "Waiting for LangHook to be healthy..."
+        max_attempts=36
+        attempt=1
+        while [ $attempt -le $max_attempts ]; do
+          if curl -f http://localhost:8000/health/ 2>/dev/null; then
+            echo "LangHook service is healthy!"
+            break
+          fi
+          
+          if [ $((attempt % 6)) -eq 0 ]; then
+            echo "Still waiting for LangHook... (attempt $attempt/$max_attempts)"
+            docker compose -f docker-compose.yml -f docker-compose.test.yml ps langhook
+          fi
+          
+          sleep 5
+          attempt=$((attempt + 1))
+        done
+        
+        if [ $attempt -gt $max_attempts ]; then
+          echo "LangHook failed to become healthy within 3 minutes"
+          docker compose -f docker-compose.yml -f docker-compose.test.yml logs langhook
+          exit 1
+        fi
     
     - name: Run end-to-end tests
       run: |

@@ -11,6 +11,8 @@ services:
       - nats-data:/data
     networks:
       - langhook
+    # No health check needed - NATS starts quickly and reliably
+    # Health will be verified through dependency chain
 
   # Redis (for rate limiting)
   redis:

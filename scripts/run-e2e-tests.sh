@@ -44,51 +44,56 @@ fi
 print_status "Cleaning up existing containers"
 docker compose -f docker-compose.yml -f docker-compose.test.yml down -v --remove-orphans 2>/dev/null || true
 
-# Build and start services
-print_status "Building and starting services"
-docker compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
+# Build and start infrastructure services first
+print_status "Building and starting infrastructure services"
+docker compose -f docker-compose.yml -f docker-compose.test.yml up -d --build nats redis postgres langhook-streams
 
 # Wait for services to be ready
-print_status "Waiting for services to be ready (this may take a few minutes)"
+print_status "Waiting for infrastructure services to be ready (this may take a few minutes)"
 
-# Function to check if a service is healthy
-check_service_health() {
-    local service_name=$1
-    local max_attempts=60
-    local attempt=1
+# Function to check if infrastructure services are healthy
+check_infrastructure_health() {
+    local redis_status=$(docker compose -f docker-compose.yml -f docker-compose.test.yml ps redis --format "{{.Health}}")
+    local postgres_status=$(docker compose -f docker-compose.yml -f docker-compose.test.yml ps postgres --format "{{.Health}}")
+    local streams_status=$(docker compose -f docker-compose.yml -f docker-compose.test.yml ps -a langhook-streams --format "{{.Status}}")
     
-    while [ $attempt -le $max_attempts ]; do
-        if docker compose -f docker-compose.yml -f docker-compose.test.yml ps $service_name | grep -q "healthy\|Up"; then
-            return 0
-        fi
-        
-        if [ $((attempt % 10)) -eq 0 ]; then
-            print_status "Still waiting for $service_name... (attempt $attempt/$max_attempts)"
-        fi
-        
-        sleep 2
-        attempt=$((attempt + 1))
-    done
-    
-    return 1
+    [[ "$redis_status" == "healthy" ]] && \
+    [[ "$postgres_status" == "healthy" ]] && \
+    [[ "$streams_status" == *"Exited (0)"* ]]
 }
 
-# Check individual services
-services=("nats" "redis" "postgres" "langhook")
-for service in "${services[@]}"; do
-    print_status "Checking $service service"
-    if ! check_service_health $service; then
-        print_error "$service service failed to start properly"
-        print_status "Service logs:"
-        docker compose -f docker-compose.yml -f docker-compose.test.yml logs $service
-        exit 1
+# Wait for infrastructure services
+max_attempts=60
+attempt=1
+while [ $attempt -le $max_attempts ]; do
+    if check_infrastructure_health; then
+        print_status "Infrastructure services are ready!"
+        break
     fi
-    print_status "$service service is ready"
+    
+    if [ $((attempt % 10)) -eq 0 ]; then
+        print_status "Still waiting for infrastructure... (attempt $attempt/$max_attempts)"
+        docker compose -f docker-compose.yml -f docker-compose.test.yml ps
+    fi
+    
+    sleep 5
+    attempt=$((attempt + 1))
 done
 
-# Additional health check for the main application
+if [ $attempt -gt $max_attempts ]; then
+    print_error "Infrastructure services failed to become healthy"
+    docker compose -f docker-compose.yml -f docker-compose.test.yml ps
+    docker compose -f docker-compose.yml -f docker-compose.test.yml logs
+    exit 1
+fi
+
+# Now start the main LangHook service
+print_status "Starting LangHook service"
+docker compose -f docker-compose.yml -f docker-compose.test.yml up -d langhook
+
+# Application health check
 print_status "Performing application health check"
-max_attempts=30
+max_attempts=36
 attempt=1
 while [ $attempt -le $max_attempts ]; do
     if curl -f http://localhost:8000/health/ 2>/dev/null; then
@@ -96,16 +101,21 @@ while [ $attempt -le $max_attempts ]; do
         break
     fi
     
-    if [ $attempt -eq $max_attempts ]; then
-        print_error "Application health check failed"
-        print_status "Application logs:"
-        docker compose -f docker-compose.yml -f docker-compose.test.yml logs langhook
-        exit 1
+    if [ $((attempt % 6)) -eq 0 ]; then
+        print_status "Still waiting for application... (attempt $attempt/$max_attempts)"
+        docker compose -f docker-compose.yml -f docker-compose.test.yml ps langhook
     fi
     
-    sleep 3
+    sleep 5
     attempt=$((attempt + 1))
 done
+
+if [ $attempt -gt $max_attempts ]; then
+    print_error "Application health check failed"
+    print_status "Application logs:"
+    docker compose -f docker-compose.yml -f docker-compose.test.yml logs langhook
+    exit 1
+fi
 
 # Run the tests
 print_status "Running end-to-end tests"

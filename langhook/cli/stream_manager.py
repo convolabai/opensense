@@ -59,7 +59,10 @@ class StreamManager:
             logger.info("Created stream 'events'", subjects=stream_config.subjects)
             print("✅ Created stream 'events' with subjects langhook.events.>")
         except Exception as e:
-            if "stream name already in use" in str(e).lower():
+            error_str = str(e).lower()
+            if ("stream name already in use" in error_str or 
+                "insufficient storage resources" in error_str or
+                "err_code=10047" in error_str):
                 logger.info("Stream 'events' already exists")
                 print("ℹ️  Stream 'events' already exists")
             else:
