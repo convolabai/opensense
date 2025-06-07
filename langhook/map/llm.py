@@ -58,8 +58,9 @@ class LLMSuggestionService:
 
         try:
             # Import here to avoid errors if langchain is not installed
-            from langchain.schema import HumanMessage, SystemMessage
             import json
+
+            from langchain.schema import HumanMessage, SystemMessage
 
             # Create the prompt
             system_prompt = self._create_system_prompt()
@@ -119,12 +120,11 @@ The canonical format is a JSON object with these required fields:
 - publisher: upstream slug/identifier (string, lowercase snake_case)
 - resource: object with "type" (singular noun) and "id" (atomic identifier) fields  
 - action: CRUD verb (string, must be one of: "create", "read", "update", "delete")
-- summary: optional human-readable sentence ≤120 chars describing the event
 
 Guidelines:
 1. Analyze the payload structure to identify the main resource and action
 2. Map webhook actions to CRUD verbs: opened/created→create, closed/deleted→delete, edited/updated→update, viewed→read
-3. Extract atomic resource ID (no composite keys with /, #, or spaces)
+3. Extract resource ID (atomic identifier)
 4. Return ONLY a valid JSON object with the canonical fields, no explanations or code blocks
 5. Use the source name as the publisher value (lowercase, snake_case)
 
@@ -132,8 +132,7 @@ Example canonical format:
 {
   "publisher": "github",
   "resource": {"type": "pull_request", "id": 123},
-  "action": "create",
-  "summary": "PR 123 opened by user123"
+  "action": "create"
 }"""
 
     def _create_user_prompt(self, source: str, raw_payload: dict[str, Any]) -> str:
@@ -203,12 +202,12 @@ Return the canonical JSON object for this event."""
             )
             return False
 
-        # Validate atomic ID (no composite keys with /, #, or space)
+        # Validate atomic ID (no composite keys with # or space, but allow /)
         resource_id = str(resource['id'])
-        invalid_chars = ['/', '#', ' ']
+        invalid_chars = ['#', ' ']
         if any(char in resource_id for char in invalid_chars):
             logger.error(
-                "LLM canonical resource ID contains invalid characters (/, #, space) - atomic IDs only",
+                "LLM canonical resource ID contains invalid characters (#, space) - atomic IDs only",
                 source=source,
                 resource_id=resource_id
             )

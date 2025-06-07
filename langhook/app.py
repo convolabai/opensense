@@ -2,6 +2,7 @@
 
 # init dotenv
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 
 import json
@@ -25,7 +26,6 @@ from langhook.ingest.kafka import kafka_producer
 from langhook.ingest.middleware import RateLimitMiddleware
 from langhook.ingest.security import verify_signature
 from langhook.map.config import settings as map_settings
-from langhook.map.llm import llm_service
 from langhook.map.metrics import metrics
 from langhook.map.service import mapping_service
 
@@ -101,17 +101,17 @@ frontend_path = Path(__file__).parent.parent / "frontend" / "build"
 if frontend_path.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_path / "static")), name="static")
 
-    @app.get("/demo")
-    async def demo():
-        """Serve the React demo application."""
+    @app.get("/console")
+    async def console():
+        """Serve the React console application."""
         index_path = frontend_path / "index.html"
         if index_path.exists():
             return FileResponse(str(index_path))
-        raise HTTPException(status_code=404, detail="Demo not available - frontend not built")
+        raise HTTPException(status_code=404, detail="Console not available - frontend not built")
 
-    @app.get("/demo/{path:path}")
-    async def demo_assets(path: str):
-        """Serve demo assets."""
+    @app.get("/console/{path:path}")
+    async def console_assets(path: str):
+        """Serve console assets."""
         file_path = frontend_path / path
         if file_path.exists() and file_path.is_file():
             return FileResponse(str(file_path))
@@ -121,12 +121,12 @@ if frontend_path.exists():
             return FileResponse(str(index_path))
         raise HTTPException(status_code=404, detail="File not found")
 else:
-    @app.get("/demo")
-    async def demo_not_available():
-        """Demo not available when frontend is not built."""
+    @app.get("/console")
+    async def console_not_available():
+        """Console not available when frontend is not built."""
         return {
-            "message": "Demo not available",
-            "instructions": "To build the frontend demo:\n1. cd frontend\n2. npm install\n3. npm run build"
+            "message": "Console not available",
+            "instructions": "To build the frontend console:\n1. cd frontend\n2. npm install\n3. npm run build"
         }
 
 

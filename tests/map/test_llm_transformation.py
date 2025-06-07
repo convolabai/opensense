@@ -21,7 +21,7 @@ async def test_transform_to_canonical_success(mock_llm_service):
     # Mock LLM response
     mock_response = Mock()
     mock_response.generations = [[Mock()]]
-    mock_response.generations[0][0].text = '{"publisher": "github", "resource": {"type": "pull_request", "id": 123}, "action": "create", "summary": "PR 123 opened"}'
+    mock_response.generations[0][0].text = '{"publisher": "github", "resource": {"type": "pull_request", "id": 123}, "action": "create"}'
     
     mock_llm_service.llm.agenerate = AsyncMock(return_value=mock_response)
     
@@ -38,7 +38,6 @@ async def test_transform_to_canonical_success(mock_llm_service):
     assert result["resource"]["type"] == "pull_request"
     assert result["resource"]["id"] == 123
     assert result["action"] == "create"
-    assert result["summary"] == "PR 123 opened"
 
 
 @pytest.mark.asyncio
@@ -107,8 +106,7 @@ def test_validate_canonical_format_success():
     canonical_data = {
         "publisher": "github",
         "resource": {"type": "pull_request", "id": 123},
-        "action": "create",
-        "summary": "PR 123 opened"
+        "action": "create"
     }
     
     result = service._validate_canonical_format(canonical_data, "github")
@@ -122,8 +120,7 @@ def test_validate_canonical_format_invalid_action():
     canonical_data = {
         "publisher": "github",
         "resource": {"type": "pull_request", "id": 123},
-        "action": "invalid_action",  # Invalid action
-        "summary": "PR 123 opened"
+        "action": "invalid_action"  # Invalid action
     }
     
     result = service._validate_canonical_format(canonical_data, "github")
@@ -136,10 +133,23 @@ def test_validate_canonical_format_invalid_resource_id():
     
     canonical_data = {
         "publisher": "github",
-        "resource": {"type": "pull_request", "id": "123/456"},  # Invalid ID with slash
-        "action": "create",
-        "summary": "PR 123 opened"
+        "resource": {"type": "pull_request", "id": "123#456"},  # Invalid ID with hash
+        "action": "create"
     }
     
     result = service._validate_canonical_format(canonical_data, "github")
     assert result is False
+
+
+def test_validate_canonical_format_allows_slash_in_resource_id():
+    """Test validation allows slash in resource ID."""
+    service = LLMSuggestionService()
+    
+    canonical_data = {
+        "publisher": "github",
+        "resource": {"type": "pull_request", "id": "123/456"},  # Valid ID with slash (now allowed)
+        "action": "create"
+    }
+    
+    result = service._validate_canonical_format(canonical_data, "github")
+    assert result is True
