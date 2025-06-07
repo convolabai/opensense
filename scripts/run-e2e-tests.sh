@@ -42,11 +42,11 @@ fi
 
 # Clean up any existing containers
 print_status "Cleaning up existing containers"
-docker compose -f docker compose.yml -f docker compose.test.yml down -v --remove-orphans 2>/dev/null || true
+docker compose -f docker-compose.yml -f docker-compose.test.yml down -v --remove-orphans 2>/dev/null || true
 
 # Build and start services
 print_status "Building and starting services"
-docker compose -f docker compose.yml -f docker compose.test.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
 
 # Wait for services to be ready
 print_status "Waiting for services to be ready (this may take a few minutes)"
@@ -58,7 +58,7 @@ check_service_health() {
     local attempt=1
     
     while [ $attempt -le $max_attempts ]; do
-        if docker compose -f docker compose.yml -f docker compose.test.yml ps $service_name | grep -q "healthy\|Up"; then
+        if docker compose -f docker-compose.yml -f docker-compose.test.yml ps $service_name | grep -q "healthy\|Up"; then
             return 0
         fi
         
@@ -80,7 +80,7 @@ for service in "${services[@]}"; do
     if ! check_service_health $service; then
         print_error "$service service failed to start properly"
         print_status "Service logs:"
-        docker compose -f docker compose.yml -f docker compose.test.yml logs $service
+        docker compose -f docker-compose.yml -f docker-compose.test.yml logs $service
         exit 1
     fi
     print_status "$service service is ready"
@@ -99,7 +99,7 @@ while [ $attempt -le $max_attempts ]; do
     if [ $attempt -eq $max_attempts ]; then
         print_error "Application health check failed"
         print_status "Application logs:"
-        docker compose -f docker compose.yml -f docker compose.test.yml logs langhook
+        docker compose -f docker-compose.yml -f docker-compose.test.yml logs langhook
         exit 1
     fi
     
@@ -109,7 +109,7 @@ done
 
 # Run the tests
 print_status "Running end-to-end tests"
-if docker compose -f docker compose.yml -f docker compose.test.yml run --rm test-runner; then
+if docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm test-runner; then
     print_status "All tests passed! ✅"
     test_result=0
 else
@@ -119,11 +119,11 @@ fi
 
 # Show test summary
 print_status "Test Summary:"
-docker compose -f docker compose.yml -f docker compose.test.yml logs test-runner | tail -20
+docker compose -f docker-compose.yml -f docker-compose.test.yml logs test-runner | tail -20
 
 # Clean up
 print_status "Cleaning up test environment"
-docker compose -f docker compose.yml -f docker compose.test.yml down -v --remove-orphans
+docker compose -f docker-compose.yml -f docker-compose.test.yml down -v --remove-orphans
 
 if [ $test_result -eq 0 ]; then
     print_status "End-to-end test suite completed successfully! 🎉"

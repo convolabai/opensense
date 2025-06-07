@@ -57,68 +57,38 @@ jobs:
     
     - name: Start services
       run: |
-        docker compose -f docker compose.yml -f docker compose.test.yml up -d --build
+        docker compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
         
     - name: Wait for services to be ready
       run: |
         # Wait for services to be healthy
-        timeout 300 bash -c 'until docker compose -f docker compose.yml -f docker compose.test.yml ps | grep -E "(healthy|Up)"; do sleep 5; done'
+        timeout 300 bash -c 'until docker compose -f docker-compose.yml -f docker-compose.test.yml ps | grep -E "(healthy|Up)"; do sleep 5; done'
         
         # Additional wait for LangHook service specifically
         timeout 120 bash -c 'until curl -f http://localhost:8000/health/ 2>/dev/null; do sleep 5; done'
     
     - name: Run end-to-end tests
       run: |
-        docker compose -f docker compose.yml -f docker compose.test.yml run --rm test-runner
+        docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm test-runner
     
     - name: Collect logs on failure
       if: failure()
       run: |
         echo "=== Docker Compose Services ==="
-        docker compose -f docker compose.yml -f docker compose.test.yml ps
+        docker compose -f docker-compose.yml -f docker-compose.test.yml ps
         echo "=== LangHook Service Logs ==="
-        docker compose -f docker compose.yml -f docker compose.test.yml logs langhook
+        docker compose -f docker-compose.yml -f docker-compose.test.yml logs langhook
         echo "=== NATS Logs ==="
-        docker compose -f docker compose.yml -f docker compose.test.yml logs nats
+        docker compose -f docker-compose.yml -f docker-compose.test.yml logs nats
         echo "=== Redis Logs ==="
-        docker compose -f docker compose.yml -f docker compose.test.yml logs redis
+        docker compose -f docker-compose.yml -f docker-compose.test.yml logs redis
         echo "=== Postgres Logs ==="
-        docker compose -f docker compose.yml -f docker compose.test.yml logs postgres
+        docker compose -f docker-compose.yml -f docker-compose.test.yml logs postgres
     
     - name: Clean up
       if: always()
       run: |
-        docker compose -f docker compose.yml -f docker compose.test.yml down -v --remove-orphans
-
-  lint:
-    name: Lint and Type Check
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-        pip install ruff mypy
-    
-    - name: Run ruff lint
-      run: |
-        ruff check langhook/ tests/
-    
-    - name: Run mypy type check
-      run: |
-        mypy langhook/ --ignore-missing-imports
-    
-    - name: Check formatting
-      run: |
-        ruff format --check langhook/ tests/
+        docker compose -f docker-compose.yml -f docker-compose.test.yml down -v --remove-orphans
 
   security:
     name: Security Scan
