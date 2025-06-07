@@ -94,14 +94,14 @@ class MapNATSProducer(BaseNATSProducer):
 
 
 class MapNATSConsumer(BaseNATSConsumer):
-    """NATS consumer for reading raw events from raw.* subjects."""
+    """NATS consumer for reading raw events from raw.> subjects."""
 
     def __init__(self, message_handler) -> None:
         super().__init__(
             nats_url=settings.nats_url,
             stream_name=settings.nats_stream_events,
             consumer_name=f"{settings.nats_consumer_group}_raw_processor",
-            filter_subject="raw.*",  # Listen to all raw events
+            filter_subject="raw.>",  # Listen to all raw events
             message_handler=message_handler,
             deliver_policy=DeliverPolicy.ALL,
         )
