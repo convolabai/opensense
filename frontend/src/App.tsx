@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, BarChart3, Zap, ArrowRight, RefreshCw } from 'lucide-react';
+import { Send, BarChart3, Zap, ArrowRight, RefreshCw, Bell, Eye, Plus } from 'lucide-react';
 
 interface CanonicalEvent {
   publisher: string;
@@ -20,6 +20,24 @@ interface Metrics {
   llm_invocations: number;
   mapping_success_rate: number;
   llm_usage_rate: number;
+}
+
+interface Subscription {
+  id: number;
+  subscriber_id: string;
+  description: string;
+  pattern: string;
+  channel_type: string;
+  channel_config: any;
+  active: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface SubscriptionCreate {
+  description: string;
+  channel_type: string;
+  channel_config: any;
 }
 
 const samplePayloads = {
@@ -77,6 +95,15 @@ function App() {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  
+  // Subscription state
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [subscriptionDescription, setSubscriptionDescription] = useState<string>('');
+  const [webhookUrl, setWebhookUrl] = useState<string>('');
+  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState<string>('');
+  const [subscriptionSuccess, setSubscriptionSuccess] = useState<string>('');
+  const [matchedSubscriptions, setMatchedSubscriptions] = useState<Subscription[]>([]);
 
   // Load sample payload when source changes
   useEffect(() => {
@@ -89,6 +116,7 @@ function App() {
   // Load metrics on component mount
   useEffect(() => {
     loadMetrics();
+    loadSubscriptions();
   }, []);
 
   const loadMetrics = async () => {
@@ -146,6 +174,7 @@ function App() {
       const canonicalEvent = createMockCanonicalEvent(selectedSource, payload);
       setTimeout(() => {
         setOutputEvent(canonicalEvent);
+        checkSubscriptionMatches(canonicalEvent);
         loadMetrics(); // Refresh metrics
       }, 1000);
 
@@ -244,6 +273,89 @@ function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadSubscriptions = async () => {
+    try {
+      const response = await fetch('/subscriptions/');
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptions(data.subscriptions || []);
+      }
+    } catch (err) {
+      // Silently fail for subscriptions
+    }
+  };
+
+  const createSubscription = async () => {
+    if (!subscriptionDescription.trim() || !webhookUrl.trim()) {
+      setSubscriptionError('Please provide both description and webhook URL');
+      return;
+    }
+
+    setIsSubscriptionLoading(true);
+    setSubscriptionError('');
+    setSubscriptionSuccess('');
+
+    try {
+      const subscriptionData: SubscriptionCreate = {
+        description: subscriptionDescription.trim(),
+        channel_type: 'webhook',
+        channel_config: {
+          url: webhookUrl.trim(),
+          method: 'POST'
+        }
+      };
+
+      const response = await fetch('/subscriptions/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(subscriptionData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create subscription');
+      }
+
+      const result = await response.json();
+      setSubscriptionSuccess(`Subscription created! NATS pattern: ${result.pattern}`);
+      setSubscriptionDescription('');
+      setWebhookUrl('');
+      
+      // Reload subscriptions
+      loadSubscriptions();
+
+    } catch (err) {
+      setSubscriptionError(err instanceof Error ? err.message : 'Failed to create subscription');
+    } finally {
+      setIsSubscriptionLoading(false);
+    }
+  };
+
+  const checkSubscriptionMatches = (event: CanonicalEvent) => {
+    // Mock subscription matching logic - in a real system this would be done by the backend
+    const eventPattern = `langhook.events.${event.publisher}.${event.resource.type}.${event.resource.id}.${event.action}`;
+    
+    const matches = subscriptions.filter(sub => {
+      if (!sub.active) return false;
+      
+      // Simple pattern matching - convert NATS wildcards to regex
+      const regexPattern = sub.pattern
+        .replace(/\*/g, '[^.]+')  // * matches one segment
+        .replace(/>/g, '.*');     // > matches remaining segments
+      
+      try {
+        const regex = new RegExp(`^${regexPattern}$`);
+        return regex.test(eventPattern);
+      } catch {
+        return false;
+      }
+    });
+    
+    setMatchedSubscriptions(matches);
   };
 
   return (
@@ -373,6 +485,157 @@ function App() {
           <div>Loading metrics...</div>
         )}
       </div>
+
+      <div className="demo-section">
+        <div className="card">
+          <h2 className="section-title">
+            <Plus size={20} />
+            Create Subscription
+          </h2>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#cbd5e1' }}>
+              Natural Language Description:
+            </label>
+            <textarea
+              className="json-editor"
+              style={{ minHeight: '120px' }}
+              value={subscriptionDescription}
+              onChange={(e) => setSubscriptionDescription(e.target.value)}
+              placeholder="Describe what events you want to be notified about, e.g., 'Notify me when a GitHub pull request is opened' or 'Alert me when Stripe payment over $100 succeeds'"
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#cbd5e1' }}>
+              Webhook URL:
+            </label>
+            <input
+              type="url"
+              className="json-editor"
+              style={{ minHeight: 'auto', height: '48px' }}
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+              placeholder="https://your-service.com/webhook"
+            />
+          </div>
+
+          <button 
+            className="btn btn-primary" 
+            onClick={createSubscription}
+            disabled={isSubscriptionLoading || !subscriptionDescription.trim() || !webhookUrl.trim()}
+          >
+            {isSubscriptionLoading ? (
+              <span className="loading">
+                <div className="spinner" />
+                Creating...
+              </span>
+            ) : (
+              <>
+                <Bell size={16} />
+                Create Subscription
+              </>
+            )}
+          </button>
+
+          {subscriptionError && <div className="error">{subscriptionError}</div>}
+          {subscriptionSuccess && <div className="success">{subscriptionSuccess}</div>}
+        </div>
+
+        <div className="card">
+          <h2 className="section-title">
+            <Eye size={20} />
+            Active Subscriptions
+            <button 
+              className="btn btn-secondary" 
+              onClick={loadSubscriptions}
+              style={{ marginLeft: 'auto', padding: '4px 8px' }}
+            >
+              <RefreshCw size={14} />
+            </button>
+          </h2>
+
+          {subscriptions.length > 0 ? (
+            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {subscriptions.map((sub) => (
+                <div key={sub.id} style={{ 
+                  marginBottom: '16px', 
+                  padding: '16px', 
+                  background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                  border: '1px solid #475569',
+                  borderRadius: '8px'
+                }}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <strong style={{ color: '#f1f5f9' }}>Description:</strong>
+                    <span style={{ color: '#cbd5e1', marginLeft: '8px' }}>{sub.description}</span>
+                  </div>
+                  <div style={{ marginBottom: '8px' }}>
+                    <strong style={{ color: '#f1f5f9' }}>NATS Pattern:</strong>
+                    <code style={{ 
+                      marginLeft: '8px',
+                      background: 'linear-gradient(135deg, #334155 0%, #475569 100%)',
+                      color: '#e2e8f0',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '13px'
+                    }}>
+                      {sub.pattern}
+                    </code>
+                  </div>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '12px',
+                    color: '#94a3b8'
+                  }}>
+                    <span>Status: {sub.active ? '🟢 Active' : '🔴 Inactive'}</span>
+                    <span>Created: {new Date(sub.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: '#94a3b8', textAlign: 'center', padding: '40px' }}>
+              No subscriptions yet. Create your first subscription above!
+            </div>
+          )}
+        </div>
+      </div>
+
+      {matchedSubscriptions.length > 0 && (
+        <div className="card">
+          <h2 className="section-title">
+            <Bell size={20} />
+            Notified Subscribers
+          </h2>
+          <p style={{ color: '#cbd5e1', marginBottom: '20px' }}>
+            The following subscriptions would be triggered by the current event:
+          </p>
+          {matchedSubscriptions.map((sub) => (
+            <div key={sub.id} style={{ 
+              marginBottom: '12px', 
+              padding: '12px', 
+              background: 'linear-gradient(135deg, #052e16 0%, #166534 100%)',
+              border: '1px solid #16a34a',
+              borderRadius: '8px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#86efac', fontWeight: '500' }}>{sub.description}</span>
+                <code style={{ 
+                  background: 'rgba(134, 239, 172, 0.2)',
+                  color: '#86efac',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontSize: '12px'
+                }}>
+                  {sub.pattern}
+                </code>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="card">
         <h2>How It Works</h2>

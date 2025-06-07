@@ -5,7 +5,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: #e2e8f0;
   min-height: 100vh;
 }
 
@@ -25,25 +26,25 @@ code {
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(30, 41, 59, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   padding: 32px;
   margin-bottom: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(71, 85, 105, 0.3);
   transition: all 0.3s ease;
 }
 
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
 }
 
 .header {
   text-align: center;
   margin-bottom: 48px;
-  color: white;
+  color: #f1f5f9;
 }
 
 .header h1 {
@@ -58,7 +59,7 @@ code {
 }
 
 .header p {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(241, 245, 249, 0.9);
   font-size: 1.25rem;
   font-weight: 400;
   max-width: 600px;
@@ -93,7 +94,7 @@ code {
 }
 
 .section-title {
-  color: #1e293b;
+  color: #f1f5f9;
   margin-bottom: 24px;
   display: flex;
   align-items: center;
@@ -108,15 +109,16 @@ code {
 
 .source-selector label {
   font-weight: 500;
-  color: #374151;
+  color: #cbd5e1;
   margin-right: 12px;
 }
 
 .source-selector select {
   padding: 12px 16px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid #475569;
   border-radius: 12px;
-  background: white;
+  background: #334155;
+  color: #f1f5f9;
   font-size: 14px;
   font-weight: 500;
   transition: all 0.2s ease;
@@ -126,33 +128,34 @@ code {
 .source-selector select:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
 }
 
 .json-editor {
   width: 100%;
   min-height: 320px;
   padding: 16px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid #475569;
   border-radius: 12px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 14px;
   line-height: 1.6;
   resize: vertical;
   transition: all 0.2s ease;
-  background: #fafbfc;
+  background: #1e293b;
+  color: #f1f5f9;
 }
 
 .json-editor:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  background: #0f172a;
 }
 
 .json-display {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border: 2px solid #475569;
   border-radius: 12px;
   padding: 16px;
   min-height: 320px;
@@ -161,7 +164,7 @@ code {
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-x: auto;
-  color: #374151;
+  color: #e2e8f0;
 }
 
 .button-group {
@@ -212,16 +215,16 @@ code {
 }
 
 .btn-secondary {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  color: #475569;
-  border: 2px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  color: #f1f5f9;
+  border: 2px solid #64748b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .btn-secondary:hover {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .btn:disabled {
@@ -236,9 +239,9 @@ code {
 }
 
 .error {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  border: 2px solid #fca5a5;
-  color: #dc2626;
+  background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
+  border: 2px solid #dc2626;
+  color: #fca5a5;
   padding: 16px;
   border-radius: 12px;
   margin-top: 20px;
@@ -247,9 +250,9 @@ code {
 }
 
 .success {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border: 2px solid #86efac;
-  color: #16a34a;
+  background: linear-gradient(135deg, #052e16 0%, #166534 100%);
+  border: 2px solid #16a34a;
+  color: #86efac;
   padding: 16px;
   border-radius: 12px;
   margin-top: 20px;
@@ -275,8 +278,8 @@ code {
 }
 
 .metric-card {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 2px solid #e2e8f0;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border: 2px solid #475569;
   border-radius: 16px;
   padding: 24px;
   text-align: center;
@@ -297,14 +300,14 @@ code {
 
 .metric-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
-  border-color: #cbd5e1;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  border-color: #64748b;
 }
 
 .metric-value {
   font-size: 2rem;
   font-weight: 700;
-  color: #1e293b;
+  color: #f1f5f9;
   margin-bottom: 8px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
@@ -314,7 +317,7 @@ code {
 
 .metric-label {
   font-size: 14px;
-  color: #64748b;
+  color: #94a3b8;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -342,7 +345,7 @@ code {
 
 /* Enhanced "How It Works" section */
 .card h2 {
-  color: #1e293b;
+  color: #f1f5f9;
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 24px;
@@ -371,7 +374,7 @@ code {
   counter-increment: step-counter;
   margin-bottom: 20px;
   padding: 20px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
   border-radius: 12px;
   border-left: 4px solid #667eea;
   position: relative;
@@ -380,7 +383,7 @@ code {
 
 .card ol li:hover {
   transform: translateX(8px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .card ol li::before {
@@ -402,16 +405,37 @@ code {
 }
 
 .card p {
-  color: #64748b;
+  color: #cbd5e1;
   line-height: 1.7;
   font-size: 16px;
 }
 
 .card code {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  color: #475569;
+  background: linear-gradient(135deg, #334155 0%, #475569 100%);
+  color: #e2e8f0;
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
+}
+
+/* Input field styling for consistency */
+input[type="url"].json-editor {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid #475569;
+  border-radius: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  transition: all 0.2s ease;
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+input[type="url"].json-editor:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  background: #0f172a;
 }
