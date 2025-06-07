@@ -1,5 +1,5 @@
 #!/bin/bash
-# Initialize OpenSense Kafka topics
+# Initialize LangHook Kafka topics
 
 set -e
 
@@ -7,7 +7,7 @@ set -e
 KAFKA_BROKERS=${KAFKA_BROKERS:-"localhost:19092"}
 WAIT_TIMEOUT=${WAIT_TIMEOUT:-30}
 
-echo "🚀 Initializing OpenSense Kafka topics..."
+echo "🚀 Initializing LangHook Kafka topics..."
 echo "📡 Using Kafka brokers: $KAFKA_BROKERS"
 
 # Wait for Kafka to be ready
@@ -35,10 +35,10 @@ done'
 echo "✅ Kafka is ready!"
 
 # Create topics using the topic manager
-echo "📝 Creating OpenSense topics..."
-python -m opensense.cli.topic_manager --brokers "$KAFKA_BROKERS" create
+echo "📝 Creating LangHook topics..."
+python -m langhook.cli.topic_manager --brokers "$KAFKA_BROKERS" create
 
 echo "📋 Listing created topics..."
-python -m opensense.cli.topic_manager --brokers "$KAFKA_BROKERS" list
+python -m langhook.cli.topic_manager --brokers "$KAFKA_BROKERS" list
 
-echo "🎉 OpenSense topics initialized successfully!"
+echo "🎉 LangHook topics initialized successfully!"

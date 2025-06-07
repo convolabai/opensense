@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "OpenSense Canonical Event v1",
-  "description": "Schema for OpenSense canonical events with REST-aligned structure",
+  "title": "LangHook Canonical Event v1",
+  "description": "Schema for LangHook canonical events with REST-aligned structure",
   "type": "object",
   "required": [
     "publisher",
