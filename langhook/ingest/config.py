@@ -16,10 +16,9 @@ class Settings(BaseModel):
     max_body_bytes: int = Field(default=1048576, env="MAX_BODY_BYTES")  # 1 MiB
     rate_limit: str = Field(default="200/minute", env="RATE_LIMIT")
 
-    # Kafka settings
-    kafka_brokers: str = Field(default="localhost:19092", env="KAFKA_BROKERS")
-    kafka_topic_raw_ingest: str = Field(default="raw_ingest", env="KAFKA_TOPIC_RAW_INGEST")
-    kafka_topic_dlq: str = Field(default="langhook.dlq", env="KAFKA_TOPIC_DLQ")
+    # NATS settings
+    nats_url: str = Field(default="nats://localhost:4222", env="NATS_URL")
+    nats_stream_events: str = Field(default="events", env="NATS_STREAM_EVENTS")
 
     # Redis settings (for rate limiting)
     redis_url: str = Field(default="redis://localhost:6379", env="REDIS_URL")
@@ -59,9 +58,8 @@ def load_settings() -> Settings:
         'LOG_LEVEL': os.getenv('LOG_LEVEL', 'INFO'),
         'MAX_BODY_BYTES': os.getenv('MAX_BODY_BYTES', '1048576'),
         'RATE_LIMIT': os.getenv('RATE_LIMIT', '200/minute'),
-        'KAFKA_BROKERS': os.getenv('KAFKA_BROKERS', 'localhost:19092'),
-        'KAFKA_TOPIC_RAW_INGEST': os.getenv('KAFKA_TOPIC_RAW_INGEST', 'raw_ingest'),
-        'KAFKA_TOPIC_DLQ': os.getenv('KAFKA_TOPIC_DLQ', 'langhook.dlq'),
+        'NATS_URL': os.getenv('NATS_URL', 'nats://localhost:4222'),
+        'NATS_STREAM_EVENTS': os.getenv('NATS_STREAM_EVENTS', 'events'),
         'REDIS_URL': os.getenv('REDIS_URL', 'redis://localhost:6379'),
         'GITHUB_SECRET': os.getenv('GITHUB_SECRET'),
         'STRIPE_SECRET': os.getenv('STRIPE_SECRET'),
@@ -76,9 +74,8 @@ def load_settings() -> Settings:
         log_level=env_vars['LOG_LEVEL'],
         max_body_bytes=max_body_bytes_val,
         rate_limit=env_vars['RATE_LIMIT'],
-        kafka_brokers=env_vars['KAFKA_BROKERS'],
-        kafka_topic_raw_ingest=env_vars['KAFKA_TOPIC_RAW_INGEST'],
-        kafka_topic_dlq=env_vars['KAFKA_TOPIC_DLQ'],
+        nats_url=env_vars['NATS_URL'],
+        nats_stream_events=env_vars['NATS_STREAM_EVENTS'],
         redis_url=env_vars['REDIS_URL'],
         github_secret=env_vars.get('GITHUB_SECRET'),
         stripe_secret=env_vars.get('STRIPE_SECRET'),

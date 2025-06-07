@@ -7,7 +7,7 @@ from typing import Any
 import structlog
 
 from langhook.map.cloudevents import cloud_event_wrapper
-from langhook.map.kafka import MapKafkaConsumer, map_producer
+from langhook.map.nats import MapNATSConsumer, map_producer
 from langhook.map.llm import llm_service
 from langhook.map.mapper import mapping_engine
 from langhook.map.metrics import metrics
@@ -19,7 +19,7 @@ class MappingService:
     """Main service that orchestrates the mapping process."""
 
     def __init__(self) -> None:
-        self.consumer: MapKafkaConsumer | None = None
+        self.consumer: MapNATSConsumer | None = None
         self._running = False
 
         # Legacy metrics (for backward compatibility)
@@ -35,11 +35,11 @@ class MappingService:
         # Update active mappings count in metrics
         metrics.update_active_mappings(len(mapping_engine._mappings))
 
-        # Start Kafka producer
+        # Start NATS producer
         await map_producer.start()
 
         # Create and start consumer
-        self.consumer = MapKafkaConsumer(self._process_raw_event)
+        self.consumer = MapNATSConsumer(self._process_raw_event)
         await self.consumer.start()
 
         self._running = True
