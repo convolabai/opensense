@@ -53,6 +53,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: test
     container_name: langhook-test-runner
     environment:
       - LANGHOOK_BASE_URL=http://langhook:8000

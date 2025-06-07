@@ -41,6 +41,12 @@ COPY langhook/ ./langhook/
 # Install dependencies
 RUN uv pip install --system -e .
 
+# Test stage - extends builder with dev dependencies
+FROM builder as test
+
+# Install dev dependencies for testing
+RUN uv pip install --system -e .[dev]
+
 # Production stage
 FROM python:3.12-slim as production
 
