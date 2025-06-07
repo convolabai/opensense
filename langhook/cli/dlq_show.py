@@ -10,7 +10,7 @@ from aiokafka import AIOKafkaConsumer
 
 from langhook.ingest.config import settings
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 async def show_dlq_messages(count: int = 10) -> None:

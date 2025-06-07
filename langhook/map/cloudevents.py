@@ -8,7 +8,7 @@ from typing import Any
 import jsonschema
 import structlog
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 class CloudEventWrapper:

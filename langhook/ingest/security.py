@@ -8,7 +8,7 @@ import structlog
 
 from langhook.ingest.config import settings
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 async def verify_signature(

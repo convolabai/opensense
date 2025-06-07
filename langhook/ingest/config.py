@@ -22,7 +22,7 @@ class Settings(BaseModel):
     kafka_topic_dlq: str = Field(default="langhook.dlq", env="KAFKA_TOPIC_DLQ")
 
     # Redis settings (for rate limiting)
-    redis_url: str = Field(default="redis://localhost:16379", env="REDIS_URL")
+    redis_url: str = Field(default="redis://localhost:6379", env="REDIS_URL")
 
     # HMAC secrets for different sources
     github_secret: str | None = Field(default=None, env="GITHUB_SECRET")
@@ -59,10 +59,10 @@ def load_settings() -> Settings:
         'LOG_LEVEL': os.getenv('LOG_LEVEL', 'INFO'),
         'MAX_BODY_BYTES': os.getenv('MAX_BODY_BYTES', '1048576'),
         'RATE_LIMIT': os.getenv('RATE_LIMIT', '200/minute'),
-        'KAFKA_BROKERS': os.getenv('KAFKA_BROKERS', 'redpanda:9092'),
+        'KAFKA_BROKERS': os.getenv('KAFKA_BROKERS', 'localhost:19092'),
         'KAFKA_TOPIC_RAW_INGEST': os.getenv('KAFKA_TOPIC_RAW_INGEST', 'raw_ingest'),
         'KAFKA_TOPIC_DLQ': os.getenv('KAFKA_TOPIC_DLQ', 'langhook.dlq'),
-        'REDIS_URL': os.getenv('REDIS_URL', 'redis://redis:6379'),
+        'REDIS_URL': os.getenv('REDIS_URL', 'redis://localhost:6379'),
         'GITHUB_SECRET': os.getenv('GITHUB_SECRET'),
         'STRIPE_SECRET': os.getenv('STRIPE_SECRET'),
     })

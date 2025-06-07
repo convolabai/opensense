@@ -35,7 +35,7 @@ dependencies = [
     "langchain>=0.1.0",
     "prometheus-client>=0.16.0",
     "openai>=1.0.0",
-    "python-dotenv>=1.0.0",
+    "python-dotenv>=1.1.0",
 ]
 
 [project.optional-dependencies]
@@ -54,9 +54,9 @@ langhook-topics = "langhook.cli.topic_manager:main"
 langhook = "langhook.main:main"
 
 [project.urls]
-Homepage = "https://github.com/convolabai/opensense"
-Repository = "https://github.com/convolabai/opensense"
-Issues = "https://github.com/convolabai/opensense/issues"
+Homepage = "https://github.com/convolabai/langhook"
+Repository = "https://github.com/convolabai/langhook"
+Issues = "https://github.com/convolabai/langhook/issues"
 
 [tool.ruff]
 target-version = "py312"

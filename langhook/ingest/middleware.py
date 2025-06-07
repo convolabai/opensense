@@ -10,7 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from langhook.ingest.config import settings
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

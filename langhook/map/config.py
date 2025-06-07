@@ -13,7 +13,7 @@ class Settings(BaseModel):
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
 
     # Kafka settings
-    kafka_brokers: str = Field(default="redpanda:9092", env="KAFKA_BROKERS")
+    kafka_brokers: str = Field(default="localhost:19092", env="KAFKA_BROKERS")
     kafka_topic_raw_ingest: str = Field(default="raw_ingest", env="KAFKA_TOPIC_RAW_INGEST")
     kafka_topic_canonical: str = Field(default="langhook.events", env="KAFKA_TOPIC_CANONICAL")
     kafka_topic_map_fail: str = Field(default="langhook.map_fail", env="KAFKA_TOPIC_MAP_FAIL")
@@ -58,7 +58,7 @@ def load_settings() -> Settings:
     env_vars.update({
         'DEBUG': os.getenv('DEBUG', 'false'),
         'LOG_LEVEL': os.getenv('LOG_LEVEL', 'INFO'),
-        'KAFKA_BROKERS': os.getenv('KAFKA_BROKERS', 'redpanda:9092'),
+        'KAFKA_BROKERS': os.getenv('KAFKA_BROKERS', 'localhost:19092'),
         'KAFKA_TOPIC_RAW_INGEST': os.getenv('KAFKA_TOPIC_RAW_INGEST', 'raw_ingest'),
         'KAFKA_TOPIC_CANONICAL': os.getenv('KAFKA_TOPIC_CANONICAL', 'langhook.events'),
         'KAFKA_TOPIC_MAP_FAIL': os.getenv('KAFKA_TOPIC_MAP_FAIL', 'langhook.map_fail'),

@@ -64,7 +64,7 @@ services:
     command: ["bash", "/app/scripts/init-topics.sh"]
     restart: "no"
 
-  # OpenSense Services (consolidated ingest + map)
+  # LangHook Services (consolidated ingest + map)
   langhook:
     profiles:
       - docker

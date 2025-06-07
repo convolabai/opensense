@@ -7,7 +7,7 @@ import structlog
 from langhook.core.kafka import BaseKafkaConsumer, BaseKafkaProducer
 from langhook.map.config import settings
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 class MapKafkaProducer(BaseKafkaProducer):

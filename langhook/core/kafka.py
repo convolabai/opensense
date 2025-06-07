@@ -6,7 +6,7 @@ from typing import Any
 import structlog
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 class BaseKafkaProducer:

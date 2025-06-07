@@ -256,7 +256,7 @@ def demo_operational_features():
     
     # Test structured logging
     import structlog
-    logger = structlog.get_logger()
+    logger = structlog.get_logger("langhook")
     print("✅ Structured logging configured")
     
     # Test configuration

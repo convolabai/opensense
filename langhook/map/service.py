@@ -12,7 +12,7 @@ from langhook.map.llm import llm_service
 from langhook.map.mapper import mapping_engine
 from langhook.map.metrics import metrics
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 class MappingService:

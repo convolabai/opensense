@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
+import logging
+# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 import json
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -29,7 +32,7 @@ from langhook.map.config import settings as map_settings
 from langhook.map.metrics import metrics
 from langhook.map.service import mapping_service
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 @asynccontextmanager
@@ -38,6 +41,14 @@ async def lifespan(app):
     import asyncio
 
     # Startup
+    logging.basicConfig(
+        level=logging.INFO,
+        # format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+    # Enable DEBUG only for our own modules
+    if ingest_settings.debug or map_settings.debug:
+        logging.getLogger("langhook").setLevel(logging.DEBUG)
+
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,
@@ -56,7 +67,7 @@ async def lifespan(app):
         cache_logger_on_first_use=True,
     )
 
-    logger = structlog.get_logger()
+    logger = structlog.get_logger("langhook")
     logger.info("Starting OpenSense Services", version="0.3.0")
 
     # Start Kafka producer (for ingest)

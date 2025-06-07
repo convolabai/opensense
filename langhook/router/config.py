@@ -13,7 +13,7 @@ class Settings(BaseModel):
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
 
     # Kafka settings
-    kafka_brokers: str = Field(default="redpanda:9092", env="KAFKA_BROKERS")
+    kafka_brokers: str = Field(default="localhost:19092", env="KAFKA_BROKERS")
     kafka_topic_canonical: str = Field(default="opensense.events", env="KAFKA_TOPIC_CANONICAL")
     kafka_topic_matches: str = Field(default="opensense.matches", env="KAFKA_TOPIC_MATCHES")
 
@@ -50,7 +50,7 @@ def load_settings() -> Settings:
     env_vars.update({
         'DEBUG': os.getenv('DEBUG', 'false'),
         'LOG_LEVEL': os.getenv('LOG_LEVEL', 'INFO'),
-        'KAFKA_BROKERS': os.getenv('KAFKA_BROKERS', 'redpanda:9092'),
+        'KAFKA_BROKERS': os.getenv('KAFKA_BROKERS', 'localhost:19092'),
         'KAFKA_TOPIC_CANONICAL': os.getenv('KAFKA_TOPIC_CANONICAL', 'opensense.events'),
         'KAFKA_TOPIC_MATCHES': os.getenv('KAFKA_TOPIC_MATCHES', 'opensense.matches'),
         'KAFKA_CONSUMER_GROUP': os.getenv('KAFKA_CONSUMER_GROUP', 'svc-router'),

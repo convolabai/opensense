@@ -7,7 +7,7 @@ from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 class HealthResponse(BaseModel):

@@ -8,7 +8,7 @@ import structlog
 
 from langhook.map.config import settings
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 class MappingEngine:

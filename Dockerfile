@@ -36,7 +36,7 @@ WORKDIR /app
 COPY pyproject.toml LICENSE README.md ./
 
 # Copy source code
-COPY opensense/ ./opensense/
+COPY langhook/ ./langhook/
 
 # Install dependencies
 RUN uv pip install --system -e .

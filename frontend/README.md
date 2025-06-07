@@ -1,6 +1,6 @@
 # Frontend Demo
 
-This directory contains the React-based interactive demo for OpenSense.
+This directory contains the React-based interactive demo for LangHook.
 
 ## Development
 
@@ -19,7 +19,7 @@ This directory contains the React-based interactive demo for OpenSense.
    npm run build
    ```
 
-The demo will be available at `/demo` when the OpenSense server is running.
+The demo will be available at `/demo` when the LangHook server is running.
 
 ## Features
 
@@ -27,8 +27,8 @@ The demo will be available at `/demo` when the OpenSense server is running.
 - **Real-time transformation**: See raw webhooks converted to canonical events
 - **Mapping generation**: Use LLM to generate JSONata mappings
 - **Live metrics**: Monitor system performance and event processing stats
-- **Educational content**: Learn how OpenSense transforms event data
+- **Educational content**: Learn how LangHook transforms event data
 
 ## Architecture
 
-The frontend is a single-page React application that communicates with the OpenSense FastAPI backend through a proxy during development and is served as static files in production.
+The frontend is a single-page React application that communicates with the LangHook FastAPI backend through a proxy during development and is served as static files in production.

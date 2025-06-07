@@ -16,11 +16,11 @@ LangHook transforms chaotic webhook payloads into standardized CloudEvents with 
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/convolabai/opensense.git
-   cd opensense
+   git clone https://github.com/convolabai/langhook.git
+   cd langhook
    ```
 
-2. **Start the core stack (without the `opensense` service):**
+2. **Start the core stack (without the `langhook` service):**
    ```bash
    docker-compose up -d
    ```
@@ -44,12 +44,12 @@ LangHook transforms chaotic webhook payloads into standardized CloudEvents with 
    cd ..
    ```
 
-5. **Run the OpenSense service:**
+5. **Run the LangHook service:**
    ```bash
    langhook
    ```
 
-   > If you prefer to debug or develop against your local Python process instead of the container, simply skip the `--profile docker` option above and start with `opensense` after installing.
+   > If you prefer to debug or develop against your local Python process instead of the container, simply skip the `--profile docker` option above and start with `langhook` after installing.
 
 The API server will be available at `http://localhost:8000` with:
 - Webhook ingestion at `/ingest/{source}`
@@ -272,4 +272,4 @@ LangHook is licensed under the [MIT License](./LICENSE).
 
 **Ready to simplify your event integrations?** Get started with the [Quick Start](#-quick-start) guide or try the [interactive demo](http://localhost:8000/demo).
 
-For questions or support, visit our [GitHub Issues](https://github.com/convolabai/opensense/issues).
+For questions or support, visit our [GitHub Issues](https://github.com/convolabai/langhook/issues).

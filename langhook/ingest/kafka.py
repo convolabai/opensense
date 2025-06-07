@@ -7,7 +7,7 @@ import structlog
 from langhook.core.kafka import BaseKafkaProducer
 from langhook.ingest.config import settings
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 class KafkaEventProducer(BaseKafkaProducer):

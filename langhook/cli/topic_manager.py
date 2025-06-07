@@ -8,7 +8,7 @@ import structlog
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 from aiokafka.admin.config_resource import ConfigResource, ConfigResourceType
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("langhook")
 
 
 class TopicManager:
