@@ -9,7 +9,7 @@ A lightweight FastAPI-based webhook receiver that replaces Svix with a secure, c
 - **Rate Limiting**: IP-based rate limiting (200 requests/minute default)
 - **Body Size Limits**: Configurable request size limits (1 MiB default)
 - **Dead Letter Queue**: Malformed JSON sent to DLQ for inspection
-- **Kafka Integration**: Events forwarded to raw_ingest topic
+- **NATS Integration**: Events forwarded to NATS JetStream
 - **Structured Logging**: JSON logs with correlation IDs
 - **Health Checks**: `/health/` endpoint for monitoring
 
@@ -46,11 +46,11 @@ curl -X POST http://localhost:8000/ingest/github \
 # Install dependencies
 pip install -e .
 
-# Start Redis and Redpanda
-docker-compose up redis redpanda -d
+# Start Redis and NATS
+docker-compose up redis nats -d
 
 # Set environment variables
-export KAFKA_BROKERS=localhost:19092
+export NATS_URL=nats://localhost:4222
 export REDIS_URL=redis://localhost:6379
 
 # Run the service
@@ -69,7 +69,7 @@ STRIPE_SECRET=your_stripe_webhook_secret_here
 # Optional overrides
 MAX_BODY_BYTES=1048576
 RATE_LIMIT=200/minute
-KAFKA_BROKERS=redpanda:9092
+NATS_URL=nats://nats:4222
 REDIS_URL=redis://redis:6379
 ```
 
@@ -109,7 +109,7 @@ Content-Type: application/json
 
 ## Event Format
 
-Events are forwarded to Kafka with this structure:
+Events are forwarded to NATS with this structure:
 
 ```json
 {
@@ -141,8 +141,8 @@ langhook-dlq-show
 # Show last 50 DLQ messages
 langhook-dlq-show --count 50
 
-# Custom Kafka brokers
-langhook-dlq-show --kafka-brokers localhost:19092
+# Custom NATS URL
+langhook-dlq-show --nats-url nats://localhost:4222
 ```
 
 ## HMAC Signature Verification
@@ -206,8 +206,8 @@ mypy langhook/
 
 ```
 ┌─────────────────┐    ┌──────────────┐    ┌─────────────┐
-│   Webhooks      │───▶│ svc-ingest   │───▶│ Kafka       │
-│ (GitHub, etc.)  │    │ (FastAPI)    │    │ raw_ingest  │
+│   Webhooks      │───▶│ svc-ingest   │───▶│ NATS        │
+│ (GitHub, etc.)  │    │ (FastAPI)    │    │ JetStream   │
 └─────────────────┘    └──────────────┘    └─────────────┘
                               │                     │
                               ▼                     ▼

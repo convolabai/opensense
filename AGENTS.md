@@ -26,7 +26,7 @@ We want an engineer, product manager, or support rep to describe *what they care
 ## 3 · Value Proposition  
 | Stakeholder | Benefit |
 |-------------|---------|
-| **Developers** | One intake URL, canonical JSON, Kafka-compatible bus → **⚡ 10× faster** integrations. |
+| **Developers** | One intake URL, canonical JSON, NATS-compatible bus → **⚡ 10× faster** integrations. |
 | **Ops / SRE** | Single place to monitor, replay, & audit all external events. |
 | **Product / Support** | Create or disable alerts with a *sentence*—no ticket to Engineering. |
 | **Enterprises / Regulated** | MIT-licensed, self-host or cloud; run inside existing compliance boundaries. |
@@ -46,7 +46,7 @@ We want an engineer, product manager, or support rep to describe *what they care
 | Term | Description |
 |------|------------|
 | **Canonical Event** | CloudEvents envelope + *five-tuple* `{publisher, resource, action, key, value}`. |
-| **Subscription** | Natural-language sentence + LLM-generated **CESQL** filter + delivery channels. |
+| **Subscription** | Natural-language sentence + LLM-generated **NATS filter pattern** + delivery channels. |
 | **Channel** | Output target (Slack, e-mail, webhook, etc.). |
 | **Mapping** | JSONata or LLM-generated rule that converts a raw payload into a canonical event. |
 
@@ -105,7 +105,7 @@ LangHook is **domain-agnostic**, **LLM-assisted**, and **fully open**.
 ## 11 · Glossary  
 | Acronym | Definition |
 |---------|------------|
-| **CESQL** | CloudEvents SQL — SQL-like filter language over CloudEvents attributes. |
+| **NATS** | Neural Autonomic Transport System — messaging system for event streaming. |
 | **DLQ** | Dead-Letter Queue (for failed/malformed events). |
 | **LLM** | Large Language Model (e.g., GPT-4o, Llama-3). |
 
