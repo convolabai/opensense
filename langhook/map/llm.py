@@ -17,10 +17,10 @@ class LLMSuggestionService:
         if settings.openai_api_key:
             try:
                 # Import and initialize LLM only if API key is available
-                from langchain.chat_models import ChatOpenAI
+                from langchain_openai import ChatOpenAI
                 self.llm = ChatOpenAI(
                     openai_api_key=settings.openai_api_key,
-                    model_name="gpt-4.1-nano",
+                    model_name="gpt-4o-mini",
                     temperature=0.1,
                     max_tokens=1000,
                 )
@@ -46,11 +46,11 @@ class LLMSuggestionService:
     async def transform_to_canonical(self, source: str, raw_payload: dict[str, Any]) -> dict[str, Any] | None:
         """
         Transform raw payload directly to canonical format using LLM.
-        
+
         Args:
             source: Source identifier (e.g., 'github', 'stripe')
             raw_payload: Raw webhook payload to analyze
-            
+
         Returns:
             Canonical event dict or None if transformation fails
         """
@@ -62,7 +62,7 @@ class LLMSuggestionService:
             # Import here to avoid errors if langchain is not installed
             import json
 
-            from langchain.schema import HumanMessage, SystemMessage
+            from langchain_core.messages import HumanMessage, SystemMessage
 
             # Create the prompt
             system_prompt = self._create_system_prompt()
@@ -120,22 +120,39 @@ Your task is to analyze webhook JSON payloads and transform them directly into a
 
 The canonical format is a JSON object with these required fields:
 - publisher: upstream slug/identifier (string, lowercase snake_case)
-- resource: object with "type" (singular noun) and "id" (atomic identifier) fields  
+- resource: object with "type" (singular noun) and "id" (atomic identifier) fields
 - action: CRUD verb (string, must be one of: "create", "read", "update", "delete")
 
-Guidelines:
-1. Analyze the payload structure to identify the main resource and action
-2. Look for event type / action indicator - this will often give you resource type and action
-3. Map webhook actions to CRUD verbs: opened/created→create, closed/deleted→delete, edited/updated→update, viewed→read
-4. Extract resource ID (atomic identifier)
-5. Return ONLY a valid JSON object with the canonical fields, no explanations or code blocks
-6. Use the source name as the publisher value (lowercase, snake_case)
+Guidelines for resource identification:
+1. For GitHub: repository pushes → repository (id from repository.id), PR/issue events → pull_request/issue (id from number)
+2. For Stripe: payment events → payment_intent (id from data.object.id), customer events → customer (id from data.object.id)
+3. For Slack: message events → message (id from ts), channel events → channel (id from channel)
+4. For Twilio: SMS → sms (id from MessageSid), call → call (id from CallSid)
+5. For Shopify: order events → order (id from order id), product events → product (id from product id)
+6. For AWS SNS: notifications → notification (id from MessageId), topic → topic (id from TopicArn)
+7. For GitLab/Bitbucket: push events → repository (id from project.id or repository name)
+8. For Jira: issue events → issue (id from issue.key)
+9. For Trello: card events → card (id from card.id), board events → board (id from board.id)
+10. For Notion: page events → page (id from page.id)
+11. For Zoom: meeting events → meeting (id from meeting id)
+12. For PayPal: payment events → payment (id from resource.id)
+13. For Calendly: booking events → event (id from event.uuid)
+
+Action mapping rules:
+- Webhook actions: opened/created/scheduled → "create"
+- Webhook actions: updated/edited/modified/succeeded/completed → "update"
+- Webhook actions: closed/deleted/cancelled → "delete"
+- Webhook actions: viewed/read/accessed → "read"
+- For push events → "update" (updating repository)
+
+Return ONLY a valid JSON object with the canonical fields, no explanations or code blocks.
+Use the source name as the publisher value (lowercase, snake_case).
 
 Example canonical format:
 {
   "publisher": "github",
-  "resource": {"type": "pull_request", "id": 123},
-  "action": "create"
+  "resource": {"type": "repository", "id": 123},
+  "action": "update"
 }"""
 
     def _create_user_prompt(self, source: str, raw_payload: dict[str, Any]) -> str:
