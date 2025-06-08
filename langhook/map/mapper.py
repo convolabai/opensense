@@ -68,7 +68,7 @@ class MappingEngine:
             raw_payload: Raw webhook payload
             
         Returns:
-            Canonical five-tuple dict or None if mapping fails
+            Canonical event dict or None if mapping fails
         """
         mapping_expr = self.get_mapping(source)
         if not mapping_expr:
