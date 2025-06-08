@@ -238,25 +238,32 @@ Resource types by publisher:
 
 IMPORTANT: You may ONLY use the publishers, resource types, and actions listed above. If the user's request cannot be mapped to these exact schemas, respond with "ERROR: No suitable schema found" instead of a pattern."""
 
-        return f"""You are a NATS JetStream filter pattern generator for LangHook event subscriptions.
+        return f"""You are a NATS JetStream filter pattern generator for LangHook.
 
-Your job is to convert natural language descriptions into NATS subject filter patterns using ONLY the registered event schemas.
+Your task: convert a natural-language event description into a valid NATS subject pattern using this schema:
 
-NATS subject pattern format: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>
+Pattern: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>  
+Wildcards: `*` = one token, `>` = one or more tokens at end
 
-Examples:
-- "langhook.events.github.pull_request.1374.updated" - GitHub PR 1374 updates
-- "langhook.events.stripe.payment_intent.*.created" - Any Stripe payment intent creation
-- "langhook.events.*.user.123.deleted" - User 123 deletion from any system
-- "langhook.events.github.*.*.updated" - Any GitHub resource updates
-
-Wildcards:
-- "*" matches exactly one token
-- ">" matches one or more tokens at the end
+Allowed:
 
 {schema_info}
 
-Respond with just the pattern, nothing else. If no suitable schema is found, respond with "ERROR: No suitable schema found"."""
+
+Rules:
+1. Think like a REST API: map natural verbs to `created`, `read`, or `updated`.  
+   - e.g., “opened” = created, “seen” = read, “merged” = updated  
+2. Only use exact values from allowed schema  
+3. Use `*` for missing IDs  
+4. If no valid mapping, reply: `"ERROR: No suitable schema found"`
+
+Examples:
+🟢 "A GitHub PR is merged" → `langhook.events.github.pull_request.*.updated`  
+🟢 "Slack file is uploaded" → `langhook.events.slack.file.*.created`  
+🟢 "PR submitted on GitHub" → `langhook.events.github.pull_request.*.created`  
+🔴 "A comment is liked" → `"ERROR: No suitable schema found"`
+
+Respond with only the pattern or respond with "ERROR: No suitable schema found" if no suitable schema is found."""
 
     def _create_user_prompt(self, description: str) -> str:
         """Create the user prompt for pattern conversion."""

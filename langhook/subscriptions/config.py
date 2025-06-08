@@ -14,7 +14,7 @@ class SubscriptionSettings(BaseModel):
     # LLM service settings
     llm_provider: str = Field(default="openai", env="LLM_PROVIDER")  # openai, azure_openai, anthropic, google, local
     llm_api_key: str | None = Field(default=None, env="LLM_API_KEY")
-    llm_model: str = Field(default="gpt-4", env="LLM_MODEL")
+    llm_model: str = Field(default="gpt-4o-mini", env="LLM_MODEL")
     llm_base_url: str | None = Field(default=None, env="LLM_BASE_URL")  # For local LLMs or custom endpoints
     llm_temperature: float = Field(default=0.1, env="LLM_TEMPERATURE")
     llm_max_tokens: int = Field(default=500, env="LLM_MAX_TOKENS")

@@ -95,7 +95,7 @@ class BaseNATSConsumer:
         consumer_name: str,
         filter_subject: str,
         message_handler: Callable[[Dict[str, Any]], Any],
-        deliver_policy: DeliverPolicy = DeliverPolicy.ALL,
+        deliver_policy: DeliverPolicy = DeliverPolicy.NEW,
     ) -> None:
         self.nats_url = nats_url
         self.stream_name = stream_name
@@ -216,6 +216,7 @@ class BaseNATSConsumer:
                         error=str(e),
                         exc_info=True,
                     )
+                    
                     # Wait a bit before retrying
                     await asyncio.sleep(1.0)
 

@@ -20,7 +20,7 @@ class LLMSuggestionService:
                 from langchain.chat_models import ChatOpenAI
                 self.llm = ChatOpenAI(
                     openai_api_key=settings.openai_api_key,
-                    model_name="gpt-4.1-nano",
+                    model_name="gpt-4o-mini",
                     temperature=0.1,
                     max_tokens=1000,
                 )
