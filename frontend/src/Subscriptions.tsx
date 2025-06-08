@@ -77,19 +77,19 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       {/* Create Subscription Section */}
-      <div className="bg-cloudflare-secondary-gray/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-cloudflare-secondary-gray">
-        <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text">
+      <div className="bg-cloudflare-secondary-gray backdrop-blur-md rounded-xl shadow-lg p-6 sm:p-8 border border-cloudflare-secondary-gray-dark">
+        <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text tracking-tight">
           <Plus size={24} className="text-cloudflare-orange" />
           Create Subscription
         </h2>
 
         <div className="mb-6">
-          <label htmlFor="subDesc" className="block text-sm font-medium text-cloudflare-light-text mb-2">
+          <label htmlFor="subDesc" className="block text-sm font-medium text-cloudflare-secondary-gray-light mb-2">
             Natural Language Description:
           </label>
           <textarea
             id="subDesc"
-            className="w-full min-h-[100px] bg-cloudflare-dark-background text-cloudflare-light-text p-3 border border-cloudflare-secondary-gray rounded-lg focus:ring-2 focus:ring-cloudflare-orange focus:border-cloudflare-orange font-mono text-sm transition-colors"
+            className="w-full min-h-[100px] bg-cloudflare-secondary-gray-dark text-cloudflare-light-text p-3 border border-cloudflare-secondary-gray-dark rounded-lg focus:ring-2 focus:ring-cloudflare-orange focus:border-cloudflare-orange font-mono text-sm transition-colors"
             value={subscriptionDescription}
             onChange={(e) => setSubscriptionDescription(e.target.value)}
             placeholder="e.g., 'GitHub PR opened' or 'Stripe payment > $100 succeeded'"
@@ -97,13 +97,13 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
         </div>
 
         <div className="mb-6">
-          <label htmlFor="webhookUrl" className="block text-sm font-medium text-cloudflare-light-text mb-2">
+          <label htmlFor="webhookUrl" className="block text-sm font-medium text-cloudflare-secondary-gray-light mb-2">
             Webhook URL:
           </label>
           <input
             id="webhookUrl"
             type="url"
-            className="w-full bg-cloudflare-dark-background text-cloudflare-light-text p-3 border border-cloudflare-secondary-gray rounded-lg focus:ring-2 focus:ring-cloudflare-orange focus:border-cloudflare-orange font-mono text-sm transition-colors"
+            className="w-full bg-cloudflare-secondary-gray-dark text-cloudflare-light-text p-3 border border-cloudflare-secondary-gray-dark rounded-lg focus:ring-2 focus:ring-cloudflare-orange focus:border-cloudflare-orange font-mono text-sm transition-colors"
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
             placeholder="https://your-service.com/webhook"
@@ -111,7 +111,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
         </div>
 
         <button
-          className="w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-cloudflare-secondary-gray/95 bg-cloudflare-orange hover:bg-cloudflare-orange/80 text-white shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all transition-transform duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-cloudflare-secondary-gray bg-cloudflare-orange hover:bg-cloudflare-orange-dark active:bg-cloudflare-orange-dark active:scale-95 text-white shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
           onClick={createSubscription}
           disabled={isSubscriptionLoading || !subscriptionDescription.trim() || !webhookUrl.trim()}
         >
@@ -130,12 +130,12 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
       </div>
 
       {/* Active Subscriptions Section */}
-      <div className="bg-cloudflare-secondary-gray/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-cloudflare-secondary-gray">
-        <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text">
+      <div className="bg-cloudflare-secondary-gray backdrop-blur-md rounded-xl shadow-lg p-6 sm:p-8 border border-cloudflare-secondary-gray-dark">
+        <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text tracking-tight">
           <Eye size={24} className="text-cloudflare-orange" />
           Active Subscriptions
           <button
-            className="ml-auto py-1 px-2 rounded-md font-semibold flex items-center justify-center gap-1 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-cloudflare-secondary-gray/95 bg-cloudflare-orange hover:bg-cloudflare-orange/80 text-white border border-cloudflare-orange/50 hover:border-cloudflare-orange text-xs"
+            className="ml-auto py-1 px-2 rounded-md font-semibold flex items-center justify-center gap-1 transition-all transition-transform duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-cloudflare-secondary-gray bg-cloudflare-orange hover:bg-cloudflare-orange-dark active:bg-cloudflare-orange-dark active:scale-95 text-white border border-cloudflare-orange/50 hover:border-cloudflare-orange text-xs"
             onClick={refreshSubscriptions}
             aria-label="Refresh subscriptions"
           >
@@ -146,18 +146,18 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
         {subscriptions.length > 0 ? (
             <div className="max-h-[400px] overflow-y-auto space-y-4 pr-2"> {/* Keep max-h or adjust as needed */}
             {subscriptions.map((sub) => (
-                <div key={sub.id} className="p-3 sm:p-4 bg-cloudflare-dark-background/70 border border-cloudflare-secondary-gray/70 rounded-lg shadow">
+                <div key={sub.id} className="p-3 sm:p-4 bg-cloudflare-secondary-gray-dark/80 border border-cloudflare-secondary-gray-dark rounded-lg shadow hover:shadow-md transition-shadow">
                 <div className="mb-2">
-                    <strong className="text-cloudflare-light-text text-sm sm:text-base">Description:</strong>
+                    <strong className="text-cloudflare-secondary-gray-light text-sm sm:text-base">Description:</strong>
                     <span className="text-cloudflare-light-text ml-2 text-sm sm:text-base">{sub.description}</span>
                 </div>
                 <div className="mb-3">
-                    <strong className="text-cloudflare-light-text text-sm sm:text-base">NATS Pattern:</strong>
-                    <code className="ml-2 bg-cloudflare-secondary-gray text-cloudflare-orange px-2 py-1 rounded-md text-xs sm:text-sm font-mono">
+                    <strong className="text-cloudflare-secondary-gray-light text-sm sm:text-base">NATS Pattern:</strong>
+                    <code className="ml-2 bg-cloudflare-dark-background text-cloudflare-orange px-2 py-1 rounded-md text-xs sm:text-sm font-mono">
                     {sub.pattern}
                   </code>
                 </div>
-                  <div className="flex justify-between items-center text-xs sm:text-sm text-cloudflare-light-text">
+                  <div className="flex justify-between items-center text-xs sm:text-sm text-cloudflare-secondary-gray-light">
                   <span>Status: {sub.active ?
                     <span className="text-green-400">🟢 Active</span> :
                     <span className="text-red-400">🔴 Inactive</span>}
@@ -168,7 +168,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
             ))}
           </div>
         ) : (
-            <div className="text-center text-cloudflare-light-text py-16 sm:py-20 text-lg">
+            <div className="text-center text-cloudflare-secondary-gray-light py-16 sm:py-20 text-lg">
             No subscriptions yet. Create your first subscription!
           </div>
         )}

@@ -190,19 +190,19 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Input Section */}
-        <div className="bg-cloudflare-secondary-gray/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-cloudflare-secondary-gray">
-          <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text">
+        <div className="bg-cloudflare-secondary-gray backdrop-blur-md rounded-xl shadow-lg p-6 sm:p-8 border border-cloudflare-secondary-gray-dark">
+          <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text tracking-tight">
             <Send size={24} className="text-cloudflare-orange" />
             Webhook Input
           </h2>
 
           <div className="mb-6">
-            <label htmlFor="source" className="block text-sm font-medium text-cloudflare-light-text mb-2">Source:</label>
+            <label htmlFor="source" className="block text-sm font-medium text-cloudflare-secondary-gray-light mb-2">Source:</label>
             <select
               id="source"
               value={selectedSource}
               onChange={(e) => setSelectedSource(e.target.value)}
-              className="w-full bg-cloudflare-dark-background border border-cloudflare-secondary-gray rounded-lg p-3 text-cloudflare-light-text focus:ring-2 focus:ring-cloudflare-orange focus:border-cloudflare-orange transition-colors"
+              className="w-full bg-cloudflare-secondary-gray-dark border border-cloudflare-secondary-gray-dark rounded-lg p-3 text-cloudflare-light-text focus:ring-2 focus:ring-cloudflare-orange focus:border-cloudflare-orange transition-colors"
             >
               <option value="github">GitHub</option>
               <option value="stripe">Stripe</option>
@@ -211,7 +211,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
           </div>
 
           <textarea
-            className="w-full min-h-[200px] bg-cloudflare-dark-background text-cloudflare-light-text p-4 border border-cloudflare-secondary-gray rounded-lg focus:ring-2 focus:ring-cloudflare-orange focus:border-cloudflare-orange font-mono text-sm transition-colors"
+            className="w-full min-h-[200px] bg-cloudflare-secondary-gray-dark text-cloudflare-light-text p-4 border border-cloudflare-secondary-gray-dark rounded-lg focus:ring-2 focus:ring-cloudflare-orange focus:border-cloudflare-orange font-mono text-sm transition-colors"
             value={inputPayload}
             onChange={(e) => setInputPayload(e.target.value)}
             placeholder="Enter webhook payload JSON..."
@@ -219,7 +219,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
 
           <div className="flex flex-col sm:flex-row gap-4 mt-6">
             <button
-              className="flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-cloudflare-dark-background bg-cloudflare-orange hover:bg-cloudflare-orange/80 text-white shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all transition-transform duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-cloudflare-secondary-gray bg-cloudflare-orange hover:bg-cloudflare-orange-dark active:bg-cloudflare-orange-dark active:scale-95 text-white shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
               onClick={sendWebhook}
               disabled={isLoading || !inputPayload.trim()}
             >
@@ -232,7 +232,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
             </button>
 
             <button
-              className="flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-cloudflare-dark-background bg-cloudflare-secondary-gray hover:bg-cloudflare-secondary-gray/80 text-cloudflare-light-text border border-cloudflare-secondary-gray/50 hover:border-cloudflare-secondary-gray shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all transition-transform duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-cloudflare-secondary-gray bg-cloudflare-secondary-gray-dark hover:bg-cloudflare-secondary-gray text-cloudflare-light-text border border-cloudflare-secondary-gray-dark hover:border-cloudflare-secondary-gray shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed active:bg-cloudflare-secondary-gray active:scale-95"
               onClick={generateMapping}
               disabled={isLoading || !inputPayload.trim()}
             >
@@ -245,50 +245,50 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
         </div>
 
         {/* Output Section */}
-        <div className="bg-cloudflare-secondary-gray/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-cloudflare-secondary-gray">
-          <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text">
+        <div className="bg-cloudflare-secondary-gray backdrop-blur-md rounded-xl shadow-lg p-6 sm:p-8 border border-cloudflare-secondary-gray-dark">
+          <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text tracking-tight">
             <ArrowRight size={24} className="text-cloudflare-orange" />
             Processed Event
           </h2>
-          <div className="bg-cloudflare-dark-background border border-cloudflare-secondary-gray rounded-lg p-4 min-h-[420px] font-mono text-sm text-cloudflare-light-text whitespace-pre-wrap overflow-x-auto">
-            {outputEvent ? JSON.stringify(outputEvent, null, 2) : <span className="text-cloudflare-light-text">Send a webhook to see the canonical event output...</span>}
+          <div className="bg-cloudflare-secondary-gray-dark border border-cloudflare-secondary-gray-dark rounded-lg p-4 min-h-[420px] font-mono text-sm text-cloudflare-light-text whitespace-pre-wrap overflow-x-auto">
+            {outputEvent ? JSON.stringify(outputEvent, null, 2) : <span className="text-cloudflare-secondary-gray-light">Send a webhook to see the canonical event output...</span>}
           </div>
         </div>
       </div>
 
       {/* Recent Events Section */}
-      <div className="bg-cloudflare-secondary-gray/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-cloudflare-secondary-gray">
-        <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text">
+      <div className="bg-cloudflare-secondary-gray backdrop-blur-md rounded-xl shadow-lg p-6 sm:p-8 border border-cloudflare-secondary-gray-dark">
+        <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text tracking-tight">
           <ListChecks size={24} className="text-cloudflare-orange" /> {/* Changed icon */}
           Recent Events Stream
         </h2>
         {recentEvents.length > 0 ? (
           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
             {recentEvents.map((event, index) => (
-              <div key={index} className="bg-cloudflare-dark-background/70 border border-cloudflare-secondary-gray/70 rounded-lg p-3 sm:p-4 font-mono text-xs sm:text-sm text-cloudflare-light-text whitespace-pre-wrap overflow-x-auto">
+              <div key={index} className="bg-cloudflare-secondary-gray-dark/80 border border-cloudflare-secondary-gray-dark rounded-lg p-3 sm:p-4 font-mono text-xs sm:text-sm text-cloudflare-light-text whitespace-pre-wrap overflow-x-auto">
                 <p className="text-cloudflare-orange font-semibold mb-1 text-sm sm:text-base">Event {recentEvents.length - index} ({event.summary || `${event.publisher}/${event.resource.type}`})</p>
                 {JSON.stringify(event, null, 2)}
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-cloudflare-light-text text-center py-8 sm:py-12 text-lg">No events processed yet in this session.</p>
+          <p className="text-cloudflare-secondary-gray-light text-center py-8 sm:py-12 text-lg">No events processed yet in this session.</p>
         )}
       </div>
 
       {/* Matched Subscriptions for the latest event */}
       {matchedSubscriptions.length > 0 && (
-        <div className="bg-cloudflare-secondary-gray/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-cloudflare-secondary-gray">
-          <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text">
+        <div className="bg-cloudflare-secondary-gray backdrop-blur-md rounded-xl shadow-lg p-6 sm:p-8 border border-cloudflare-secondary-gray-dark">
+          <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text tracking-tight">
             <Bell size={24} className="text-cloudflare-orange" /> {/* Added Bell icon */}
             Notified Subscribers (for last event)
           </h2>
           <div className="space-y-3">
             {matchedSubscriptions.map((sub) => (
-              <div key={sub.id} className="p-3 bg-green-500/20 border border-green-500/50 rounded-lg shadow">
+              <div key={sub.id} className="p-3 bg-green-600/30 border border-green-600/50 rounded-lg shadow">
                 <div className="flex justify-between items-center">
-                  <span className="text-green-400 font-medium text-sm">{sub.description}</span>
-                  <code className="bg-green-600/40 text-green-300 px-2 py-1 rounded-md text-xs font-mono">{sub.pattern}</code>
+                  <span className="text-green-300 font-medium text-sm">{sub.description}</span>
+                  <code className="bg-green-700/50 text-green-200 px-2 py-1 rounded-md text-xs font-mono">{sub.pattern}</code>
                 </div>
               </div>
             ))}
