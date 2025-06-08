@@ -11,6 +11,7 @@ from langhook.map.nats import MapNATSConsumer, map_producer
 from langhook.map.llm import llm_service
 from langhook.map.mapper import mapping_engine
 from langhook.map.metrics import metrics
+from langhook.subscriptions.schema_registry import schema_registry_service
 
 logger = structlog.get_logger("langhook")
 
@@ -134,6 +135,9 @@ class MappingService:
             # Send to canonical events topic
             await map_producer.send_canonical_event(canonical_event)
 
+            # Register schema in registry
+            await self._register_event_schema(canonical_data)
+
             # Record success metrics
             self.events_mapped += 1
             metrics.record_event_mapped(source or "unknown")
@@ -182,6 +186,30 @@ class MappingService:
 
         await map_producer.send_mapping_failure(failure_event)
         self.events_failed += 1
+
+    async def _register_event_schema(self, canonical_data: dict[str, Any]) -> None:
+        """Register event schema in the schema registry."""
+        try:
+            publisher = canonical_data.get("publisher")
+            resource = canonical_data.get("resource", {})
+            resource_type = resource.get("type")
+            action = canonical_data.get("action")
+            
+            if publisher and resource_type and action:
+                await schema_registry_service.register_event_schema(
+                    publisher=publisher,
+                    resource_type=resource_type, 
+                    action=action
+                )
+        except Exception as e:
+            # Log but don't fail event processing
+            logger.warning(
+                "Failed to register event schema",
+                publisher=canonical_data.get("publisher"),
+                resource_type=canonical_data.get("resource", {}).get("type"),
+                action=canonical_data.get("action"),
+                error=str(e)
+            )
 
     def get_metrics(self) -> dict[str, Any]:
         """Get basic metrics for monitoring."""
