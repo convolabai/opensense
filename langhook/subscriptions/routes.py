@@ -5,7 +5,7 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 
 from langhook.subscriptions.database import db_service
-from langhook.subscriptions.llm import llm_service
+from langhook.subscriptions.llm import llm_service, NoSuitableSchemaError
 from langhook.subscriptions.schemas import (
     SubscriptionCreate,
     SubscriptionListResponse,
@@ -28,7 +28,19 @@ async def create_subscription(
     
     try:
         # Convert natural language description to NATS filter pattern
-        pattern = await llm_service.convert_to_pattern(subscription_data.description)
+        try:
+            pattern = await llm_service.convert_to_pattern(subscription_data.description)
+        except NoSuitableSchemaError as e:
+            logger.warning(
+                "Subscription rejected - no suitable schema found",
+                subscriber_id=subscriber_id,
+                description=subscription_data.description,
+                error=str(e)
+            )
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"No suitable event schema found for description: '{subscription_data.description}'. Please check available schemas at /schema endpoint."
+            ) from e
 
         # Create subscription in database
         subscription = await db_service.create_subscription(
@@ -46,6 +58,8 @@ async def create_subscription(
 
         return SubscriptionResponse.from_orm(subscription)
 
+    except HTTPException:
+        raise
     except Exception as e:
         error_details = str(e)
         # Log the full error with stack trace for debugging
@@ -143,7 +157,20 @@ async def update_subscription(
         # If description is being updated, regenerate the pattern
         pattern = None
         if update_data.description is not None:
-            pattern = await llm_service.convert_to_pattern(update_data.description)
+            try:
+                pattern = await llm_service.convert_to_pattern(update_data.description)
+            except NoSuitableSchemaError as e:
+                logger.warning(
+                    "Subscription update rejected - no suitable schema found",
+                    subscription_id=subscription_id,
+                    subscriber_id=subscriber_id,
+                    description=update_data.description,
+                    error=str(e)
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"No suitable event schema found for description: '{update_data.description}'. Please check available schemas at /schema endpoint."
+                ) from e
 
         subscription = await db_service.update_subscription(
             subscription_id=subscription_id,

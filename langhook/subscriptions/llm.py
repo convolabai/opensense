@@ -10,6 +10,11 @@ from langhook.subscriptions.config import subscription_settings
 logger = structlog.get_logger("langhook")
 
 
+class NoSuitableSchemaError(Exception):
+    """Raised when no suitable schema is found for the subscription request."""
+    pass
+
+
 class LLMPatternService:
     """Service for converting natural language descriptions to NATS filter patterns using LLM."""
 
@@ -122,12 +127,15 @@ class LLMPatternService:
 
         Returns:
             NATS filter pattern like "github.pull_request.1374.update"
+
+        Raises:
+            NoSuitableSchemaError: When no suitable schema is found for the request
         """
         if not self.llm_available:
             return self._fallback_pattern_conversion(description)
 
         try:
-            system_prompt = self._get_system_prompt()
+            system_prompt = await self._get_system_prompt_with_schemas()
             user_prompt = self._create_user_prompt(description)
 
             # Create messages in a format compatible with different LLM providers
@@ -149,6 +157,15 @@ class LLMPatternService:
                 else:
                     response_text = str(response_text).strip()
 
+            # Check if LLM indicated no suitable schema
+            if self._is_no_schema_response(response_text):
+                logger.warning(
+                    "LLM indicated no suitable schema found",
+                    description=description,
+                    response=response_text
+                )
+                raise NoSuitableSchemaError(f"No suitable schema found for description: {description}")
+
             # Parse the response to extract the pattern
             pattern = self._extract_pattern_from_response(response_text)
 
@@ -167,6 +184,8 @@ class LLMPatternService:
                 )
                 return self._fallback_pattern_conversion(description)
 
+        except NoSuitableSchemaError:
+            raise
         except Exception as e:
             logger.error(
                 "Failed to convert description to pattern using LLM",
@@ -176,29 +195,68 @@ class LLMPatternService:
             )
             return self._fallback_pattern_conversion(description)
 
-    def _get_system_prompt(self) -> str:
-        """Get the system prompt for pattern conversion."""
-        return """You are a NATS JetStream filter pattern generator for LangHook event subscriptions.
+    async def _get_system_prompt_with_schemas(self) -> str:
+        """Get the system prompt for pattern conversion with real schema data."""
+        # Import here to avoid circular imports
+        from langhook.subscriptions.schema_registry import schema_registry_service
+        
+        try:
+            schema_data = await schema_registry_service.get_schema_summary()
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch schema data for prompt, using fallback",
+                error=str(e)
+            )
+            schema_data = {
+                "publishers": [],
+                "resource_types": {},
+                "actions": []
+            }
 
-Your job is to convert natural language descriptions into NATS subject filter patterns.
+        # Build schema information for the prompt
+        if not schema_data["publishers"]:
+            # No schemas available, include instruction to reject
+            schema_info = """
+IMPORTANT: No event schemas are currently registered in the system. You must respond with "ERROR: No registered schemas available" for any subscription request."""
+        else:
+            # Build schema information from real data
+            publishers_list = ", ".join(schema_data["publishers"])
+            actions_list = ", ".join(schema_data["actions"])
+            
+            resource_types_info = []
+            for publisher, resource_types in schema_data["resource_types"].items():
+                types_str = ", ".join(resource_types)
+                resource_types_info.append(f"- {publisher}: {types_str}")
+            resource_types_text = "\n".join(resource_types_info)
+            
+            schema_info = f"""
+AVAILABLE EVENT SCHEMAS:
+Publishers: {publishers_list}
+Actions: {actions_list}
+Resource types by publisher:
+{resource_types_text}
+
+IMPORTANT: You may ONLY use the publishers, resource types, and actions listed above. If the user's request cannot be mapped to these exact schemas, respond with "ERROR: No suitable schema found" instead of a pattern."""
+
+        return f"""You are a NATS JetStream filter pattern generator for LangHook event subscriptions.
+
+Your job is to convert natural language descriptions into NATS subject filter patterns using ONLY the registered event schemas.
 
 NATS subject pattern format: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>
 
 Examples:
-- "langhook.events.github.pull_request.1374.update" - GitHub PR 1374 updates
-- "langhook.events.stripe.payment_intent.*.create" - Any Stripe payment intent creation
-- "langhook.events.*.user.123.delete" - User 123 deletion from any system
-- "langhook.events.github.*.*.update" - Any GitHub resource updates
+- "langhook.events.github.pull_request.1374.updated" - GitHub PR 1374 updates
+- "langhook.events.stripe.payment_intent.*.created" - Any Stripe payment intent creation
+- "langhook.events.*.user.123.deleted" - User 123 deletion from any system
+- "langhook.events.github.*.*.updated" - Any GitHub resource updates
 
 Wildcards:
 - "*" matches exactly one token
 - ">" matches one or more tokens at the end
 
-Publishers: github, stripe, slack, jira, custom-app, etc.
-Resource types: pull_request, issue, payment_intent, user, order, etc.
-Actions: created, read, updated, deleted
+{schema_info}
 
-Respond with just the pattern, nothing else."""
+Respond with just the pattern, nothing else. If no suitable schema is found, respond with "ERROR: No suitable schema found"."""
 
     def _create_user_prompt(self, description: str) -> str:
         """Create the user prompt for pattern conversion."""
@@ -207,6 +265,20 @@ Respond with just the pattern, nothing else."""
 "{description}"
 
 Pattern:"""
+
+    def _is_no_schema_response(self, response: str) -> bool:
+        """Check if the LLM response indicates no suitable schema was found."""
+        response_lower = response.lower().strip()
+        error_indicators = [
+            "error: no suitable schema found",
+            "error: no registered schemas available",
+            "no suitable schema",
+            "no registered schemas",
+            "cannot be mapped",
+            "not available in",
+            "schema not found"
+        ]
+        return any(indicator in response_lower for indicator in error_indicators)
 
     def _extract_pattern_from_response(self, response: str) -> str | None:
         """Extract the NATS pattern from the LLM response."""
