@@ -79,24 +79,37 @@ async def lifespan(app):
     mapping_task = asyncio.create_task(mapping_service.run())
 
     # Initialize subscription database tables with retry logic
-    import time
+
     max_retries = 10
     retry_delay = 2
-    
+
     for attempt in range(max_retries):
         try:
             from langhook.subscriptions.database import db_service
+
             db_service.create_tables()
-            logger.info("Subscription database initialized successfully", attempt=attempt + 1)
+            logger.info(
+                "Subscription database initialized successfully", attempt=attempt + 1
+            )
             break
         except Exception as e:
             if attempt == max_retries - 1:
-                logger.error("Failed to initialize subscription database after max retries", 
-                           error=str(e), attempts=max_retries, exc_info=True)
-                raise RuntimeError(f"Cannot start application - database initialization failed after {max_retries} attempts: {e}") from e
+                logger.error(
+                    "Failed to initialize subscription database after max retries",
+                    error=str(e),
+                    attempts=max_retries,
+                    exc_info=True,
+                )
+                raise RuntimeError(
+                    f"Cannot start application - database initialization failed after {max_retries} attempts: {e}"
+                ) from e
             else:
-                logger.warning("Database initialization failed, retrying", 
-                             error=str(e), attempt=attempt + 1, max_retries=max_retries)
+                logger.warning(
+                    "Database initialization failed, retrying",
+                    error=str(e),
+                    attempt=attempt + 1,
+                    max_retries=max_retries,
+                )
                 await asyncio.sleep(retry_delay)
 
     yield
@@ -136,7 +149,9 @@ app.include_router(subscriptions_router)
 # Frontend demo routes
 frontend_path = Path(__file__).parent.parent / "frontend" / "build"
 if frontend_path.exists():
-    app.mount("/static", StaticFiles(directory=str(frontend_path / "static")), name="static")
+    app.mount(
+        "/static", StaticFiles(directory=str(frontend_path / "static")), name="static"
+    )
 
     @app.get("/console")
     async def console():
@@ -144,7 +159,9 @@ if frontend_path.exists():
         index_path = frontend_path / "index.html"
         if index_path.exists():
             return FileResponse(str(index_path))
-        raise HTTPException(status_code=404, detail="Console not available - frontend not built")
+        raise HTTPException(
+            status_code=404, detail="Console not available - frontend not built"
+        )
 
     @app.get("/console/{path:path}")
     async def console_assets(path: str):
@@ -158,18 +175,20 @@ if frontend_path.exists():
             return FileResponse(str(index_path))
         raise HTTPException(status_code=404, detail="File not found")
 else:
+
     @app.get("/console")
     async def console_not_available():
         """Console not available when frontend is not built."""
         return {
             "message": "Console not available",
-            "instructions": "To build the frontend console:\n1. cd frontend\n2. npm install\n3. npm run build"
+            "instructions": "To build the frontend console:\n1. cd frontend\n2. npm install\n3. npm run build",
         }
 
 
 # ================================
 # SHARED ENDPOINTS
 # ================================
+
 
 class HealthResponse(BaseModel):
     """Health check response model."""
@@ -183,11 +202,11 @@ class HealthResponse(BaseModel):
 async def get_event_schema() -> dict[str, Any]:
     """
     Get the event schema registry with all known publishers, resource types, and actions.
-    
+
     Returns:
         Dictionary containing:
         - publishers: List of all known publishers
-        - resource_types: Dictionary mapping publishers to their resource types  
+        - resource_types: Dictionary mapping publishers to their resource types
         - actions: List of all known actions
     """
     return await schema_registry_service.get_schema_summary()
@@ -197,18 +216,14 @@ async def get_event_schema() -> dict[str, Any]:
 async def health_check() -> HealthResponse:
     """Health check endpoint for both services."""
     return HealthResponse(
-        status="up",
-        services={
-            "ingest": "up",
-            "map": "up"
-        },
-        version="0.3.0"
+        status="up", services={"ingest": "up", "map": "up"}, version="0.3.0"
     )
 
 
 # ================================
 # INGEST ENDPOINTS
 # ================================
+
 
 class IngestResponse(BaseModel):
     """Ingest endpoint response model."""
@@ -225,15 +240,15 @@ async def ingest_webhook(
 ) -> IngestResponse:
     """
     Catch-all webhook endpoint that accepts JSON payloads.
-    
+
     Args:
         source: Source identifier from URL path (e.g., 'github', 'stripe')
         request: FastAPI request object
         response: FastAPI response object
-    
+
     Returns:
         IngestResponse: Success response with request ID
-    
+
     Raises:
         HTTPException: For various error conditions (400, 401, 413, 429)
     """
@@ -257,7 +272,7 @@ async def ingest_webhook(
             )
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail="Request body too large"
+                detail="Request body too large",
             )
 
         # Parse JSON payload
@@ -273,8 +288,7 @@ async def ingest_webhook(
                 error=str(e),
             )
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid JSON payload"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON payload"
             )
 
         # Verify HMAC signature if configured for this source
@@ -286,8 +300,7 @@ async def ingest_webhook(
                 request_id=request_id,
             )
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid signature"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature"
             )
 
         # Create event message for Kafka
@@ -328,7 +341,7 @@ async def ingest_webhook(
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
+            detail="Internal server error",
         )
 
 
@@ -355,6 +368,7 @@ async def send_to_dlq(
 # ================================
 # MAP ENDPOINTS
 # ================================
+
 
 class MetricsResponse(BaseModel):
     """Response model for metrics endpoint."""
@@ -385,12 +399,13 @@ async def get_json_metrics() -> MetricsResponse:
         events_failed=service_metrics["events_failed"],
         llm_invocations=service_metrics["llm_invocations"],
         mapping_success_rate=service_metrics["mapping_success_rate"],
-        llm_usage_rate=service_metrics["llm_usage_rate"]
+        llm_usage_rate=service_metrics["llm_usage_rate"],
     )
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "langhook.app:app",
         host="0.0.0.0",

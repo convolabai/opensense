@@ -20,13 +20,11 @@ class HealthResponse(BaseModel):
 
 def create_health_endpoint(service_name: str, version: str):
     """Create a standardized health check endpoint."""
+
     async def health_check() -> HealthResponse:
         """Health check endpoint for readiness probes."""
-        return HealthResponse(
-            status="up",
-            service=service_name,
-            version=version
-        )
+        return HealthResponse(status="up", service=service_name, version=version)
+
     return health_check
 
 

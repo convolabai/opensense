@@ -15,14 +15,12 @@ class TopicManager:
     """Manages Kafka topic creation and configuration."""
 
     def __init__(self, brokers: str):
-        self.brokers = brokers.split(',')
+        self.brokers = brokers.split(",")
         self.admin_client: AIOKafkaAdminClient | None = None
 
     async def start(self) -> None:
         """Start the admin client."""
-        self.admin_client = AIOKafkaAdminClient(
-            bootstrap_servers=self.brokers
-        )
+        self.admin_client = AIOKafkaAdminClient(bootstrap_servers=self.brokers)
         await self.admin_client.start()
         logger.info("Topic manager started", brokers=self.brokers)
 
@@ -40,58 +38,58 @@ class TopicManager:
 
         # Epic 3 core topics configuration
         topics_config = {
-            'raw_ingest': {
-                'partitions': 3,
-                'replication_factor': 1,
-                'config': {
-                    'retention.ms': str(7 * 24 * 60 * 60 * 1000),  # 7 days
-                    'cleanup.policy': 'delete',  # No log compaction
-                    'compression.type': 'gzip',
-                    'segment.ms': str(24 * 60 * 60 * 1000),  # 24 hours
-                }
+            "raw_ingest": {
+                "partitions": 3,
+                "replication_factor": 1,
+                "config": {
+                    "retention.ms": str(7 * 24 * 60 * 60 * 1000),  # 7 days
+                    "cleanup.policy": "delete",  # No log compaction
+                    "compression.type": "gzip",
+                    "segment.ms": str(24 * 60 * 60 * 1000),  # 24 hours
+                },
             },
-            'langhook.events': {
-                'partitions': 3,
-                'replication_factor': 1,
-                'config': {
-                    'retention.ms': str(7 * 24 * 60 * 60 * 1000),  # 7 days
-                    'cleanup.policy': 'delete',  # No log compaction
-                    'compression.type': 'gzip',
-                    'segment.ms': str(24 * 60 * 60 * 1000),  # 24 hours
-                }
+            "langhook.events": {
+                "partitions": 3,
+                "replication_factor": 1,
+                "config": {
+                    "retention.ms": str(7 * 24 * 60 * 60 * 1000),  # 7 days
+                    "cleanup.policy": "delete",  # No log compaction
+                    "compression.type": "gzip",
+                    "segment.ms": str(24 * 60 * 60 * 1000),  # 24 hours
+                },
             },
-            'langhook.matches': {
-                'partitions': 3,
-                'replication_factor': 1,
-                'config': {
-                    'retention.ms': str(7 * 24 * 60 * 60 * 1000),  # 7 days
-                    'cleanup.policy': 'compact',  # Log compaction for matches
-                    'compression.type': 'gzip',
-                    'segment.ms': str(24 * 60 * 60 * 1000),  # 24 hours
-                    'min.cleanable.dirty.ratio': '0.5',
-                    'delete.retention.ms': str(24 * 60 * 60 * 1000),  # 24 hours
-                }
+            "langhook.matches": {
+                "partitions": 3,
+                "replication_factor": 1,
+                "config": {
+                    "retention.ms": str(7 * 24 * 60 * 60 * 1000),  # 7 days
+                    "cleanup.policy": "compact",  # Log compaction for matches
+                    "compression.type": "gzip",
+                    "segment.ms": str(24 * 60 * 60 * 1000),  # 24 hours
+                    "min.cleanable.dirty.ratio": "0.5",
+                    "delete.retention.ms": str(24 * 60 * 60 * 1000),  # 24 hours
+                },
             },
-            'langhook.dlq': {
-                'partitions': 1,
-                'replication_factor': 1,
-                'config': {
-                    'retention.ms': str(7 * 24 * 60 * 60 * 1000),  # 7 days
-                    'cleanup.policy': 'delete',  # No log compaction
-                    'compression.type': 'gzip',
-                    'segment.ms': str(24 * 60 * 60 * 1000),  # 24 hours
-                }
+            "langhook.dlq": {
+                "partitions": 1,
+                "replication_factor": 1,
+                "config": {
+                    "retention.ms": str(7 * 24 * 60 * 60 * 1000),  # 7 days
+                    "cleanup.policy": "delete",  # No log compaction
+                    "compression.type": "gzip",
+                    "segment.ms": str(24 * 60 * 60 * 1000),  # 24 hours
+                },
             },
-            'langhook.map_fail': {
-                'partitions': 1,
-                'replication_factor': 1,
-                'config': {
-                    'retention.ms': str(7 * 24 * 60 * 60 * 1000),  # 7 days
-                    'cleanup.policy': 'delete',  # No log compaction
-                    'compression.type': 'gzip',
-                    'segment.ms': str(24 * 60 * 60 * 1000),  # 24 hours
-                }
-            }
+            "langhook.map_fail": {
+                "partitions": 1,
+                "replication_factor": 1,
+                "config": {
+                    "retention.ms": str(7 * 24 * 60 * 60 * 1000),  # 7 days
+                    "cleanup.policy": "delete",  # No log compaction
+                    "compression.type": "gzip",
+                    "segment.ms": str(24 * 60 * 60 * 1000),  # 24 hours
+                },
+            },
         }
 
         # Check existing topics
@@ -103,9 +101,9 @@ class TopicManager:
             if topic_name not in existing_topics:
                 new_topic = NewTopic(
                     name=topic_name,
-                    num_partitions=config['partitions'],
-                    replication_factor=config['replication_factor'],
-                    topic_configs=config['config']
+                    num_partitions=config["partitions"],
+                    replication_factor=config["replication_factor"],
+                    topic_configs=config["config"],
                 )
                 new_topics.append(new_topic)
                 logger.info("Will create topic", topic=topic_name, config=config)
@@ -116,14 +114,16 @@ class TopicManager:
             try:
                 result = await self.admin_client.create_topics(new_topics)
                 # Handle different response types from aiokafka
-                if hasattr(result, 'items'):
+                if hasattr(result, "items"):
                     # Old API - result is a dict
                     for topic_name, future in result.items():
                         try:
                             await future  # Wait for creation to complete
                             logger.info("Topic created successfully", topic=topic_name)
                         except Exception as e:
-                            logger.error("Failed to create topic", topic=topic_name, error=str(e))
+                            logger.error(
+                                "Failed to create topic", topic=topic_name, error=str(e)
+                            )
                 else:
                     # New API - result might be a different type
                     # Just log success for all topics since no exceptions were raised
@@ -142,7 +142,7 @@ class TopicManager:
 
         metadata = await self.admin_client.list_topics()
         # Handle different return types from aiokafka
-        if hasattr(metadata, 'topics'):
+        if hasattr(metadata, "topics"):
             return list(metadata.topics.keys())
         else:
             # If metadata is a list or set of topic names
@@ -157,17 +157,17 @@ class TopicManager:
         if topic_name in metadata.topics:
             topic = metadata.topics[topic_name]
             return {
-                'name': topic.topic,
-                'partitions': len(topic.partitions),
-                'partition_details': [
+                "name": topic.topic,
+                "partitions": len(topic.partitions),
+                "partition_details": [
                     {
-                        'partition': p.partition,
-                        'leader': p.leader,
-                        'replicas': p.replicas,
-                        'isr': p.isr
+                        "partition": p.partition,
+                        "leader": p.leader,
+                        "replicas": p.replicas,
+                        "isr": p.isr,
                     }
                     for p in topic.partitions
-                ]
+                ],
             }
         else:
             raise ValueError(f"Topic {topic_name} not found")
@@ -230,8 +230,10 @@ async def describe_topic(brokers: str, topic_name: str) -> None:
         print(f"Topic: {info['name']}")
         print(f"Partitions: {info['partitions']}")
         print("\nPartition Details:")
-        for p in info['partition_details']:
-            print(f"  Partition {p['partition']}: Leader={p['leader']}, Replicas={p['replicas']}, ISR={p['isr']}")
+        for p in info["partition_details"]:
+            print(
+                f"  Partition {p['partition']}: Leader={p['leader']}, Replicas={p['replicas']}, ISR={p['isr']}"
+            )
 
         print("\nConfiguration:")
         for key, value in sorted(config.items()):
@@ -251,22 +253,23 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Manage LangHook Kafka topics")
     parser.add_argument(
-        "--brokers", "-b",
+        "--brokers",
+        "-b",
         default="localhost:19092",
-        help="Kafka brokers (default: localhost:19092)"
+        help="Kafka brokers (default: localhost:19092)",
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Create topics command
-    create_parser = subparsers.add_parser('create', help='Create LangHook topics')
+    create_parser = subparsers.add_parser("create", help="Create LangHook topics")
 
     # List topics command
-    list_parser = subparsers.add_parser('list', help='List all topics')
+    list_parser = subparsers.add_parser("list", help="List all topics")
 
     # Describe topic command
-    describe_parser = subparsers.add_parser('describe', help='Describe a topic')
-    describe_parser.add_argument('topic', help='Topic name to describe')
+    describe_parser = subparsers.add_parser("describe", help="Describe a topic")
+    describe_parser.add_argument("topic", help="Topic name to describe")
 
     args = parser.parse_args()
 
@@ -275,11 +278,11 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        if args.command == 'create':
+        if args.command == "create":
             asyncio.run(create_topics(args.brokers))
-        elif args.command == 'list':
+        elif args.command == "list":
             asyncio.run(list_topics(args.brokers))
-        elif args.command == 'describe':
+        elif args.command == "describe":
             asyncio.run(describe_topic(args.brokers, args.topic))
     except KeyboardInterrupt:
         print("\nInterrupted by user")

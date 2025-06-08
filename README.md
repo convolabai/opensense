@@ -253,19 +253,38 @@ graph TD
 
 LangHook includes comprehensive testing at multiple levels:
 
+### Quick Start
+```bash
+# Install development dependencies first
+make install-dev
+
+# Run all unit tests
+make test-unit
+
+# Run all code quality checks
+make check
+```
+
 ### Unit Tests
 ```bash
-# Run all unit tests
-pytest tests/ --ignore=tests/e2e/
+# Run all unit tests (requires dev dependencies)
+python -m pytest tests/ -v --tb=short -x --ignore=tests/e2e/
+
+# Using Make (recommended)
+make test-unit
 
 # Run specific test files
 pytest tests/test_app.py -v
 pytest tests/map/test_mapper.py -v
 ```
 
+**Note**: Unit tests require development dependencies. Install with `pip install -e ".[dev]"` or `make install-dev`.
+
 ### End-to-End Tests
 ```bash
 # Run complete E2E test suite (requires Docker)
+make test-e2e
+# OR
 ./scripts/run-e2e-tests.sh
 
 # Manual E2E testing
@@ -301,16 +320,52 @@ We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md)
 
 ### Development Setup
 
+#### Quick Setup (Recommended)
+```bash
+# Complete development environment setup
+make dev-setup
+```
+
+This will:
+- Install development dependencies (`pip install -e ".[dev]"`)
+- Start Docker services (`docker-compose up -d`)
+- Verify everything is working
+
+#### Manual Setup
 ```bash
 # Install development dependencies
 pip install -e ".[dev]"
 
-# Run linting
-ruff check langhook/
-ruff format langhook/
+# Start Docker services
+docker-compose up -d
 
-# Run type checking
-mypy langhook/
+# Verify installation
+make test-unit
+```
+
+### Development Commands
+```bash
+# Code quality
+make lint          # Run linting
+make format        # Format code  
+make type-check    # Run type checking
+make check         # Run all quality checks
+
+# Testing
+make test-unit     # Run unit tests
+make test-e2e      # Run E2E tests (requires Docker)
+
+# See all available commands
+make help
+```
+
+### Common Issues
+
+**"No module named pytest"** - You need to install dev dependencies:
+```bash
+pip install -e ".[dev]"
+# OR
+make install-dev
 ```
 
 ## 📄 License

@@ -21,21 +21,23 @@ class DatabaseService:
         self.engine = create_engine(
             subscription_settings.postgres_dsn,
             pool_pre_ping=True,  # Validate connections before use
-            pool_recycle=3600,   # Recreate connections after 1 hour
+            pool_recycle=3600,  # Recreate connections after 1 hour
             connect_args={
                 "connect_timeout": 10,
                 "application_name": "langhook_subscriptions",
-            }
+            },
         )
-        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        self.SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=self.engine
+        )
 
     def create_tables(self) -> None:
         """Create database tables."""
         Base.metadata.create_all(bind=self.engine)
-        
+
         # Explicitly ensure event schema registry table exists
         self.create_schema_registry_table()
-        
+
         logger.info("Subscription database tables created")
 
     def create_schema_registry_table(self) -> None:
@@ -58,7 +60,7 @@ class DatabaseService:
             logger.error(
                 "Failed to create event schema registry table",
                 error=str(e),
-                exc_info=True
+                exc_info=True,
             )
 
     def get_session(self) -> Session:
@@ -66,10 +68,7 @@ class DatabaseService:
         return self.SessionLocal()
 
     async def create_subscription(
-        self,
-        subscriber_id: str,
-        pattern: str,
-        subscription_data: SubscriptionCreate
+        self, subscriber_id: str, pattern: str, subscription_data: SubscriptionCreate
     ) -> Subscription:
         """Create a new subscription."""
         with self.get_session() as session:
@@ -79,7 +78,7 @@ class DatabaseService:
                 pattern=pattern,
                 channel_type=subscription_data.channel_type,
                 channel_config=json.dumps(subscription_data.channel_config),
-                active=True
+                active=True,
             )
 
             session.add(subscription)
@@ -93,20 +92,26 @@ class DatabaseService:
                 "Subscription created",
                 subscription_id=subscription.id,
                 subscriber_id=subscriber_id,
-                pattern=pattern
+                pattern=pattern,
             )
 
             return subscription
 
-    async def get_subscription(self, subscription_id: int, subscriber_id: str) -> Subscription | None:
+    async def get_subscription(
+        self, subscription_id: int, subscriber_id: str
+    ) -> Subscription | None:
         """Get a subscription by ID for a specific subscriber."""
         with self.get_session() as session:
-            subscription = session.query(Subscription).filter(
-                and_(
-                    Subscription.id == subscription_id,
-                    Subscription.subscriber_id == subscriber_id
+            subscription = (
+                session.query(Subscription)
+                .filter(
+                    and_(
+                        Subscription.id == subscription_id,
+                        Subscription.subscriber_id == subscriber_id,
+                    )
                 )
-            ).first()
+                .first()
+            )
 
             if subscription:
                 # Parse the channel_config JSON
@@ -115,14 +120,13 @@ class DatabaseService:
             return subscription
 
     async def get_subscriber_subscriptions(
-        self,
-        subscriber_id: str,
-        skip: int = 0,
-        limit: int = 100
+        self, subscriber_id: str, skip: int = 0, limit: int = 100
     ) -> tuple[list[Subscription], int]:
         """Get all subscriptions for a subscriber with pagination."""
         with self.get_session() as session:
-            query = session.query(Subscription).filter(Subscription.subscriber_id == subscriber_id)
+            query = session.query(Subscription).filter(
+                Subscription.subscriber_id == subscriber_id
+            )
 
             total = query.count()
             subscriptions = query.offset(skip).limit(limit).all()
@@ -138,16 +142,20 @@ class DatabaseService:
         subscription_id: int,
         subscriber_id: str,
         pattern: str | None,
-        update_data: SubscriptionUpdate
+        update_data: SubscriptionUpdate,
     ) -> Subscription | None:
         """Update a subscription."""
         with self.get_session() as session:
-            subscription = session.query(Subscription).filter(
-                and_(
-                    Subscription.id == subscription_id,
-                    Subscription.subscriber_id == subscriber_id
+            subscription = (
+                session.query(Subscription)
+                .filter(
+                    and_(
+                        Subscription.id == subscription_id,
+                        Subscription.subscriber_id == subscriber_id,
+                    )
                 )
-            ).first()
+                .first()
+            )
 
             if not subscription:
                 return None
@@ -173,20 +181,26 @@ class DatabaseService:
             logger.info(
                 "Subscription updated",
                 subscription_id=subscription.id,
-                subscriber_id=subscriber_id
+                subscriber_id=subscriber_id,
             )
 
             return subscription
 
-    async def delete_subscription(self, subscription_id: int, subscriber_id: str) -> bool:
+    async def delete_subscription(
+        self, subscription_id: int, subscriber_id: str
+    ) -> bool:
         """Delete a subscription."""
         with self.get_session() as session:
-            subscription = session.query(Subscription).filter(
-                and_(
-                    Subscription.id == subscription_id,
-                    Subscription.subscriber_id == subscriber_id
+            subscription = (
+                session.query(Subscription)
+                .filter(
+                    and_(
+                        Subscription.id == subscription_id,
+                        Subscription.subscriber_id == subscriber_id,
+                    )
                 )
-            ).first()
+                .first()
+            )
 
             if not subscription:
                 return False
@@ -197,7 +211,7 @@ class DatabaseService:
             logger.info(
                 "Subscription deleted",
                 subscription_id=subscription.id,
-                subscriber_id=subscriber_id
+                subscriber_id=subscriber_id,
             )
 
             return True
@@ -205,9 +219,9 @@ class DatabaseService:
     async def get_all_active_subscriptions(self) -> list[Subscription]:
         """Get all active subscriptions for consumer management."""
         with self.get_session() as session:
-            subscriptions = session.query(Subscription).filter(
-                Subscription.active
-            ).all()
+            subscriptions = (
+                session.query(Subscription).filter(Subscription.active).all()
+            )
 
             # Parse channel_config JSON for each subscription
             for subscription in subscriptions:

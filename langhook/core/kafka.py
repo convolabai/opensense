@@ -42,7 +42,7 @@ class BaseKafkaProducer:
         topic: str,
         message: dict[str, Any],
         key: str | None = None,
-        log_success: bool = True
+        log_success: bool = True,
     ) -> None:
         """Send a message to a Kafka topic."""
         if not self.producer:
@@ -81,7 +81,7 @@ class BaseKafkaConsumer:
         brokers: list[str],
         group_id: str,
         message_handler,
-        auto_offset_reset: str = "earliest"
+        auto_offset_reset: str = "earliest",
     ) -> None:
         self.topics = topics
         self.brokers = brokers
@@ -138,7 +138,9 @@ class BaseKafkaConsumer:
                 except Exception as e:
                     logger.error(
                         "Error processing message",
-                        message_key=message.key.decode("utf-8") if message.key else None,
+                        message_key=message.key.decode("utf-8")
+                        if message.key
+                        else None,
                         topic=message.topic,
                         error=str(e),
                         exc_info=True,

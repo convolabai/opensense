@@ -19,10 +19,7 @@ class KafkaEventProducer(BaseKafkaProducer):
     async def send_event(self, event: dict[str, Any]) -> None:
         """Send event to the raw_ingest topic."""
         await self.send_message(
-            settings.kafka_topic_raw_ingest,
-            event,
-            key=event["id"],
-            log_success=True
+            settings.kafka_topic_raw_ingest, event, key=event["id"], log_success=True
         )
         logger.debug(
             "Event sent to raw_ingest topic",
@@ -37,7 +34,7 @@ class KafkaEventProducer(BaseKafkaProducer):
                 settings.kafka_topic_dlq,
                 dlq_event,
                 key=dlq_event["id"],
-                log_success=False
+                log_success=False,
             )
             logger.debug(
                 "Event sent to DLQ",

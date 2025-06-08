@@ -16,44 +16,44 @@ mapping_registry = CollectorRegistry()
 
 # Define metrics
 events_processed_total = Counter(
-    'langhook_events_processed_total',
-    'Total number of events processed by the mapping service',
-    ['source'],
-    registry=mapping_registry
+    "langhook_events_processed_total",
+    "Total number of events processed by the mapping service",
+    ["source"],
+    registry=mapping_registry,
 )
 
 events_mapped_total = Counter(
-    'langhook_events_mapped_total',
-    'Total number of events successfully mapped',
-    ['source'],
-    registry=mapping_registry
+    "langhook_events_mapped_total",
+    "Total number of events successfully mapped",
+    ["source"],
+    registry=mapping_registry,
 )
 
 events_failed_total = Counter(
-    'langhook_events_failed_total',
-    'Total number of events that failed mapping',
-    ['source', 'reason'],
-    registry=mapping_registry
+    "langhook_events_failed_total",
+    "Total number of events that failed mapping",
+    ["source", "reason"],
+    registry=mapping_registry,
 )
 
 llm_invocations_total = Counter(
-    'langhook_llm_invocations_total',
-    'Total number of LLM invocations for mapping suggestions',
-    ['source'],
-    registry=mapping_registry
+    "langhook_llm_invocations_total",
+    "Total number of LLM invocations for mapping suggestions",
+    ["source"],
+    registry=mapping_registry,
 )
 
 mapping_duration_seconds = Histogram(
-    'langhook_mapping_duration_seconds',
-    'Time spent processing each event',
-    ['source'],
-    registry=mapping_registry
+    "langhook_mapping_duration_seconds",
+    "Time spent processing each event",
+    ["source"],
+    registry=mapping_registry,
 )
 
 active_mappings = Gauge(
-    'langhook_active_mappings',
-    'Number of active mapping rules loaded',
-    registry=mapping_registry
+    "langhook_active_mappings",
+    "Number of active mapping rules loaded",
+    registry=mapping_registry,
 )
 
 
@@ -89,14 +89,16 @@ class MetricsCollector:
 
     def get_metrics_text(self) -> str:
         """Get metrics in Prometheus text format."""
-        return generate_latest(mapping_registry).decode('utf-8')
+        return generate_latest(mapping_registry).decode("utf-8")
 
     def get_metrics_dict(self) -> dict[str, Any]:
         """Get metrics as a dictionary for JSON API."""
         # Simple metrics for the /metrics endpoint
         return {
-            'uptime_seconds': time.time() - self.start_time,
-            'active_mappings': active_mappings._value._value if hasattr(active_mappings, '_value') else 0,
+            "uptime_seconds": time.time() - self.start_time,
+            "active_mappings": active_mappings._value._value
+            if hasattr(active_mappings, "_value")
+            else 0,
         }
 
 

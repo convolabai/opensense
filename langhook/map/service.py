@@ -7,10 +7,10 @@ from typing import Any
 import structlog
 
 from langhook.map.cloudevents import cloud_event_wrapper
-from langhook.map.nats import MapNATSConsumer, map_producer
 from langhook.map.llm import llm_service
 from langhook.map.mapper import mapping_engine
 from langhook.map.metrics import metrics
+from langhook.map.nats import MapNATSConsumer, map_producer
 from langhook.subscriptions.schema_registry import schema_registry_service
 
 logger = structlog.get_logger("langhook")
@@ -90,7 +90,7 @@ class MappingService:
             "Processing raw event",
             event_id=event_id,
             source=source,
-            payload_keys=list(payload.keys()) if payload else []
+            payload_keys=list(payload.keys()) if payload else [],
         )
 
         try:
@@ -103,25 +103,33 @@ class MappingService:
                     logger.info(
                         "No mapping found, using LLM for direct transformation",
                         event_id=event_id,
-                        source=source
+                        source=source,
                     )
 
                     self.llm_invocations += 1
                     metrics.record_llm_invocation(source or "unknown")
 
                     # Transform payload directly to canonical format using LLM
-                    canonical_data = await llm_service.transform_to_canonical(source, payload)
+                    canonical_data = await llm_service.transform_to_canonical(
+                        source, payload
+                    )
 
                     if canonical_data is None:
                         await self._send_mapping_failure(
                             raw_event,
-                            "LLM failed to transform payload to canonical format"
+                            "LLM failed to transform payload to canonical format",
                         )
-                        metrics.record_event_failed(source or "unknown", "llm_transformation_failed")
+                        metrics.record_event_failed(
+                            source or "unknown", "llm_transformation_failed"
+                        )
                         return
                 else:
-                    await self._send_mapping_failure(raw_event, "No mapping available and LLM service unavailable")
-                    metrics.record_event_failed(source or "unknown", "no_mapping_no_llm")
+                    await self._send_mapping_failure(
+                        raw_event, "No mapping available and LLM service unavailable"
+                    )
+                    metrics.record_event_failed(
+                        source or "unknown", "no_mapping_no_llm"
+                    )
                     return
 
             # Create canonical CloudEvent
@@ -129,7 +137,7 @@ class MappingService:
                 event_id=event_id,
                 source=source,
                 canonical_data=canonical_data,
-                raw_payload=payload
+                raw_payload=payload,
             )
 
             # Send to canonical events topic
@@ -154,7 +162,7 @@ class MappingService:
                 resource_type=canonical_data["resource"]["type"],
                 resource_id=canonical_data["resource"]["id"],
                 action=canonical_data["action"],
-                processing_time_ms=round(duration * 1000, 2)
+                processing_time_ms=round(duration * 1000, 2),
             )
 
         except Exception as e:
@@ -167,13 +175,11 @@ class MappingService:
                 event_id=event_id,
                 source=source,
                 error=str(e),
-                exc_info=True
+                exc_info=True,
             )
 
     async def _send_mapping_failure(
-        self,
-        raw_event: dict[str, Any],
-        error_message: str
+        self, raw_event: dict[str, Any], error_message: str
     ) -> None:
         """Send mapping failure to DLQ topic."""
         failure_event = {
@@ -181,7 +187,7 @@ class MappingService:
             "timestamp": datetime.now(UTC).isoformat(),
             "source": raw_event.get("source"),
             "error": error_message,
-            "payload": raw_event.get("payload", {})
+            "payload": raw_event.get("payload", {}),
         }
 
         await map_producer.send_mapping_failure(failure_event)
@@ -194,12 +200,10 @@ class MappingService:
             resource = canonical_data.get("resource", {})
             resource_type = resource.get("type")
             action = canonical_data.get("action")
-            
+
             if publisher and resource_type and action:
                 await schema_registry_service.register_event_schema(
-                    publisher=publisher,
-                    resource_type=resource_type, 
-                    action=action
+                    publisher=publisher, resource_type=resource_type, action=action
                 )
         except Exception as e:
             # Log but don't fail event processing
@@ -208,7 +212,7 @@ class MappingService:
                 publisher=canonical_data.get("publisher"),
                 resource_type=canonical_data.get("resource", {}).get("type"),
                 action=canonical_data.get("action"),
-                error=str(e)
+                error=str(e),
             )
 
     def get_metrics(self) -> dict[str, Any]:
@@ -220,12 +224,14 @@ class MappingService:
             "llm_invocations": self.llm_invocations,
             "mapping_success_rate": (
                 self.events_mapped / self.events_processed
-                if self.events_processed > 0 else 0.0
+                if self.events_processed > 0
+                else 0.0
             ),
             "llm_usage_rate": (
                 self.llm_invocations / self.events_processed
-                if self.events_processed > 0 else 0.0
-            )
+                if self.events_processed > 0
+                else 0.0
+            ),
         }
 
 

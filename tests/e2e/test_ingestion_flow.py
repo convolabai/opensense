@@ -1,6 +1,7 @@
 """End-to-end tests for event ingestion and processing flow."""
 
 import asyncio
+
 import pytest
 import structlog
 
@@ -24,7 +25,7 @@ class TestEventIngestion:
     async def test_health_check(self, e2e_utils: E2ETestUtils):
         """Test health check endpoint."""
         health = await e2e_utils.check_health()
-        
+
         assert health["status"] == "up"
         assert "services" in health
         assert health["services"]["ingest"] == "up"
@@ -39,17 +40,17 @@ class TestEventIngestion:
                 "number": 123,
                 "title": "E2E Test PR",
                 "state": "open",
-                "user": {"login": "testuser"}
+                "user": {"login": "testuser"},
             },
             "repository": {
                 "name": "test-repo",
                 "id": 12345,
-                "owner": {"login": "testorg"}
-            }
+                "owner": {"login": "testorg"},
+            },
         }
-        
+
         result = await e2e_utils.send_test_event("github", payload)
-        
+
         assert result["message"] == "Event accepted"
         assert "request_id" in result
         assert result["request_id"] is not None
@@ -65,13 +66,13 @@ class TestEventIngestion:
                     "id": "pi_test_456",
                     "amount": 2000,
                     "currency": "usd",
-                    "status": "succeeded"
+                    "status": "succeeded",
                 }
-            }
+            },
         }
-        
+
         result = await e2e_utils.send_test_event("stripe", payload)
-        
+
         assert result["message"] == "Event accepted"
         assert "request_id" in result
 
@@ -81,14 +82,11 @@ class TestEventIngestion:
             "event_type": "user_registered",
             "user_id": "user_123",
             "timestamp": "2024-01-01T10:00:00Z",
-            "metadata": {
-                "source": "mobile_app",
-                "version": "1.2.3"
-            }
+            "metadata": {"source": "mobile_app", "version": "1.2.3"},
         }
-        
+
         result = await e2e_utils.send_test_event("custom-app", payload)
-        
+
         assert result["message"] == "Event accepted"
         assert "request_id" in result
 
@@ -99,7 +97,7 @@ class TestEventIngestion:
             response = await e2e_utils.http_client.post(
                 "/ingest/github",
                 content="{ invalid json }",
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             )
             assert response.status_code == 400
         except Exception:
@@ -109,7 +107,7 @@ class TestEventIngestion:
     async def test_ingest_empty_payload(self, e2e_utils: E2ETestUtils):
         """Test ingesting empty payload."""
         result = await e2e_utils.send_test_event("github", {})
-        
+
         assert result["message"] == "Event accepted"
         assert "request_id" in result
 
@@ -120,11 +118,11 @@ class TestEventIngestion:
         payload = {
             "action": "opened",
             "pull_request": {"number": 123, "title": "Large PR"},
-            "large_field": large_data
+            "large_field": large_data,
         }
-        
+
         result = await e2e_utils.send_test_event("github", payload)
-        
+
         assert result["message"] == "Event accepted"
         assert "request_id" in result
 
@@ -132,23 +130,22 @@ class TestEventIngestion:
         """Test getting service metrics."""
         # Send a few events first to generate metrics
         for i in range(3):
-            await e2e_utils.send_test_event("github", {
-                "action": "opened",
-                "pull_request": {"number": i + 1}
-            })
-        
+            await e2e_utils.send_test_event(
+                "github", {"action": "opened", "pull_request": {"number": i + 1}}
+            )
+
         # Give some time for events to be processed
         await asyncio.sleep(5)
-        
+
         metrics = await e2e_utils.get_metrics()
-        
+
         assert "events_processed" in metrics
         assert "events_mapped" in metrics
         assert "events_failed" in metrics
         assert "llm_invocations" in metrics
         assert "mapping_success_rate" in metrics
         assert "llm_usage_rate" in metrics
-        
+
         # Should have processed at least our test events
         assert metrics["events_processed"] >= 3
 
@@ -165,22 +162,22 @@ class TestEventProcessingFlow:
                 "number": 456,
                 "title": "E2E Test Flow PR",
                 "state": "open",
-                "user": {"login": "testuser"}
+                "user": {"login": "testuser"},
             },
             "repository": {
                 "name": "test-repo",
                 "id": 12345,
-                "owner": {"login": "testorg"}
-            }
+                "owner": {"login": "testorg"},
+            },
         }
-        
+
         result = await e2e_utils.send_test_event("github", payload)
         event_id = result["request_id"]
-        
+
         # Wait for event to be processed
         processed = await e2e_utils.wait_for_event_processing(event_id, timeout=30)
         assert processed, "Event should have been processed"
-        
+
         # Check metrics to verify processing
         metrics = await e2e_utils.get_metrics()
         assert metrics["events_processed"] > 0
@@ -192,31 +189,28 @@ class TestEventProcessingFlow:
             description="E2E_TEST GitHub pull request events",
             channel_config={
                 "url": "http://test-webhook.example.com/github-prs",
-                "method": "POST"
-            }
+                "method": "POST",
+            },
         )
-        
+
         # Send a matching GitHub PR event
         payload = {
             "action": "opened",
             "pull_request": {
                 "number": 789,
                 "title": "Test PR for subscription",
-                "state": "open"
+                "state": "open",
             },
-            "repository": {
-                "name": "test-repo",
-                "id": 12345
-            }
+            "repository": {"name": "test-repo", "id": 12345},
         }
-        
+
         result = await e2e_utils.send_test_event("github", payload)
         event_id = result["request_id"]
-        
+
         # Wait for event processing
         processed = await e2e_utils.wait_for_event_processing(event_id, timeout=30)
         assert processed, "Event should have been processed"
-        
+
         # Verify subscription still exists (processing shouldn't affect it)
         sub_check = await e2e_utils.get_subscription_by_id(subscription["id"])
         assert sub_check is not None
@@ -224,28 +218,31 @@ class TestEventProcessingFlow:
     async def test_multiple_sources_flow(self, e2e_utils: E2ETestUtils):
         """Test event flow from multiple sources."""
         sources_and_payloads = [
-            ("github", {
-                "action": "closed",
-                "pull_request": {"number": 100, "state": "closed"}
-            }),
-            ("stripe", {
-                "type": "invoice.payment_succeeded",
-                "data": {"object": {"id": "inv_123", "amount_paid": 1000}}
-            }),
-            ("custom-app", {
-                "event_type": "order_completed",
-                "order_id": "order_456"
-            })
+            (
+                "github",
+                {
+                    "action": "closed",
+                    "pull_request": {"number": 100, "state": "closed"},
+                },
+            ),
+            (
+                "stripe",
+                {
+                    "type": "invoice.payment_succeeded",
+                    "data": {"object": {"id": "inv_123", "amount_paid": 1000}},
+                },
+            ),
+            ("custom-app", {"event_type": "order_completed", "order_id": "order_456"}),
         ]
-        
+
         event_ids = []
         for source, payload in sources_and_payloads:
             result = await e2e_utils.send_test_event(source, payload)
             event_ids.append(result["request_id"])
-        
+
         # Wait for all events to be processed
         await asyncio.sleep(10)
-        
+
         # Check that metrics show multiple events processed
         metrics = await e2e_utils.get_metrics()
         assert metrics["events_processed"] >= len(sources_and_payloads)
@@ -256,11 +253,14 @@ class TestEventProcessingFlow:
         test_events = [
             ("github", {"action": "opened", "pull_request": {"number": 1}}),
             ("github", {"action": "closed", "issue": {"number": 2}}),
-            ("stripe", {"type": "customer.created", "data": {"object": {"id": "cus_123"}}}),
+            (
+                "stripe",
+                {"type": "customer.created", "data": {"object": {"id": "cus_123"}}},
+            ),
             ("custom", {"event": "test", "data": None}),
             ("custom", {"complex": {"nested": {"structure": [1, 2, 3]}}}),
         ]
-        
+
         successful_events = 0
         for source, payload in test_events:
             try:
@@ -269,13 +269,13 @@ class TestEventProcessingFlow:
                     successful_events += 1
             except Exception as e:
                 logger.warning("Event failed", source=source, error=str(e))
-        
+
         # Most events should succeed
         assert successful_events >= len(test_events) * 0.8  # 80% success rate
-        
+
         # Wait for processing
         await asyncio.sleep(10)
-        
+
         # System should still be healthy
         health = await e2e_utils.check_health()
         assert health["status"] == "up"
@@ -287,7 +287,7 @@ class TestServiceIntegration:
     async def test_service_health_integration(self, e2e_utils: E2ETestUtils):
         """Test that all services are properly integrated and healthy."""
         health = await e2e_utils.check_health()
-        
+
         # All services should be up
         assert health["status"] == "up"
         assert health["services"]["ingest"] == "up"
@@ -299,25 +299,22 @@ class TestServiceIntegration:
         subscription = await e2e_utils.create_test_subscription(
             description="E2E_TEST complete integration test"
         )
-        
+
         # 2. Send event
         payload = {
             "action": "opened",
-            "pull_request": {
-                "number": 999,
-                "title": "Integration Test PR"
-            }
+            "pull_request": {"number": 999, "title": "Integration Test PR"},
         }
         result = await e2e_utils.send_test_event("github", payload)
-        
+
         # 3. Wait for processing
         await e2e_utils.wait_for_event_processing(result["request_id"])
-        
+
         # 4. Verify subscription still exists and is active
         final_sub = await e2e_utils.get_subscription_by_id(subscription["id"])
         assert final_sub is not None
         assert final_sub["active"] is True
-        
+
         # 5. Check overall system health
         health = await e2e_utils.check_health()
         assert health["status"] == "up"

@@ -16,10 +16,7 @@ class SchemaRegistryService:
     """Service for managing the event schema registry."""
 
     async def register_event_schema(
-        self,
-        publisher: str,
-        resource_type: str,
-        action: str
+        self, publisher: str, resource_type: str, action: str
     ) -> None:
         """
         Register a new event schema combination with upsert logic.
@@ -38,18 +35,21 @@ class SchemaRegistryService:
                     ON CONFLICT (publisher, resource_type, action) DO NOTHING
                 """)
 
-                session.execute(insert_stmt, {
-                    'publisher': publisher,
-                    'resource_type': resource_type,
-                    'action': action
-                })
+                session.execute(
+                    insert_stmt,
+                    {
+                        "publisher": publisher,
+                        "resource_type": resource_type,
+                        "action": action,
+                    },
+                )
                 session.commit()
 
                 logger.debug(
                     "Schema registry entry processed",
                     publisher=publisher,
                     resource_type=resource_type,
-                    action=action
+                    action=action,
                 )
 
         except SQLAlchemyError as e:
@@ -59,7 +59,7 @@ class SchemaRegistryService:
                 resource_type=resource_type,
                 action=action,
                 error=str(e),
-                exc_info=True
+                exc_info=True,
             )
             # Don't raise - schema registry failures shouldn't break event processing
         except Exception as e:
@@ -69,7 +69,7 @@ class SchemaRegistryService:
                 resource_type=resource_type,
                 action=action,
                 error=str(e),
-                exc_info=True
+                exc_info=True,
             )
 
     async def get_schema_summary(self) -> dict[str, Any]:
@@ -94,39 +94,33 @@ class SchemaRegistryService:
 
                 # Group resource types by publisher
                 for publisher in publishers:
-                    publisher_entries = [e for e in all_entries if e.publisher == publisher]
-                    publisher_resource_types = list({e.resource_type for e in publisher_entries})
+                    publisher_entries = [
+                        e for e in all_entries if e.publisher == publisher
+                    ]
+                    publisher_resource_types = list(
+                        {e.resource_type for e in publisher_entries}
+                    )
                     publisher_resource_types.sort()
                     resource_types[publisher] = publisher_resource_types
 
                 return {
                     "publishers": publishers,
                     "resource_types": resource_types,
-                    "actions": actions
+                    "actions": actions,
                 }
 
         except SQLAlchemyError as e:
             logger.error(
-                "Failed to retrieve schema summary",
-                error=str(e),
-                exc_info=True
+                "Failed to retrieve schema summary", error=str(e), exc_info=True
             )
-            return {
-                "publishers": [],
-                "resource_types": {},
-                "actions": []
-            }
+            return {"publishers": [], "resource_types": {}, "actions": []}
         except Exception as e:
             logger.error(
                 "Unexpected error retrieving schema summary",
                 error=str(e),
-                exc_info=True
+                exc_info=True,
             )
-            return {
-                "publishers": [],
-                "resource_types": {},
-                "actions": []
-            }
+            return {"publishers": [], "resource_types": {}, "actions": []}
 
 
 # Global schema registry service instance

@@ -18,12 +18,12 @@ async def verify_signature(
 ) -> bool | None:
     """
     Verify HMAC signature for a webhook request.
-    
+
     Args:
         source: Source identifier (e.g., 'github', 'stripe')
         body_bytes: Raw request body bytes
         headers: Request headers
-    
+
     Returns:
         bool: True if signature is valid, False if invalid, None if no secret configured
     """
@@ -61,18 +61,24 @@ def _verify_github_signature(
             return False
 
         # SHA-1 verification
-        expected_sig = "sha1=" + hmac.new(
-            secret.encode(),
-            body_bytes,
-            hashlib.sha1,
-        ).hexdigest()
+        expected_sig = (
+            "sha1="
+            + hmac.new(
+                secret.encode(),
+                body_bytes,
+                hashlib.sha1,
+            ).hexdigest()
+        )
     else:
         # SHA-256 verification
-        expected_sig = "sha256=" + hmac.new(
-            secret.encode(),
-            body_bytes,
-            hashlib.sha256,
-        ).hexdigest()
+        expected_sig = (
+            "sha256="
+            + hmac.new(
+                secret.encode(),
+                body_bytes,
+                hashlib.sha256,
+            ).hexdigest()
+        )
 
     return hmac.compare_digest(signature_header, expected_sig)
 
@@ -121,9 +127,9 @@ def _verify_generic_signature(
     """Verify generic HMAC signature."""
     # Look for common signature headers
     signature_header = (
-        headers.get("x-webhook-signature") or
-        headers.get("x-signature") or
-        headers.get("signature")
+        headers.get("x-webhook-signature")
+        or headers.get("x-signature")
+        or headers.get("signature")
     )
 
     if not signature_header:
@@ -132,20 +138,26 @@ def _verify_generic_signature(
 
     # Try SHA-256 first
     if signature_header.startswith("sha256="):
-        expected_sig = "sha256=" + hmac.new(
-            secret.encode(),
-            body_bytes,
-            hashlib.sha256,
-        ).hexdigest()
+        expected_sig = (
+            "sha256="
+            + hmac.new(
+                secret.encode(),
+                body_bytes,
+                hashlib.sha256,
+            ).hexdigest()
+        )
         return hmac.compare_digest(signature_header, expected_sig)
 
     # Try SHA-1
     elif signature_header.startswith("sha1="):
-        expected_sig = "sha1=" + hmac.new(
-            secret.encode(),
-            body_bytes,
-            hashlib.sha1,
-        ).hexdigest()
+        expected_sig = (
+            "sha1="
+            + hmac.new(
+                secret.encode(),
+                body_bytes,
+                hashlib.sha1,
+            ).hexdigest()
+        )
         return hmac.compare_digest(signature_header, expected_sig)
 
     # Direct hex comparison (assume SHA-256)

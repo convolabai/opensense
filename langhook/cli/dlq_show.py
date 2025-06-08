@@ -18,15 +18,17 @@ async def show_dlq_messages(count: int = 10) -> None:
     consumer = AIOKafkaConsumer(
         settings.kafka_topic_dlq,
         bootstrap_servers=settings.kafka_brokers,
-        auto_offset_reset='latest',
+        auto_offset_reset="latest",
         enable_auto_commit=False,
         group_id=None,  # Don't use consumer group to read all messages
-        value_deserializer=lambda x: json.loads(x.decode('utf-8')),
+        value_deserializer=lambda x: json.loads(x.decode("utf-8")),
     )
 
     try:
         await consumer.start()
-        print(f"Reading last {count} messages from DLQ topic: {settings.kafka_topic_dlq}")
+        print(
+            f"Reading last {count} messages from DLQ topic: {settings.kafka_topic_dlq}"
+        )
         print("=" * 80)
 
         # Get topic partitions
@@ -36,7 +38,11 @@ async def show_dlq_messages(count: int = 10) -> None:
             topic_partitions = consumer.partitions_for_topic(settings.kafka_topic_dlq)
             if topic_partitions:
                 from aiokafka import TopicPartition
-                partitions = [TopicPartition(settings.kafka_topic_dlq, p) for p in topic_partitions]
+
+                partitions = [
+                    TopicPartition(settings.kafka_topic_dlq, p)
+                    for p in topic_partitions
+                ]
                 consumer.assign(partitions)
 
         # Seek to end and read backwards
@@ -73,13 +79,13 @@ async def show_dlq_messages(count: int = 10) -> None:
                 print(f"Error: {dlq_data.get('error', 'N/A')}")
                 print(f"Timestamp: {dlq_data.get('timestamp', 'N/A')}")
 
-                if 'headers' in dlq_data:
+                if "headers" in dlq_data:
                     print("Headers:")
-                    for k, v in dlq_data['headers'].items():
+                    for k, v in dlq_data["headers"].items():
                         print(f"  {k}: {v}")
 
-                if 'payload' in dlq_data:
-                    payload = dlq_data['payload']
+                if "payload" in dlq_data:
+                    payload = dlq_data["payload"]
                     if len(payload) > 200:
                         payload = payload[:200] + "..."
                     print(f"Payload: {payload}")
@@ -102,15 +108,14 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="View LangHook DLQ messages")
     parser.add_argument(
-        "--count", "-c",
+        "--count",
+        "-c",
         type=int,
         default=10,
-        help="Number of messages to show (default: 10)"
+        help="Number of messages to show (default: 10)",
     )
     parser.add_argument(
-        "--kafka-brokers",
-        default=None,
-        help="Kafka brokers (default: from config)"
+        "--kafka-brokers", default=None, help="Kafka brokers (default: from config)"
     )
 
     args = parser.parse_args()

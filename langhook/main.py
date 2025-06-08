@@ -29,10 +29,14 @@ def main() -> None:
     debug_mode = ingest_settings.debug or map_settings.debug
 
     # Use the most verbose log level from either service
-    log_level = "debug" if debug_mode else min(
-        ingest_settings.log_level.lower(),
-        map_settings.log_level.lower(),
-        key=lambda x: {"debug": 0, "info": 1, "warning": 2, "error": 3}.get(x, 1)
+    log_level = (
+        "debug"
+        if debug_mode
+        else min(
+            ingest_settings.log_level.lower(),
+            map_settings.log_level.lower(),
+            key=lambda x: {"debug": 0, "info": 1, "warning": 2, "error": 3}.get(x, 1),
+        )
     )
 
     # Run the server

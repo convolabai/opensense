@@ -28,13 +28,15 @@ class TestSubscriptionCRUD:
             channel_config={
                 "url": "http://example.com/webhook",
                 "method": "POST",
-                "headers": {"Authorization": "Bearer test-token"}
-            }
+                "headers": {"Authorization": "Bearer test-token"},
+            },
         )
-        
+
         # Verify subscription was created
         assert subscription["id"] is not None
-        assert subscription["description"] == "E2E_TEST webhook for GitHub pull requests"
+        assert (
+            subscription["description"] == "E2E_TEST webhook for GitHub pull requests"
+        )
         assert subscription["channel_type"] == "webhook"
         assert subscription["channel_config"]["url"] == "http://example.com/webhook"
         assert subscription["active"] is True
@@ -47,10 +49,10 @@ class TestSubscriptionCRUD:
         created = await e2e_utils.create_test_subscription(
             description="E2E_TEST read test subscription"
         )
-        
+
         # Read subscription by ID
         subscription = await e2e_utils.get_subscription_by_id(created["id"])
-        
+
         assert subscription is not None
         assert subscription["id"] == created["id"]
         assert subscription["description"] == "E2E_TEST read test subscription"
@@ -67,13 +69,13 @@ class TestSubscriptionCRUD:
         subscriptions = []
         for i in range(3):
             sub = await e2e_utils.create_test_subscription(
-                description=f"E2E_TEST list test subscription {i+1}"
+                description=f"E2E_TEST list test subscription {i + 1}"
             )
             subscriptions.append(sub)
-        
+
         # List subscriptions
         result = await e2e_utils.list_subscriptions(page=1, size=10)
-        
+
         assert "subscriptions" in result
         assert "total" in result
         assert "page" in result
@@ -81,11 +83,11 @@ class TestSubscriptionCRUD:
         assert result["page"] == 1
         assert result["size"] == 10
         assert result["total"] >= 3
-        
+
         # Check our test subscriptions are in the list
         found_descriptions = [s["description"] for s in result["subscriptions"]]
         for i in range(3):
-            expected_desc = f"E2E_TEST list test subscription {i+1}"
+            expected_desc = f"E2E_TEST list test subscription {i + 1}"
             assert expected_desc in found_descriptions
 
     async def test_list_subscriptions_pagination(self, e2e_utils: E2ETestUtils):
@@ -93,15 +95,17 @@ class TestSubscriptionCRUD:
         # Create test subscriptions
         for i in range(5):
             await e2e_utils.create_test_subscription(
-                description=f"E2E_TEST pagination test {i+1}"
+                description=f"E2E_TEST pagination test {i + 1}"
             )
-        
+
         # Test pagination
         page1 = await e2e_utils.list_subscriptions(page=1, size=2)
         page2 = await e2e_utils.list_subscriptions(page=2, size=2)
-        
+
         assert len(page1["subscriptions"]) == 2
-        assert len(page2["subscriptions"]) >= 1  # Could be 1 or 2 depending on existing data
+        assert (
+            len(page2["subscriptions"]) >= 1
+        )  # Could be 1 or 2 depending on existing data
         assert page1["page"] == 1
         assert page2["page"] == 2
         assert page1["size"] == 2
@@ -112,21 +116,21 @@ class TestSubscriptionCRUD:
         # Create subscription
         created = await e2e_utils.create_test_subscription(
             description="E2E_TEST original description",
-            channel_config={"url": "http://original.example.com/webhook"}
+            channel_config={"url": "http://original.example.com/webhook"},
         )
-        
+
         # Update subscription
         updates = {
             "description": "E2E_TEST updated description",
             "channel_config": {
                 "url": "http://updated.example.com/webhook",
-                "method": "POST"
+                "method": "POST",
             },
-            "active": False
+            "active": False,
         }
-        
+
         updated = await e2e_utils.update_subscription(created["id"], updates)
-        
+
         # Verify updates
         assert updated["id"] == created["id"]
         assert updated["description"] == "E2E_TEST updated description"
@@ -149,13 +153,13 @@ class TestSubscriptionCRUD:
         created = await e2e_utils.create_test_subscription(
             description="E2E_TEST partial update test"
         )
-        
+
         original_channel_config = created["channel_config"].copy()
-        
+
         # Update only description
         updates = {"description": "E2E_TEST partially updated description"}
         updated = await e2e_utils.update_subscription(created["id"], updates)
-        
+
         # Verify only description changed
         assert updated["description"] == "E2E_TEST partially updated description"
         assert updated["channel_config"] == original_channel_config
@@ -167,11 +171,11 @@ class TestSubscriptionCRUD:
         created = await e2e_utils.create_test_subscription(
             description="E2E_TEST delete test subscription"
         )
-        
+
         # Delete subscription
         deleted = await e2e_utils.delete_subscription(created["id"])
         assert deleted is True
-        
+
         # Verify subscription is gone
         subscription = await e2e_utils.get_subscription_by_id(created["id"])
         assert subscription is None
@@ -188,9 +192,11 @@ class TestSubscriptionCRUD:
             invalid_payload = {
                 "description": "E2E_TEST invalid channel type",
                 "channel_type": "invalid_type",
-                "channel_config": {"url": "http://example.com"}
+                "channel_config": {"url": "http://example.com"},
             }
-            response = await e2e_utils.http_client.post("/subscriptions/", json=invalid_payload)
+            response = await e2e_utils.http_client.post(
+                "/subscriptions/", json=invalid_payload
+            )
             assert response.status_code == 422  # Validation error
         except Exception:
             pass  # Expected to fail
@@ -201,7 +207,9 @@ class TestSubscriptionCRUD:
                 "description": "E2E_TEST missing fields"
                 # Missing channel_type and channel_config
             }
-            response = await e2e_utils.http_client.post("/subscriptions/", json=incomplete_payload)
+            response = await e2e_utils.http_client.post(
+                "/subscriptions/", json=incomplete_payload
+            )
             assert response.status_code == 422  # Validation error
         except Exception:
             pass  # Expected to fail
@@ -212,22 +220,21 @@ class TestSubscriptionCRUD:
         created = await e2e_utils.create_test_subscription(
             description="E2E_TEST complete CRUD flow"
         )
-        
+
         # READ
         read = await e2e_utils.get_subscription_by_id(created["id"])
         assert read["id"] == created["id"]
-        
+
         # UPDATE
         updated = await e2e_utils.update_subscription(
-            created["id"], 
-            {"description": "E2E_TEST updated CRUD flow"}
+            created["id"], {"description": "E2E_TEST updated CRUD flow"}
         )
         assert updated["description"] == "E2E_TEST updated CRUD flow"
-        
+
         # DELETE
         deleted = await e2e_utils.delete_subscription(created["id"])
         assert deleted is True
-        
+
         # VERIFY DELETION
         final_read = await e2e_utils.get_subscription_by_id(created["id"])
         assert final_read is None

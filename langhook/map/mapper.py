@@ -23,8 +23,7 @@ class MappingEngine:
         mappings_path = Path(settings.mappings_dir)
         if not mappings_path.exists():
             logger.warning(
-                "Mappings directory does not exist",
-                mappings_dir=settings.mappings_dir
+                "Mappings directory does not exist", mappings_dir=settings.mappings_dir
             )
             return
 
@@ -37,18 +36,14 @@ class MappingEngine:
                 # Store the JSONata expression string
                 self._mappings[source] = jsonata_expression
 
-                logger.info(
-                    "Loaded mapping",
-                    source=source,
-                    file=str(mapping_file)
-                )
+                logger.info("Loaded mapping", source=source, file=str(mapping_file))
             except Exception as e:
                 logger.error(
                     "Failed to load mapping",
                     source=source,
                     file=str(mapping_file),
                     error=str(e),
-                    exc_info=True
+                    exc_info=True,
                 )
 
     def get_mapping(self, source: str) -> str | None:
@@ -59,23 +54,22 @@ class MappingEngine:
         """Check if mapping exists for a source."""
         return source in self._mappings
 
-    def apply_mapping(self, source: str, raw_payload: dict[str, Any]) -> dict[str, Any] | None:
+    def apply_mapping(
+        self, source: str, raw_payload: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Apply JSONata mapping to transform raw payload to canonical format.
-        
+
         Args:
             source: Source identifier (e.g., 'github', 'stripe')
             raw_payload: Raw webhook payload
-            
+
         Returns:
             Canonical event dict or None if mapping fails
         """
         mapping_expr = self.get_mapping(source)
         if not mapping_expr:
-            logger.debug(
-                "No mapping found for source",
-                source=source
-            )
+            logger.debug("No mapping found for source", source=source)
             return None
 
         try:
@@ -87,12 +81,12 @@ class MappingEngine:
                 logger.error(
                     "Mapping result is not a dictionary",
                     source=source,
-                    result_type=type(result).__name__
+                    result_type=type(result).__name__,
                 )
                 return None
 
             # Validate new canonical format requirements
-            required_fields = ['publisher', 'resource', 'action']
+            required_fields = ["publisher", "resource", "action"]
             missing_fields = [field for field in required_fields if field not in result]
 
             if missing_fields:
@@ -100,75 +94,68 @@ class MappingEngine:
                     "Mapping result missing required fields",
                     source=source,
                     missing_fields=missing_fields,
-                    result=result
+                    result=result,
                 )
                 return None
 
             # Validate resource structure
-            if not isinstance(result.get('resource'), dict):
+            if not isinstance(result.get("resource"), dict):
                 logger.error(
                     "Resource must be an object with type and id fields",
                     source=source,
-                    resource=result.get('resource')
+                    resource=result.get("resource"),
                 )
                 return None
 
-            resource = result['resource']
-            if 'type' not in resource or 'id' not in resource:
+            resource = result["resource"]
+            if "type" not in resource or "id" not in resource:
                 logger.error(
                     "Resource object missing type or id field",
                     source=source,
-                    resource=resource
+                    resource=resource,
                 )
                 return None
 
             # Convert present tense actions to past tense for canonical format
             action_mapping = {
-                'create': 'created',
-                'update': 'updated', 
-                'delete': 'deleted',
-                'read': 'read'
+                "create": "created",
+                "update": "updated",
+                "delete": "deleted",
+                "read": "read",
             }
-            
+
             # Support both present and past tense input
-            if result['action'] in action_mapping:
-                result['action'] = action_mapping[result['action']]
-            
+            if result["action"] in action_mapping:
+                result["action"] = action_mapping[result["action"]]
+
             # Validate action is past tense CRUD enum
-            valid_actions = ['created', 'read', 'updated', 'deleted']
-            if result['action'] not in valid_actions:
+            valid_actions = ["created", "read", "updated", "deleted"]
+            if result["action"] not in valid_actions:
                 logger.error(
                     "Invalid action - must be one of: created, read, updated, deleted",
                     source=source,
-                    action=result['action']
+                    action=result["action"],
                 )
                 return None
 
             # Validate atomic ID (no composite keys with /, #, or space)
-            resource_id = str(resource['id'])
-            invalid_chars = ['/', '#', ' ']
+            resource_id = str(resource["id"])
+            invalid_chars = ["/", "#", " "]
             if any(char in resource_id for char in invalid_chars):
                 logger.error(
                     "Resource ID contains invalid characters (/, #, space) - atomic IDs only",
                     source=source,
-                    resource_id=resource_id
+                    resource_id=resource_id,
                 )
                 return None
 
-            logger.debug(
-                "Mapping applied successfully",
-                source=source,
-                result=result
-            )
+            logger.debug("Mapping applied successfully", source=source, result=result)
 
             return result
 
         except Exception as e:
             logger.error(
-                "Failed to apply mapping",
-                source=source,
-                error=str(e),
-                exc_info=True
+                "Failed to apply mapping", source=source, error=str(e), exc_info=True
             )
             return None
 

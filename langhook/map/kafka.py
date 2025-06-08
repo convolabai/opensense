@@ -19,17 +19,14 @@ class MapKafkaProducer(BaseKafkaProducer):
     async def send_canonical_event(self, event: dict[str, Any]) -> None:
         """Send canonical event to the langhook.events topic."""
         await self.send_message(
-            settings.kafka_topic_canonical,
-            event,
-            key=event["id"],
-            log_success=True
+            settings.kafka_topic_canonical, event, key=event["id"], log_success=True
         )
         logger.debug(
             "Canonical event sent to Kafka",
             event_id=event["id"],
             publisher=event["data"]["publisher"],
             resource_type=event["data"]["resource"]["type"],
-            action=event["data"]["action"]
+            action=event["data"]["action"],
         )
 
     async def send_mapping_failure(self, failure_event: dict[str, Any]) -> None:
@@ -39,7 +36,7 @@ class MapKafkaProducer(BaseKafkaProducer):
                 settings.kafka_topic_map_fail,
                 failure_event,
                 key=failure_event["id"],
-                log_success=False
+                log_success=False,
             )
             logger.debug(
                 "Mapping failure sent to DLQ",
@@ -66,7 +63,7 @@ class MapKafkaConsumer(BaseKafkaConsumer):
             brokers=settings.kafka_brokers,
             group_id=settings.kafka_consumer_group,
             message_handler=message_handler,
-            auto_offset_reset="earliest"
+            auto_offset_reset="earliest",
         )
 
 

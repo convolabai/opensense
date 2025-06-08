@@ -3,12 +3,11 @@
 import argparse
 import asyncio
 import sys
-from typing import Any
 
-import structlog
 import nats
+import structlog
 from nats.js import JetStreamContext
-from nats.js.api import StreamConfig, RetentionPolicy, StorageType
+from nats.js.api import RetentionPolicy, StorageType, StreamConfig
 
 logger = structlog.get_logger("langhook")
 
@@ -47,8 +46,8 @@ class StreamManager:
             name="events",
             subjects=[
                 "langhook.events.>",  # Canonical events
-                "raw.>",              # Raw events for processing
-                "dlq.>"               # Dead letter queue events
+                "raw.>",  # Raw events for processing
+                "dlq.>",  # Dead letter queue events
             ],
             storage=StorageType.FILE,
             retention=RetentionPolicy.LIMITS,
@@ -61,12 +60,16 @@ class StreamManager:
         try:
             await self.js.add_stream(stream_config)
             logger.info("Created stream 'events'", subjects=stream_config.subjects)
-            print(f"✅ Created stream 'events' with subjects {', '.join(stream_config.subjects)}")
+            print(
+                f"✅ Created stream 'events' with subjects {', '.join(stream_config.subjects)}"
+            )
         except Exception as e:
             error_str = str(e).lower()
-            if ("stream name already in use" in error_str or 
-                "insufficient storage resources" in error_str or
-                "err_code=10047" in error_str):
+            if (
+                "stream name already in use" in error_str
+                or "insufficient storage resources" in error_str
+                or "err_code=10047" in error_str
+            ):
                 logger.info("Stream 'events' already exists")
                 print("ℹ️  Stream 'events' already exists")
             else:
@@ -80,7 +83,7 @@ class StreamManager:
 
         try:
             streams_info = await self.js.streams_info()
-            
+
             if not streams_info:
                 print("No streams found")
                 return
@@ -119,16 +122,14 @@ class StreamManager:
 
 async def main() -> None:
     """Main CLI entry point."""
-    parser = argparse.ArgumentParser(description="Manage LangHook NATS JetStream streams")
-    parser.add_argument(
-        "--url",
-        default="nats://localhost:4222",
-        help="NATS server URL"
+    parser = argparse.ArgumentParser(
+        description="Manage LangHook NATS JetStream streams"
     )
     parser.add_argument(
-        "action",
-        choices=["create", "list", "delete"],
-        help="Action to perform"
+        "--url", default="nats://localhost:4222", help="NATS server URL"
+    )
+    parser.add_argument(
+        "action", choices=["create", "list", "delete"], help="Action to perform"
     )
 
     args = parser.parse_args()

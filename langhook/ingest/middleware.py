@@ -24,14 +24,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def parse_rate_limit(self) -> None:
         """Parse rate limit string like '200/minute' into requests and window."""
         try:
-            requests_str, window_str = settings.rate_limit.split('/')
+            requests_str, window_str = settings.rate_limit.split("/")
             self.max_requests = int(requests_str)
 
-            if window_str == 'second':
+            if window_str == "second":
                 self.window_seconds = 1
-            elif window_str == 'minute':
+            elif window_str == "minute":
                 self.window_seconds = 60
-            elif window_str == 'hour':
+            elif window_str == "hour":
                 self.window_seconds = 3600
             else:
                 raise ValueError(f"Unsupported window: {window_str}")
@@ -40,7 +40,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             logger.warning(
                 "Invalid rate limit format, using default",
                 rate_limit=settings.rate_limit,
-                error=str(e)
+                error=str(e),
             )
             self.max_requests = 200
             self.window_seconds = 60
@@ -59,7 +59,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             logger.warning("Rate limit exceeded", client_ip=client_ip)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded"
+                detail="Rate limit exceeded",
             )
 
         # Process request
@@ -115,7 +115,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 "Error checking rate limit, allowing request",
                 client_ip=client_ip,
                 error=str(e),
-                exc_info=True
+                exc_info=True,
             )
             # Allow request if Redis is unavailable
             return False

@@ -1,13 +1,15 @@
 """Tests for LLM integration with schema registry."""
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
-from langhook.subscriptions.llm import LLMPatternService, NoSuitableSchemaError
+import pytest
+
+from langhook.subscriptions.llm import LLMPatternService
 
 
 class MockLLMResponse:
     """Mock object to simulate LLM response with content attribute."""
+
     def __init__(self, content: str):
         self._content = content
 
@@ -17,6 +19,7 @@ class MockLLMResponse:
         class ContentString(str):
             def strip(self):
                 return self
+
         return ContentString(self._content)
 
     def strip(self):
@@ -29,7 +32,7 @@ class TestLLMSchemaIntegration:
     @pytest.fixture
     def llm_service(self):
         """Mock LLM service for testing."""
-        with patch('langhook.subscriptions.llm.subscription_settings') as mock_settings:
+        with patch("langhook.subscriptions.llm.subscription_settings") as mock_settings:
             mock_settings.llm_api_key = "test-key"
             service = LLMPatternService()
             service.llm_available = True
@@ -43,37 +46,40 @@ class TestLLMSchemaIntegration:
             "publishers": ["github", "stripe"],
             "resource_types": {
                 "github": ["pull_request", "repository"],
-                "stripe": ["refund"]
+                "stripe": ["refund"],
             },
-            "actions": ["created", "updated", "deleted"]
+            "actions": ["created", "updated", "deleted"],
         }
 
-        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+        with patch(
+            "langhook.subscriptions.schema_registry.schema_registry_service"
+        ) as mock_registry:
             mock_registry.get_schema_summary = AsyncMock(return_value=mock_schema_data)
-            
+
             prompt = await llm_service._get_system_prompt_with_schemas()
-            
+
             # Check that actual schema data is included
             assert "github, stripe" in prompt
             assert "created, updated, deleted" in prompt
             assert "github: pull_request, repository" in prompt
             assert "stripe: refund" in prompt
-            assert "ONLY use the publishers, resource types, and actions listed above" in prompt
+            assert (
+                "ONLY use the publishers, resource types, and actions listed above"
+                in prompt
+            )
 
     @pytest.mark.asyncio
     async def test_system_prompt_with_empty_schemas(self, llm_service):
         """Test that system prompt handles empty schema registry."""
-        mock_empty_data = {
-            "publishers": [],
-            "resource_types": {},
-            "actions": []
-        }
+        mock_empty_data = {"publishers": [], "resource_types": {}, "actions": []}
 
-        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+        with patch(
+            "langhook.subscriptions.schema_registry.schema_registry_service"
+        ) as mock_registry:
             mock_registry.get_schema_summary = AsyncMock(return_value=mock_empty_data)
-            
+
             prompt = await llm_service._get_system_prompt_with_schemas()
-            
+
             # Should include instruction to reject all requests
             assert "No event schemas are currently registered" in prompt
             assert 'respond with "ERROR: No registered schemas available"' in prompt
@@ -81,11 +87,15 @@ class TestLLMSchemaIntegration:
     @pytest.mark.asyncio
     async def test_system_prompt_schema_fetch_error(self, llm_service):
         """Test that system prompt handles schema fetch errors gracefully."""
-        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
-            mock_registry.get_schema_summary = AsyncMock(side_effect=Exception("Database error"))
-            
+        with patch(
+            "langhook.subscriptions.schema_registry.schema_registry_service"
+        ) as mock_registry:
+            mock_registry.get_schema_summary = AsyncMock(
+                side_effect=Exception("Database error")
+            )
+
             prompt = await llm_service._get_system_prompt_with_schemas()
-            
+
             # Should fall back to empty schema handling
             assert "No event schemas are currently registered" in prompt
 
@@ -93,13 +103,19 @@ class TestLLMSchemaIntegration:
         """Test detection of 'no suitable schema' responses."""
         # Positive cases
         assert llm_service._is_no_schema_response("ERROR: No suitable schema found")
-        assert llm_service._is_no_schema_response("ERROR: No registered schemas available")
+        assert llm_service._is_no_schema_response(
+            "ERROR: No registered schemas available"
+        )
         assert llm_service._is_no_schema_response("no suitable schema for this request")
-        assert llm_service._is_no_schema_response("Cannot be mapped to available schemas")
+        assert llm_service._is_no_schema_response(
+            "Cannot be mapped to available schemas"
+        )
         assert llm_service._is_no_schema_response("  ERROR: NO SUITABLE SCHEMA FOUND  ")
 
         # Negative cases
-        assert not llm_service._is_no_schema_response("langhook.events.github.pull_request.123.updated")
+        assert not llm_service._is_no_schema_response(
+            "langhook.events.github.pull_request.123.updated"
+        )
         assert not llm_service._is_no_schema_response("This is a valid pattern")
         assert not llm_service._is_no_schema_response("Schema validation passed")
 
@@ -111,21 +127,23 @@ class TestLLMSchemaIntegration:
         mock_schema_data = {
             "publishers": ["github"],
             "resource_types": {"github": ["pull_request"]},
-            "actions": ["created"]
+            "actions": ["created"],
         }
 
-        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+        with patch(
+            "langhook.subscriptions.schema_registry.schema_registry_service"
+        ) as mock_registry:
             mock_registry.get_schema_summary = AsyncMock(return_value=mock_schema_data)
-            
+
             # Create a proper mock response object with actual string content
             mock_response = MockLLMResponse("ERROR: No suitable schema found")
             llm_service.llm.ainvoke = AsyncMock(return_value=mock_response)
-            
-            # Note: This test is complex due to mocking challenges. 
+
+            # Note: This test is complex due to mocking challenges.
             # The functionality is properly tested in test_subscription_schema_validation.py
             # via API integration tests.
             pytest.skip("Complex mocking - tested via API integration tests")
-            
+
             assert "No suitable schema found" in str(exc_info.value)
 
     @pytest.mark.asyncio
@@ -134,27 +152,35 @@ class TestLLMSchemaIntegration:
         mock_schema_data = {
             "publishers": ["github"],
             "resource_types": {"github": ["pull_request"]},
-            "actions": ["created", "updated"]
+            "actions": ["created", "updated"],
         }
 
-        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+        with patch(
+            "langhook.subscriptions.schema_registry.schema_registry_service"
+        ) as mock_registry:
             mock_registry.get_schema_summary = AsyncMock(return_value=mock_schema_data)
-            
+
             # Create a proper mock response object with actual string content
-            mock_response = MockLLMResponse("langhook.events.github.pull_request.123.updated")
+            mock_response = MockLLMResponse(
+                "langhook.events.github.pull_request.123.updated"
+            )
             llm_service.llm.ainvoke = AsyncMock(return_value=mock_response)
-            
-            pattern = await llm_service.convert_to_pattern("Notify me when GitHub PR 123 is updated")
-            
+
+            pattern = await llm_service.convert_to_pattern(
+                "Notify me when GitHub PR 123 is updated"
+            )
+
             assert pattern == "langhook.events.github.pull_request.123.updated"
 
     @pytest.mark.asyncio
     async def test_fallback_when_llm_unavailable(self, llm_service):
         """Test that fallback still works when LLM is unavailable."""
         llm_service.llm_available = False
-        
-        pattern = await llm_service.convert_to_pattern("Notify me about GitHub pull requests")
-        
+
+        pattern = await llm_service.convert_to_pattern(
+            "Notify me about GitHub pull requests"
+        )
+
         # Should return fallback pattern
         assert pattern.startswith("langhook.events.")
         assert "github" in pattern
