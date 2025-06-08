@@ -493,6 +493,87 @@ class TestWebhookTransformations:
         # Should handle gracefully
 
     @pytest.mark.asyncio
+    async def test_complete_e2e_transformation_flow(
+        self,
+        openai_llm_service: LLMSuggestionService,
+        cloud_wrapper: CloudEventWrapper
+    ):
+        """Test the complete end-to-end flow from raw webhook to validated canonical event."""
+        logger.info("Testing complete E2E transformation flow")
+
+        # Use a representative GitHub payload
+        github_payload = {
+            "action": "opened",
+            "pull_request": {
+                "number": 12345,
+                "title": "Add new webhook transformation feature",
+                "state": "open",
+                "user": {"login": "developer"},
+                "head": {"sha": "abc123"},
+                "base": {"ref": "main"}
+            },
+            "repository": {
+                "id": 987654321,
+                "name": "awesome-project",
+                "full_name": "org/awesome-project",
+                "owner": {"login": "org"}
+            },
+            "sender": {"login": "developer"}
+        }
+
+        # Step 1: Transform raw webhook payload with LLM
+        canonical_data = await openai_llm_service.transform_to_canonical("github", github_payload)
+        assert canonical_data is not None, "LLM transformation should succeed"
+
+        # Step 2: Validate the canonical data structure
+        assert canonical_data["publisher"] == "github"
+        assert canonical_data["resource"]["type"] in ["pull_request", "repository"]  # Either is reasonable
+        assert canonical_data["action"] in ["create", "update"]  # Either is reasonable for PR opened
+
+        # Step 3: Create full canonical event with CloudEvents wrapper
+        event_id = "e2e-test-12345"
+        canonical_event = cloud_wrapper.create_canonical_event(
+            event_id=event_id,
+            source="github",
+            canonical_data=canonical_data,
+            raw_payload=github_payload
+        )
+
+        # Step 4: Validate the full canonical event
+        assert canonical_event["publisher"] == canonical_data["publisher"]
+        assert canonical_event["resource"] == canonical_data["resource"]
+        assert canonical_event["action"] == canonical_data["action"]
+        assert "timestamp" in canonical_event
+        assert canonical_event["payload"] == github_payload
+
+        # Step 5: Validate against JSON schema
+        assert cloud_wrapper.validate_canonical_event(canonical_event), \
+            "Canonical event should pass schema validation"
+
+        # Step 6: Create CloudEvents envelope
+        cloud_event = cloud_wrapper.create_cloudevents_envelope(event_id, canonical_event)
+
+        # Step 7: Validate CloudEvents envelope structure
+        assert cloud_event["id"] == event_id
+        assert cloud_event["specversion"] == "1.0"
+        assert cloud_event["source"] == "/github"
+        assert cloud_event["data"] == canonical_event
+        assert "type" in cloud_event
+        assert "subject" in cloud_event
+        assert "time" in cloud_event
+
+        logger.info(
+            "Complete E2E transformation successful",
+            event_id=event_id,
+            publisher=canonical_data["publisher"],
+            resource_type=canonical_data["resource"]["type"],
+            resource_id=canonical_data["resource"]["id"],
+            action=canonical_data["action"],
+            cloud_event_type=cloud_event["type"],
+            cloud_event_subject=cloud_event["subject"]
+        )
+
+    @pytest.mark.asyncio
     async def test_prompt_consistency(self, openai_llm_service: LLMSuggestionService):
         """Test that the same payload consistently produces the same canonical output."""
         test_payload = {
