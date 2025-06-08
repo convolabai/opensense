@@ -121,12 +121,12 @@ Your task is to analyze webhook JSON payloads and transform them directly into a
 The canonical format is a JSON object with these required fields:
 - publisher: upstream slug/identifier (string, lowercase snake_case)
 - resource: object with "type" (singular noun) and "id" (atomic identifier) fields  
-- action: CRUD verb (string, must be one of: "create", "read", "update", "delete")
+- action: CRUD verb (string, must be one of: "created", "read", "updated", "deleted")
 
 Guidelines:
 1. Analyze the payload structure to identify the main resource and action
 2. Look for event type / action indicator - this will often give you resource type and action
-3. Map webhook actions to CRUD verbs: opened/created→create, closed/deleted→delete, edited/updated→update, viewed→read
+3. Map webhook actions to CRUD verbs: opened/created→created, closed/deleted→deleted, edited/updated→updated, viewed→read
 4. Extract resource ID (atomic identifier)
 5. Return ONLY a valid JSON object with the canonical fields, no explanations or code blocks
 6. Use the source name as the publisher value (lowercase, snake_case)
@@ -135,7 +135,7 @@ Example canonical format:
 {
   "publisher": "github",
   "resource": {"type": "pull_request", "id": 123},
-  "action": "create"
+  "action": "created"
 }"""
 
     def _create_user_prompt(self, source: str, raw_payload: dict[str, Any]) -> str:
@@ -188,24 +188,15 @@ Example canonical format:
             )
             return False
 
-        # Validate action is CRUD enum and convert to past tense
-        valid_actions = ['create', 'read', 'update', 'delete']
+        # Validate action is CRUD enum in past tense
+        valid_actions = ['created', 'read', 'updated', 'deleted']
         if canonical_data['action'] not in valid_actions:
             logger.error(
-                "LLM canonical invalid action - must be one of: create, read, update, delete",
+                "LLM canonical invalid action - must be one of: created, read, updated, deleted",
                 source=source,
                 action=canonical_data['action']
             )
             return False
-
-        # Convert to past tense for canonical format
-        action_mapping = {
-            'create': 'created',
-            'update': 'updated', 
-            'delete': 'deleted',
-            'read': 'read'
-        }
-        canonical_data['action'] = action_mapping[canonical_data['action']]
 
         # Validate atomic ID (no composite keys with # or space, but allow /)
         resource_id = str(resource['id'])
