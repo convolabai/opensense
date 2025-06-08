@@ -77,7 +77,7 @@ The API server will be available at `http://localhost:8000` with:
 
 ## 📊 Canonical Event Format
 
-LangHook transforms any webhook into a standardized five-tuple format:
+LangHook transforms any webhook into a standardized canonical format:
 
 ```json
 {
@@ -88,8 +88,7 @@ LangHook transforms any webhook into a standardized five-tuple format:
   },
   "action": "update",
   "timestamp": "2025-06-03T15:45:02Z",
-  "summary": "PR 1374 approved by Alice",
-  "raw": { /* original webhook payload */ }
+  "payload": { /* original webhook payload */ }
 }
 ```
 
