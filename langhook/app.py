@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import structlog
+from structlog.dev import ConsoleRenderer
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -60,7 +61,7 @@ async def lifespan(app):
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
-            structlog.processors.JSONRenderer(),
+            ConsoleRenderer(),
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
