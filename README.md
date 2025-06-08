@@ -72,7 +72,7 @@ The API server will be available at `http://localhost:8000` with:
 
 ### Natural Language Subscriptions
 - **Plain English queries** like "Notify me when PR 1374 is approved"
-- **LLM-generated CESQL filters** automatically translate intent to code
+- **LLM-generated NATS filter patterns** automatically translate intent to code
 - **Multiple delivery channels** (Slack, email, webhooks)
 
 ## 📊 Canonical Event Format
@@ -150,11 +150,9 @@ LangHook is configured via environment variables:
 
 ### Core Settings
 ```bash
-# Kafka Configuration
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-KAFKA_TOPIC_RAW=raw_ingest
-KAFKA_TOPIC_CANONICAL=langhook.events
-KAFKA_TOPIC_DLQ=langhook.dlq
+# NATS Configuration
+NATS_URL=nats://localhost:4222
+NATS_STREAM_EVENTS=events
 
 # Service Settings
 LOG_LEVEL=info
@@ -177,12 +175,19 @@ OPENAI_API_KEY=sk-your-openai-key
 # Mapping files location
 MAPPINGS_DIR=/app/mappings
 
+# NATS JetStream configuration
+NATS_STREAM_EVENTS=events
+NATS_CONSUMER_GROUP=svc-map
+
 # Rate limiting
 RATE_LIMIT_REQUESTS=1000
 RATE_LIMIT_WINDOW=60
 
 # Redis for rate limiting
 REDIS_URL=redis://localhost:6379
+
+# PostgreSQL for subscription metadata
+POSTGRES_DSN=postgresql://user:pass@localhost:5432/langhook
 ```
 
 ## 📈 Performance
@@ -199,9 +204,9 @@ LangHook is designed for high throughput:
 ```mermaid
 graph TD
     A[Webhooks] --> B[svc-ingest]
-    B --> C[Kafka: raw_ingest]
+    B --> C[NATS: raw.*]
     C --> D[svc-map]
-    D --> E[Kafka: langhook.events]
+    D --> E[NATS: langhook.events.*]
     E --> F[Rule Engine]
     F --> G[Channels]
     H[JSONata Mappings] --> D
