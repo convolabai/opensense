@@ -45,7 +45,7 @@ We want an engineer, product manager, or support rep to describe *what they care
 ## 5 · Core Concepts  
 | Term | Description |
 |------|------------|
-| **Canonical Event** | CloudEvents envelope + standardized structure `{publisher, resource, action, timestamp, payload}`. |
+| **Canonical Event** | CloudEvents envelope + standardized structure `{publisher, resource, action, timestamp, payload}` where `resource` contains `{type: string, id: string|number}`. |
 | **Subscription** | Natural-language sentence + LLM-generated **NATS filter pattern** + delivery channels. |
 | **Channel** | Output target (Slack, e-mail, webhook, etc.). |
 | **Mapping** | JSONata or LLM-generated rule that converts a raw payload into a canonical event. |
