@@ -79,7 +79,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
       {/* Create Subscription Section */}
       <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-slate-700">
         <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-slate-100">
-          <Plus size={24} sm:size={28} className="text-indigo-400" />
+          <Plus size={24} className="text-indigo-400" />
           Create Subscription
         </h2>
 
@@ -132,7 +132,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
       {/* Active Subscriptions Section */}
       <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-slate-700">
         <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-slate-100">
-          <Eye size={24} sm:size={28} className="text-indigo-400" />
+          <Eye size={24} className="text-indigo-400" />
           Active Subscriptions
           <button
             className="ml-auto py-1 px-2 rounded-md font-semibold flex items-center justify-center gap-1 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-800 bg-slate-600 hover:bg-slate-500 text-slate-200 border border-slate-500 hover:border-slate-400 text-xs"

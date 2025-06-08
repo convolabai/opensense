@@ -125,10 +125,11 @@ The canonical format is a JSON object with these required fields:
 
 Guidelines:
 1. Analyze the payload structure to identify the main resource and action
-2. Map webhook actions to CRUD verbs: opened/created→create, closed/deleted→delete, edited/updated→update, viewed→read
-3. Extract resource ID (atomic identifier)
-4. Return ONLY a valid JSON object with the canonical fields, no explanations or code blocks
-5. Use the source name as the publisher value (lowercase, snake_case)
+2. Look for event type / action indicator - this will often give you resource type and action
+3. Map webhook actions to CRUD verbs: opened/created→create, closed/deleted→delete, edited/updated→update, viewed→read
+4. Extract resource ID (atomic identifier)
+5. Return ONLY a valid JSON object with the canonical fields, no explanations or code blocks
+6. Use the source name as the publisher value (lowercase, snake_case)
 
 Example canonical format:
 {
@@ -143,14 +144,7 @@ Example canonical format:
 
         payload_json = json.dumps(raw_payload, indent=2)
 
-        return f"""Transform this webhook payload from "{source}" into canonical format:
-
-Source: {source}
-
-Payload:
-{payload_json}
-
-Return the canonical JSON object for this event."""
+        return f"""{payload_json}"""
 
     def _validate_canonical_format(self, canonical_data: dict[str, Any], source: str) -> bool:
         """Validate that the canonical data has the required format."""

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, ArrowRight, Zap } from 'lucide-react'; // Add other icons as needed
+import { Send, ArrowRight, Zap, ListChecks, Bell } from 'lucide-react'; // Add other icons as needed
 
 // Copied from App.tsx
 interface CanonicalEvent {
@@ -192,7 +192,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
         {/* Input Section */}
         <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-slate-700">
           <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-slate-100">
-            <Send size={24} sm:size={28} className="text-indigo-400" />
+            <Send size={24} className="text-indigo-400" />
             Webhook Input
           </h2>
 
@@ -247,7 +247,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
         {/* Output Section */}
         <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-slate-700">
           <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-slate-100">
-            <ArrowRight size={24} sm:size={28} className="text-indigo-400" />
+            <ArrowRight size={24} className="text-indigo-400" />
             Processed Event
           </h2>
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 min-h-[420px] font-mono text-sm text-slate-200 whitespace-pre-wrap overflow-x-auto">
@@ -259,7 +259,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
       {/* Recent Events Section */}
       <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-slate-700">
         <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-slate-100">
-          <ListChecks size={24} sm:size={28} className="text-indigo-400" /> {/* Changed icon */}
+          <ListChecks size={24} className="text-indigo-400" /> {/* Changed icon */}
           Recent Events Stream
         </h2>
         {recentEvents.length > 0 ? (
@@ -280,7 +280,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
       {matchedSubscriptions.length > 0 && (
         <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 sm:p-8 border border-slate-700">
           <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-slate-100">
-            <Bell size={24} sm:size={28} className="text-indigo-400" /> {/* Added Bell icon */}
+            <Bell size={24} className="text-indigo-400" /> {/* Added Bell icon */}
             Notified Subscribers (for last event)
           </h2>
           <div className="space-y-3">
