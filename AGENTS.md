@@ -46,6 +46,7 @@ We want an engineer, product manager, or support rep to describe *what they care
 | Term | Description |
 |------|------------|
 | **Canonical Event** | CloudEvents envelope + standardized structure `{publisher, resource, action, timestamp, payload}` where `resource` contains `{type: string, id: string|number}`. |
+| **Schema Registry** | Dynamic database that automatically collects and tracks all unique combinations of `publisher`, `resource.type`, and `action` from processed canonical events, accessible via `/schema` API. |
 | **Subscription** | Natural-language sentence + LLM-generated **NATS filter pattern** + delivery channels. |
 | **Channel** | Output target (Slack, e-mail, webhook, etc.). |
 | **Mapping** | JSONata or LLM-generated rule that converts a raw payload into a canonical event. |
@@ -53,8 +54,8 @@ We want an engineer, product manager, or support rep to describe *what they care
 ---
 
 ## 6 · Primary Use Cases (MVP-1)  
-1. **GitHub PR approval alert** – Product owner gets Slack DM when a specific PR is approved.  
-2. **Stripe high-value refund ping** – Finance lead notified when refund > $500.  
+1. **GitHub PR approval alert** – Product owner gets Slack DM when a specific PR is approved, with LLM grounded in actual GitHub event schemas.  
+2. **Stripe high-value refund ping** – Finance lead notified when refund > $500, with subscription validation against collected Stripe schemas.  
 3. **Jira ticket transitioned** – Support channel post when issue moves to “Done”.  
 4. **Custom app heartbeat** – Ops receives webhook if internal service reports error rate > 5 %.  
 
@@ -99,6 +100,19 @@ LangHook is **domain-agnostic**, **LLM-assisted**, and **fully open**.
 | **Q1 2026** | **Scale & Ecosystem** | Exactly-once (Idempotence), S3 backup, marketplace for community mappings |
 
 *(Roadmap is directional and subject to change.)*
+
+---
+
+## 10.5 · Schema Registry Architecture
+
+| Component | Purpose |
+|-----------|---------|
+| **Auto-Discovery** | Canonical events automatically register their `publisher`, `resource.type`, and `action` combinations into PostgreSQL |
+| **Schema API** | `/schema` endpoint exposes structured JSON of all collected event schemas for LLM consumption |
+| **LLM Grounding** | Natural language subscription generation uses real schema data instead of hardcoded examples |
+| **Error Prevention** | Invalid subscription requests return helpful errors directing users to check `/schema` endpoint |
+
+**Flow Integration**: Schema registration happens after successful canonical event creation but before metrics recording, ensuring data consistency without blocking event processing.
 
 ---
 

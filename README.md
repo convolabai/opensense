@@ -53,6 +53,7 @@ LangHook transforms chaotic webhook payloads into standardized CloudEvents with 
 
 The API server will be available at `http://localhost:8000` with:
 - Webhook ingestion at `/ingest/{source}`
+- Event schema registry at `/schema`
 - Interactive demo at `/demo`
 - API docs at `/docs`
 
@@ -75,6 +76,12 @@ The API server will be available at `http://localhost:8000` with:
 - **LLM-generated NATS filter patterns** automatically translate intent to code
 - **Multiple delivery channels** (Slack, email, webhooks)
 
+### Dynamic Schema Registry
+- **Automatic schema discovery** collects publisher, resource type, and action combinations from all processed events
+- **Real-time schema API** at `/schema` exposes available event types for accurate subscription generation
+- **LLM grounding** ensures natural language subscriptions only use actually available event schemas
+- **Non-blocking collection** - schema registry failures don't affect event processing
+
 ## 📊 Canonical Event Format
 
 LangHook transforms any webhook into a standardized canonical format:
@@ -86,13 +93,13 @@ LangHook transforms any webhook into a standardized canonical format:
     "type": "pull_request",
     "id": 1374
   },
-  "action": "update",
+  "action": "updated",
   "timestamp": "2025-06-03T15:45:02Z",
   "payload": { /* original webhook payload */ }
 }
 ```
 
-This consistent structure enables powerful filtering and routing capabilities across all event sources.
+This consistent structure enables powerful filtering and routing capabilities across all event sources. **Schema Registry**: As events are processed, LangHook automatically collects and tracks all unique combinations of `publisher`, `resource.type`, and `action` values, building a dynamic registry of available event schemas accessible via the `/schema` API endpoint.
 
 ## 🛠 Usage Examples
 
@@ -125,7 +132,26 @@ curl -X POST http://localhost:8000/map/suggest-map \
   }'
 ```
 
-### 3. Monitor System Metrics
+### 3. Query Available Event Schemas
+
+```bash
+curl http://localhost:8000/schema
+```
+
+Response:
+```json
+{
+  "publishers": ["github", "stripe", "jira"],
+  "resource_types": {
+    "github": ["pull_request", "repository"],
+    "stripe": ["refund"],
+    "jira": ["issue"]
+  },
+  "actions": ["created", "updated", "deleted", "read"]
+}
+```
+
+### 4. Monitor System Metrics
 
 ```bash
 # Prometheus metrics
@@ -206,17 +232,22 @@ graph TD
     B --> C[NATS: raw.*]
     C --> D[svc-map]
     D --> E[NATS: langhook.events.*]
+    D --> SR[Schema Registry DB]
     E --> F[Rule Engine]
     F --> G[Channels]
     H[JSONata Mappings] --> D
     I[LLM Service] -.-> D
+    SR --> J[/schema API]
+    SR --> K[LLM Prompt Augmentation]
+    K --> L[Natural Language Subscriptions]
 ```
 
 ### Services
 
 1. **svc-ingest**: HTTP webhook receiver with signature verification
-2. **svc-map**: Event transformation engine with LLM fallback
-3. **Rule Engine**: Natural language subscription matching (coming soon)
+2. **svc-map**: Event transformation engine with LLM fallback and automatic schema collection
+3. **Schema Registry**: Dynamic database tracking all event types, exposed via `/schema` API
+4. **Rule Engine**: Natural language subscription matching (coming soon)
 
 ## 🧪 Testing
 
