@@ -122,11 +122,23 @@ class MappingEngine:
                 )
                 return None
 
-            # Validate action is CRUD enum
-            valid_actions = ['create', 'read', 'update', 'delete']
+            # Convert present tense actions to past tense for canonical format
+            action_mapping = {
+                'create': 'created',
+                'update': 'updated', 
+                'delete': 'deleted',
+                'read': 'read'
+            }
+            
+            # Support both present and past tense input
+            if result['action'] in action_mapping:
+                result['action'] = action_mapping[result['action']]
+            
+            # Validate action is past tense CRUD enum
+            valid_actions = ['created', 'read', 'updated', 'deleted']
             if result['action'] not in valid_actions:
                 logger.error(
-                    "Invalid action - must be one of: create, read, update, delete",
+                    "Invalid action - must be one of: created, read, updated, deleted",
                     source=source,
                     action=result['action']
                 )

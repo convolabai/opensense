@@ -3,7 +3,7 @@
 import json
 
 import structlog
-from sqlalchemy import and_, create_engine
+from sqlalchemy import and_, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from langhook.subscriptions.config import subscription_settings
@@ -32,7 +32,34 @@ class DatabaseService:
     def create_tables(self) -> None:
         """Create database tables."""
         Base.metadata.create_all(bind=self.engine)
+        
+        # Explicitly ensure event schema registry table exists
+        self.create_schema_registry_table()
+        
         logger.info("Subscription database tables created")
+
+    def create_schema_registry_table(self) -> None:
+        """Create the event schema registry table if it doesn't exist."""
+        try:
+            with self.get_session() as session:
+                # Create table with explicit SQL to ensure it exists
+                create_table_sql = text("""
+                    CREATE TABLE IF NOT EXISTS event_schema_registry (
+                        publisher VARCHAR(255) NOT NULL,
+                        resource_type VARCHAR(255) NOT NULL,
+                        action VARCHAR(255) NOT NULL,
+                        PRIMARY KEY (publisher, resource_type, action)
+                    )
+                """)
+                session.execute(create_table_sql)
+                session.commit()
+                logger.info("Event schema registry table ensured")
+        except Exception as e:
+            logger.error(
+                "Failed to create event schema registry table",
+                error=str(e),
+                exc_info=True
+            )
 
     def get_session(self) -> Session:
         """Get a database session."""

@@ -32,6 +32,7 @@ from langhook.map.config import settings as map_settings
 from langhook.map.metrics import metrics
 from langhook.map.service import mapping_service
 from langhook.subscriptions.routes import router as subscriptions_router
+from langhook.subscriptions.schema_registry import schema_registry_service
 
 logger = structlog.get_logger("langhook")
 
@@ -176,6 +177,20 @@ class HealthResponse(BaseModel):
     status: str
     services: dict[str, str]
     version: str
+
+
+@app.get("/schema")
+async def get_event_schema() -> dict[str, Any]:
+    """
+    Get the event schema registry with all known publishers, resource types, and actions.
+    
+    Returns:
+        Dictionary containing:
+        - publishers: List of all known publishers
+        - resource_types: Dictionary mapping publishers to their resource types  
+        - actions: List of all known actions
+    """
+    return await schema_registry_service.get_schema_summary()
 
 
 @app.get("/health/")

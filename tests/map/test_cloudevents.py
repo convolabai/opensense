@@ -11,7 +11,7 @@ def test_canonical_event_creation():
     canonical_data = {
         "publisher": "github",
         "resource": {"type": "pull_request", "id": 1374},
-        "action": "create"
+        "action": "created"
     }
     
     raw_payload = {
@@ -30,7 +30,7 @@ def test_canonical_event_creation():
     assert canonical_event["publisher"] == "github"
     assert canonical_event["resource"]["type"] == "pull_request"
     assert canonical_event["resource"]["id"] == 1374
-    assert canonical_event["action"] == "create"
+    assert canonical_event["action"] == "created"
     assert canonical_event["payload"] == raw_payload
     assert "timestamp" in canonical_event
     
@@ -40,7 +40,7 @@ def test_canonical_event_creation():
     assert cloud_event["id"] == "test-id-123"
     assert cloud_event["specversion"] == "1.0"
     assert cloud_event["source"] == "/github"
-    assert cloud_event["type"] == "com.github.pull_request.create"
+    assert cloud_event["type"] == "com.github.pull_request.created"
     assert cloud_event["subject"] == "pull_request/1374"
     assert cloud_event["data"] == canonical_event
 
@@ -53,7 +53,7 @@ def test_event_validation():
     valid_event = {
         "publisher": "github",
         "resource": {"type": "pull_request", "id": 1374},
-        "action": "create",
+        "action": "created",
         "timestamp": "2025-06-03T15:45:02Z",
         "payload": {"test": "data"}
     }
@@ -68,7 +68,7 @@ def test_event_validation():
     
     # Invalid action (not CRUD)
     invalid_action_event = valid_event.copy()
-    invalid_action_event["action"] = "opened"  # Should be "create"
+    invalid_action_event["action"] = "opened"  # Should be "created"
     
     assert wrapper.validate_canonical_event(invalid_action_event) is False
 
@@ -80,7 +80,7 @@ def test_wrap_and_validate():
     canonical_data = {
         "publisher": "github",
         "resource": {"type": "issue", "id": 456},
-        "action": "delete"
+        "action": "deleted"
     }
     
     raw_payload = {"action": "closed", "issue": {"number": 456}}
@@ -95,9 +95,9 @@ def test_wrap_and_validate():
     # Should return a CloudEvents envelope
     assert cloud_event is not None
     assert cloud_event["id"] == "test-456"
-    assert cloud_event["type"] == "com.github.issue.delete"
+    assert cloud_event["type"] == "com.github.issue.deleted"
     assert cloud_event["subject"] == "issue/456"
-    assert cloud_event["data"]["action"] == "delete"
+    assert cloud_event["data"]["action"] == "deleted"
     assert cloud_event["data"]["resource"]["id"] == 456
 
 

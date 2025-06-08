@@ -22,7 +22,7 @@ async def test_llm_transformation_flow():
         mock_llm.transform_to_canonical = AsyncMock(return_value={
             "publisher": "github",
             "resource": {"type": "pull_request", "id": 1374},
-            "action": "create",
+            "action": "created",
             "summary": "PR 1374 opened"
         })
         
