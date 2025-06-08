@@ -359,161 +359,162 @@ function App() {
   };
 
   return (
-    <div className="container">
-      <div className="header">
-        <h1>LangHook Demo</h1>
-        <p>Transform webhooks into canonical events with AI-powered mapping</p>
-      </div>
+    <div className="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
+      <div className="container mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold mb-4" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            LangHook Demo
+          </h1>
+          <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+            Transform webhooks into canonical events with AI-powered mapping
+          </p>
+        </div>
 
-      <div className="demo-section">
-        <div className="card input-section">
-          <h2 className="section-title">
-            <Send size={20} />
-            Webhook Input
-          </h2>
-          
-          <div className="source-selector">
-            <label htmlFor="source">Source: </label>
-            <select 
-              id="source"
-              value={selectedSource} 
-              onChange={(e) => setSelectedSource(e.target.value)}
-            >
-              <option value="github">GitHub</option>
-              <option value="stripe">Stripe</option>
-              <option value="slack">Slack</option>
-            </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          {/* Input Section */}
+          <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 border border-slate-700">
+            <h2 className="flex items-center gap-3 text-2xl font-semibold mb-6 text-slate-100">
+              <Send size={24} className="text-indigo-400" />
+              Webhook Input
+            </h2>
+
+            <div className="mb-6">
+              <label htmlFor="source" className="block text-sm font-medium text-slate-300 mb-2">Source:</label>
+              <select
+                id="source"
+                value={selectedSource}
+                onChange={(e) => setSelectedSource(e.target.value)}
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              >
+                <option value="github">GitHub</option>
+                <option value="stripe">Stripe</option>
+                <option value="slack">Slack</option>
+              </select>
+            </div>
+
+            <textarea
+              className="w-full min-h-[200px] bg-slate-900 text-slate-200 p-4 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm transition-colors"
+              value={inputPayload}
+              onChange={(e) => setInputPayload(e.target.value)}
+              placeholder="Enter webhook payload JSON..."
+            />
+
+            <div className="flex flex-col sm:flex-row gap-4 mt-6">
+              <button
+                className="flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-slate-900 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={sendWebhook}
+                disabled={isLoading || !inputPayload.trim()}
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
+                    Processing...
+                  </span>
+                ) : (
+                  <>
+                    <Send size={18} />
+                    Send Webhook
+                  </>
+                )}
+              </button>
+
+              <button
+                className="flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-slate-900 bg-slate-600 hover:bg-slate-500 text-slate-100 border border-slate-500 hover:border-slate-400 shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={generateMapping}
+                disabled={isLoading || !inputPayload.trim()}
+              >
+                <Zap size={18} />
+                Suggest Mapping
+              </button>
+            </div>
+
+            {error && <div className="p-4 rounded-md mt-6 text-sm bg-red-700/30 border border-red-600 text-red-300 animate-pulse">{error}</div>}
+            {success && <div className="p-4 rounded-md mt-6 text-sm bg-green-700/30 border border-green-600 text-green-300">{success}</div>}
           </div>
 
-          <textarea
-            className="json-editor"
-            value={inputPayload}
-            onChange={(e) => setInputPayload(e.target.value)}
-            placeholder="Enter webhook payload JSON..."
-          />
+          {/* Output Section */}
+          <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 border border-slate-700">
+            <h2 className="flex items-center gap-3 text-2xl font-semibold mb-6 text-slate-100">
+              <ArrowRight size={24} className="text-indigo-400" />
+              Canonical Event
+            </h2>
 
-          <div className="button-group">
-            <button 
-              className="btn btn-primary" 
-              onClick={sendWebhook}
-              disabled={isLoading || !inputPayload.trim()}
-            >
-              {isLoading ? (
-                <span className="loading">
-                  <div className="spinner" />
-                  Processing...
-                </span>
+            <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 min-h-[420px] font-mono text-sm text-slate-200 whitespace-pre-wrap overflow-x-auto">
+              {outputEvent ? (
+                JSON.stringify(outputEvent, null, 2)
               ) : (
-                <>
-                  <Send size={16} />
-                  Send Webhook
-                </>
+                <span className="text-slate-400">Send a webhook to see the canonical event output...</span>
               )}
-            </button>
-            
-            <button 
-              className="btn btn-secondary" 
-              onClick={generateMapping}
-              disabled={isLoading || !inputPayload.trim()}
-            >
-              <Zap size={16} />
-              Generate Mapping
-            </button>
-          </div>
-
-          {error && <div className="error">{error}</div>}
-          {success && <div className="success">{success}</div>}
-        </div>
-
-        <div className="card output-section">
-          <h2 className="section-title">
-            <ArrowRight size={20} />
-            Canonical Event
-          </h2>
-
-          <div className="json-display">
-            {outputEvent ? (
-              JSON.stringify(outputEvent, null, 2)
-            ) : (
-              'Send a webhook to see the canonical event output...'
-            )}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="card">
-        <h2 className="section-title">
-          <BarChart3 size={20} />
+        {/* Metrics Section */}
+        <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 border border-slate-700 mb-8">
+          <h2 className="flex items-center gap-3 text-2xl font-semibold mb-6 text-slate-100">
+            <BarChart3 size={24} className="text-indigo-400" />
           System Metrics
           <button 
-            className="btn btn-secondary" 
+              className="ml-auto py-1 px-2 rounded-md font-semibold flex items-center justify-center gap-1 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-800 bg-slate-600 hover:bg-slate-500 text-slate-200 border border-slate-500 hover:border-slate-400 text-xs"
             onClick={loadMetrics}
-            style={{ marginLeft: 'auto', padding: '4px 8px' }}
           >
-            <RefreshCw size={14} />
+              <RefreshCw size={12} />
           </button>
         </h2>
 
-        {metrics ? (
-          <div className="metrics-section">
-            <div className="metric-card">
-              <div className="metric-value">{metrics.events_processed}</div>
-              <div className="metric-label">Events Processed</div>
+          {metrics ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { label: "Events Processed", value: metrics.events_processed },
+                { label: "Events Mapped", value: metrics.events_mapped },
+                { label: "Events Failed", value: metrics.events_failed },
+                { label: "Success Rate", value: `${(metrics.mapping_success_rate * 100).toFixed(1)}%` },
+                { label: "LLM Invocations", value: metrics.llm_invocations },
+                { label: "LLM Usage Rate", value: `${(metrics.llm_usage_rate * 100).toFixed(1)}%` },
+              ].map(metric => (
+                <div key={metric.label} className="bg-slate-800/70 p-5 rounded-lg shadow border border-slate-700/70 transition-all hover:shadow-lg hover:-translate-y-0.5">
+                  <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-400 mb-1">
+                    {metric.value}
+                  </div>
+                  <div className="text-sm text-slate-400 uppercase tracking-wider">{metric.label}</div>
+                </div>
+              ))}
             </div>
-            <div className="metric-card">
-              <div className="metric-value">{metrics.events_mapped}</div>
-              <div className="metric-label">Events Mapped</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-value">{metrics.events_failed}</div>
-              <div className="metric-label">Events Failed</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-value">{(metrics.mapping_success_rate * 100).toFixed(1)}%</div>
-              <div className="metric-label">Success Rate</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-value">{metrics.llm_invocations}</div>
-              <div className="metric-label">LLM Invocations</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-value">{(metrics.llm_usage_rate * 100).toFixed(1)}%</div>
-              <div className="metric-label">LLM Usage Rate</div>
-            </div>
-          </div>
-        ) : (
-          <div>Loading metrics...</div>
-        )}
-      </div>
+          ) : (
+            <div className="text-center text-slate-400 py-8">Loading metrics...</div>
+          )}
+        </div>
 
-      <div className="demo-section">
-        <div className="card">
-          <h2 className="section-title">
-            <Plus size={20} />
-            Create Subscription
-          </h2>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#cbd5e1' }}>
-              Natural Language Description:
-            </label>
-            <textarea
-              className="json-editor"
-              style={{ minHeight: '120px' }}
-              value={subscriptionDescription}
-              onChange={(e) => setSubscriptionDescription(e.target.value)}
-              placeholder="Describe what events you want to be notified about, e.g., 'Notify me when a GitHub pull request is opened' or 'Alert me when Stripe payment over $100 succeeds'"
-            />
-          </div>
+        {/* Subscription Sections */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          {/* Create Subscription Section */}
+          <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 border border-slate-700">
+            <h2 className="flex items-center gap-3 text-2xl font-semibold mb-6 text-slate-100">
+              <Plus size={24} className="text-indigo-400" />
+              Create Subscription
+            </h2>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#cbd5e1' }}>
-              Webhook URL:
-            </label>
-            <input
-              type="url"
-              className="json-editor"
-              style={{ minHeight: 'auto', height: '48px' }}
+            <div className="mb-6">
+              <label htmlFor="subDesc" className="block text-sm font-medium text-slate-300 mb-2">
+                Natural Language Description:
+              </label>
+              <textarea
+                id="subDesc"
+                className="w-full min-h-[100px] bg-slate-900 text-slate-200 p-3 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm transition-colors"
+                value={subscriptionDescription}
+                onChange={(e) => setSubscriptionDescription(e.target.value)}
+                placeholder="e.g., 'GitHub PR opened' or 'Stripe payment > $100 succeeded'"
+              />
+            </div>
+
+            <div className="mb-6">
+              <label htmlFor="webhookUrl" className="block text-sm font-medium text-slate-300 mb-2">
+                Webhook URL:
+              </label>
+              <input
+                id="webhookUrl"
+                type="url"
+                className="w-full bg-slate-900 text-slate-200 p-3 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm transition-colors"
               value={webhookUrl}
               onChange={(e) => setWebhookUrl(e.target.value)}
               placeholder="https://your-service.com/webhook"
@@ -521,135 +522,126 @@ function App() {
           </div>
 
           <button 
-            className="btn btn-primary" 
+              className="w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-slate-800 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
             onClick={createSubscription}
             disabled={isSubscriptionLoading || !subscriptionDescription.trim() || !webhookUrl.trim()}
           >
             {isSubscriptionLoading ? (
-              <span className="loading">
-                <div className="spinner" />
+                <span className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
                 Creating...
               </span>
             ) : (
               <>
-                <Bell size={16} />
+                  <Bell size={18} />
                 Create Subscription
               </>
             )}
           </button>
 
-          {subscriptionError && <div className="error">{subscriptionError}</div>}
-          {subscriptionSuccess && <div className="success">{subscriptionSuccess}</div>}
+            {subscriptionError && <div className="p-4 rounded-md mt-6 text-sm bg-red-700/30 border border-red-600 text-red-300 animate-pulse">{subscriptionError}</div>}
+            {subscriptionSuccess && <div className="p-4 rounded-md mt-6 text-sm bg-green-700/30 border border-green-600 text-green-300">{subscriptionSuccess}</div>}
         </div>
 
-        <div className="card">
-          <h2 className="section-title">
-            <Eye size={20} />
+          {/* Active Subscriptions Section */}
+          <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 border border-slate-700">
+            <h2 className="flex items-center gap-3 text-2xl font-semibold mb-6 text-slate-100">
+              <Eye size={24} className="text-indigo-400" />
             Active Subscriptions
             <button 
-              className="btn btn-secondary" 
+                className="ml-auto py-1 px-2 rounded-md font-semibold flex items-center justify-center gap-1 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-800 bg-slate-600 hover:bg-slate-500 text-slate-200 border border-slate-500 hover:border-slate-400 text-xs"
               onClick={loadSubscriptions}
-              style={{ marginLeft: 'auto', padding: '4px 8px' }}
             >
-              <RefreshCw size={14} />
+                <RefreshCw size={12} />
             </button>
           </h2>
 
           {subscriptions.length > 0 ? (
-            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              <div className="max-h-[400px] overflow-y-auto space-y-4 pr-2">
               {subscriptions.map((sub) => (
-                <div key={sub.id} style={{ 
-                  marginBottom: '16px', 
-                  padding: '16px', 
-                  background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                  border: '1px solid #475569',
-                  borderRadius: '8px'
-                }}>
-                  <div style={{ marginBottom: '8px' }}>
-                    <strong style={{ color: '#f1f5f9' }}>Description:</strong>
-                    <span style={{ color: '#cbd5e1', marginLeft: '8px' }}>{sub.description}</span>
+                  <div key={sub.id} className="p-4 bg-slate-800/70 border border-slate-700/70 rounded-lg shadow">
+                    <div className="mb-2">
+                      <strong className="text-slate-200">Description:</strong>
+                      <span className="text-slate-300 ml-2">{sub.description}</span>
                   </div>
-                  <div style={{ marginBottom: '8px' }}>
-                    <strong style={{ color: '#f1f5f9' }}>NATS Pattern:</strong>
-                    <code style={{ 
-                      marginLeft: '8px',
-                      background: 'linear-gradient(135deg, #334155 0%, #475569 100%)',
-                      color: '#e2e8f0',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '13px'
-                    }}>
+                    <div className="mb-3">
+                      <strong className="text-slate-200">NATS Pattern:</strong>
+                      <code className="ml-2 bg-slate-700 text-indigo-300 px-2 py-1 rounded-md text-xs font-mono">
                       {sub.pattern}
                     </code>
                   </div>
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontSize: '12px',
-                    color: '#94a3b8'
-                  }}>
-                    <span>Status: {sub.active ? '🟢 Active' : '🔴 Inactive'}</span>
+                    <div className="flex justify-between items-center text-xs text-slate-400">
+                      <span>Status: {sub.active ?
+                        <span className="text-green-400">🟢 Active</span> :
+                        <span className="text-red-400">🔴 Inactive</span>}
+                      </span>
                     <span>Created: {new Date(sub.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div style={{ color: '#94a3b8', textAlign: 'center', padding: '40px' }}>
-              No subscriptions yet. Create your first subscription above!
+              <div className="text-center text-slate-400 py-16">
+                No subscriptions yet. Create your first subscription!
             </div>
           )}
         </div>
       </div>
 
-      {matchedSubscriptions.length > 0 && (
-        <div className="card">
-          <h2 className="section-title">
-            <Bell size={20} />
-            Notified Subscribers
-          </h2>
-          <p style={{ color: '#cbd5e1', marginBottom: '20px' }}>
-            The following subscriptions would be triggered by the current event:
-          </p>
-          {matchedSubscriptions.map((sub) => (
-            <div key={sub.id} style={{ 
-              marginBottom: '12px', 
-              padding: '12px', 
-              background: 'linear-gradient(135deg, #052e16 0%, #166534 100%)',
-              border: '1px solid #16a34a',
-              borderRadius: '8px'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#86efac', fontWeight: '500' }}>{sub.description}</span>
-                <code style={{ 
-                  background: 'rgba(134, 239, 172, 0.2)',
-                  color: '#86efac',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  fontSize: '12px'
-                }}>
-                  {sub.pattern}
-                </code>
-              </div>
+        {/* Matched Subscriptions Section */}
+        {matchedSubscriptions.length > 0 && (
+          <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 border border-slate-700 mb-8">
+            <h2 className="flex items-center gap-3 text-2xl font-semibold mb-6 text-slate-100">
+              <Bell size={24} className="text-indigo-400" />
+              Notified Subscribers
+            </h2>
+            <p className="text-slate-300 mb-4 text-sm">
+              The following subscriptions would be triggered by the current event:
+            </p>
+            <div className="space-y-3">
+              {matchedSubscriptions.map((sub) => (
+                <div key={sub.id} className="p-3 bg-green-800/30 border border-green-700/50 rounded-lg shadow">
+                  <div className="flex justify-between items-center">
+                    <span className="text-green-300 font-medium text-sm">{sub.description}</span>
+                    <code className="bg-green-700/50 text-green-200 px-2 py-1 rounded-md text-xs font-mono">
+                      {sub.pattern}
+                    </code>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
 
-      <div className="card">
-        <h2>How It Works</h2>
-        <ol>
-          <li><strong>Webhook Ingestion:</strong> Send any webhook to <code>/ingest/&#123;source&#125;</code></li>
-          <li><strong>Event Transformation:</strong> JSONata mappings convert raw payloads to canonical format</li>
-          <li><strong>CloudEvents Wrapper:</strong> Events are wrapped in CNCF-compliant envelopes</li>
-          <li><strong>Intelligent Routing:</strong> Natural language subscriptions match events to actions</li>
-        </ol>
-        
-        <p>
-          The canonical event format ensures consistency across all webhook sources, 
-          making it easy to create powerful automation and monitoring rules.
-        </p>
+        {/* How It Works Section */}
+        <div className="bg-slate-800/95 backdrop-blur-md rounded-xl shadow-2xl p-6 border border-slate-700">
+          <h2 className="text-2xl font-semibold mb-6 text-slate-100 relative pb-3 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-16 after:h-1 after:bg-gradient-to-r after:from-purple-500 after:to-indigo-500 after:rounded-full">
+            How It Works
+          </h2>
+          <ol className="list-none space-y-6 pl-2">
+            {[
+              { title: "Webhook Ingestion", text: "Send any webhook to <code>/ingest/{source}</code>" },
+              { title: "Event Transformation", text: "JSONata mappings convert raw payloads to canonical format" },
+              { title: "CloudEvents Wrapper", text: "Events are wrapped in CNCF-compliant envelopes" },
+              { title: "Intelligent Routing", text: "Natural language subscriptions match events to actions" },
+            ].map((item, index) => (
+              <li key={item.title} className="flex items-start group">
+                <div className="mr-4 flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-semibold text-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg">
+                  {index + 1}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-200 mb-1">{item.title}</h3>
+                  <p className="text-slate-400 text-sm" dangerouslySetInnerHTML={{ __html: item.text }} />
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <p className="mt-8 text-slate-300 text-sm leading-relaxed">
+            The canonical event format ensures consistency across all webhook sources,
+            making it easy to create powerful automation and monitoring rules.
+          </p>
+        </div>
       </div>
     </div>
   );
