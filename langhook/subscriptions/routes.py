@@ -5,7 +5,7 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 
 from langhook.subscriptions.database import db_service
-from langhook.subscriptions.nlp import llm_service
+from langhook.subscriptions.llm import llm_service
 from langhook.subscriptions.schemas import (
     SubscriptionCreate,
     SubscriptionListResponse,
