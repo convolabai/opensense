@@ -103,7 +103,7 @@ class MapNATSConsumer(BaseNATSConsumer):
             consumer_name=f"{settings.nats_consumer_group}_raw_processor",
             filter_subject="raw.>",  # Listen to all raw events
             message_handler=message_handler,
-            deliver_policy=DeliverPolicy.ALL,
+            deliver_policy=DeliverPolicy.NEW,
         )
 
 
