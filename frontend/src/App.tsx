@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 import Dashboard from './Dashboard';
 import Events from './Events';
 import Subscriptions from './Subscriptions';
+import Schema from './Schema';
 import Sidebar from './Sidebar'; // Import the new Sidebar component
 
-type TabName = 'Dashboard' | 'Events' | 'Subscriptions';
+type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema';
 
 interface Subscription {
   id: number;
@@ -96,6 +97,7 @@ function App() {
 
           {activeTab === 'Events' && <Events subscriptions={subscriptions} />}
           {activeTab === 'Subscriptions' && <Subscriptions subscriptions={subscriptions} refreshSubscriptions={loadSubscriptions} />}
+          {activeTab === 'Schema' && <Schema />}
         </div>
       </main>
     </div>

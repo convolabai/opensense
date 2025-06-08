@@ -1,7 +1,7 @@
 import React from 'react';
-import { LayoutDashboard, ListChecks, MailQuestion } from 'lucide-react'; // Example icons
+import { LayoutDashboard, ListChecks, MailQuestion, BookOpen } from 'lucide-react'; // Example icons
 
-type TabName = 'Dashboard' | 'Events' | 'Subscriptions';
+type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema';
 
 interface SidebarProps {
   activeTab: TabName;
@@ -12,6 +12,7 @@ const navItems = [
   { name: 'Dashboard', icon: LayoutDashboard },
   { name: 'Events', icon: ListChecks },
   { name: 'Subscriptions', icon: MailQuestion },
+  { name: 'Schema', icon: BookOpen },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
