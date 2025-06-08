@@ -77,19 +77,19 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       {/* Create Subscription Section */}
-      <div className="bg-cloudflare-secondary-gray backdrop-blur-md rounded-xl shadow-lg p-6 sm:p-8 border border-cloudflare-secondary-gray-dark">
-        <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text tracking-tight">
-          <Plus size={24} className="text-cloudflare-orange" />
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 sm:p-8">
+        <h2 className="flex items-center gap-3 text-xl font-semibold mb-6 text-gray-800 tracking-tight">
+          <Plus size={24} className="text-blue-600" />
           Create Subscription
         </h2>
 
         <div className="mb-6">
-          <label htmlFor="subDesc" className="block text-sm font-medium text-cloudflare-secondary-gray-light mb-2">
+          <label htmlFor="subDesc" className="block text-sm font-medium text-gray-500 mb-2">
             Natural Language Description:
           </label>
           <textarea
             id="subDesc"
-            className="w-full min-h-[100px] bg-cloudflare-secondary-gray-dark text-cloudflare-light-text p-3 border border-cloudflare-secondary-gray-dark rounded-lg focus:ring-2 focus:ring-cloudflare-orange focus:border-cloudflare-orange font-mono text-sm transition-colors"
+            className="w-full min-h-[100px] bg-gray-50 border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
             value={subscriptionDescription}
             onChange={(e) => setSubscriptionDescription(e.target.value)}
             placeholder="e.g., 'GitHub PR opened' or 'Stripe payment > $100 succeeded'"
@@ -97,13 +97,13 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
         </div>
 
         <div className="mb-6">
-          <label htmlFor="webhookUrl" className="block text-sm font-medium text-cloudflare-secondary-gray-light mb-2">
+          <label htmlFor="webhookUrl" className="block text-sm font-medium text-gray-500 mb-2">
             Webhook URL:
           </label>
           <input
             id="webhookUrl"
             type="url"
-            className="w-full bg-cloudflare-secondary-gray-dark text-cloudflare-light-text p-3 border border-cloudflare-secondary-gray-dark rounded-lg focus:ring-2 focus:ring-cloudflare-orange focus:border-cloudflare-orange font-mono text-sm transition-colors"
+            className="w-full bg-gray-50 border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
             placeholder="https://your-service.com/webhook"
@@ -111,7 +111,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
         </div>
 
         <button
-          className="w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all transition-transform duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-cloudflare-secondary-gray bg-cloudflare-orange hover:bg-cloudflare-orange-dark active:bg-cloudflare-orange-dark active:scale-95 text-white shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full py-2 px-4 rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
           onClick={createSubscription}
           disabled={isSubscriptionLoading || !subscriptionDescription.trim() || !webhookUrl.trim()}
         >
@@ -121,21 +121,21 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
               Creating...
             </span>
           ) : (
-            <> <Bell size={18} /> Create Subscription </>
+            <> <Bell size={16} /> Create Subscription </>
           )}
         </button>
 
-        {subscriptionError && <div className="p-4 rounded-md mt-6 text-sm bg-red-500/20 border border-red-500 text-red-400 animate-pulse">{subscriptionError}</div>}
-        {subscriptionSuccess && <div className="p-4 rounded-md mt-6 text-sm bg-green-500/20 border border-green-500 text-green-400">{subscriptionSuccess}</div>}
+        {subscriptionError && <div className="p-4 rounded-md mt-6 text-sm bg-red-100 border-red-400 text-red-700">{subscriptionError}</div>}
+        {subscriptionSuccess && <div className="p-4 rounded-md mt-6 text-sm bg-green-100 border-green-400 text-green-700">{subscriptionSuccess}</div>}
       </div>
 
       {/* Active Subscriptions Section */}
-      <div className="bg-cloudflare-secondary-gray backdrop-blur-md rounded-xl shadow-lg p-6 sm:p-8 border border-cloudflare-secondary-gray-dark">
-        <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text tracking-tight">
-          <Eye size={24} className="text-cloudflare-orange" />
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 sm:p-8">
+        <h2 className="flex items-center gap-3 text-xl font-semibold mb-6 text-gray-800 tracking-tight">
+          <Eye size={24} className="text-blue-600" />
           Active Subscriptions
           <button
-            className="ml-auto py-1 px-2 rounded-md font-semibold flex items-center justify-center gap-1 transition-all transition-transform duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-cloudflare-secondary-gray bg-cloudflare-orange hover:bg-cloudflare-orange-dark active:bg-cloudflare-orange-dark active:scale-95 text-white border border-cloudflare-orange/50 hover:border-cloudflare-orange text-xs"
+            className="ml-auto py-1 px-3 rounded-md font-semibold flex items-center justify-center gap-1 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white shadow-sm text-xs"
             onClick={refreshSubscriptions}
             aria-label="Refresh subscriptions"
           >
@@ -146,21 +146,21 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
         {subscriptions.length > 0 ? (
             <div className="max-h-[400px] overflow-y-auto space-y-4 pr-2"> {/* Keep max-h or adjust as needed */}
             {subscriptions.map((sub) => (
-                <div key={sub.id} className="p-3 sm:p-4 bg-cloudflare-secondary-gray-dark/80 border border-cloudflare-secondary-gray-dark rounded-lg shadow hover:shadow-md transition-shadow">
+                <div key={sub.id} className="bg-white rounded-lg shadow border border-gray-200 p-3 sm:p-4 hover:shadow-sm transition-shadow">
                 <div className="mb-2">
-                    <strong className="text-cloudflare-secondary-gray-light text-sm sm:text-base">Description:</strong>
-                    <span className="text-cloudflare-light-text ml-2 text-sm sm:text-base">{sub.description}</span>
+                    <strong className="text-gray-500 font-semibold text-sm">Description:</strong>
+                    <span className="text-gray-800 ml-2 text-sm">{sub.description}</span>
                 </div>
                 <div className="mb-3">
-                    <strong className="text-cloudflare-secondary-gray-light text-sm sm:text-base">NATS Pattern:</strong>
-                    <code className="ml-2 bg-cloudflare-dark-background text-cloudflare-orange px-2 py-1 rounded-md text-xs sm:text-sm font-mono">
+                    <strong className="text-gray-500 font-semibold text-sm">NATS Pattern:</strong>
+                    <code className="ml-2 bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs font-mono">
                     {sub.pattern}
                   </code>
                 </div>
-                  <div className="flex justify-between items-center text-xs sm:text-sm text-cloudflare-secondary-gray-light">
+                  <div className="flex justify-between items-center text-xs text-gray-500">
                   <span>Status: {sub.active ?
-                    <span className="text-green-400">🟢 Active</span> :
-                    <span className="text-red-400">🔴 Inactive</span>}
+                    <span className="text-green-500">🟢 Active</span> :
+                    <span className="text-red-500">🔴 Inactive</span>}
                   </span>
                   <span>Created: {new Date(sub.created_at).toLocaleDateString()}</span>
                 </div>
@@ -168,7 +168,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
             ))}
           </div>
         ) : (
-            <div className="text-center text-cloudflare-secondary-gray-light py-16 sm:py-20 text-lg">
+            <div className="text-center text-gray-500 py-16 sm:py-20 text-base">
             No subscriptions yet. Create your first subscription!
           </div>
         )}

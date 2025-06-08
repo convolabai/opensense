@@ -34,12 +34,12 @@ const Dashboard: React.FC = () => {
   }, []);
 
   return (
-    <div className="bg-cloudflare-secondary-gray backdrop-blur-md rounded-xl shadow-lg p-6 sm:p-8 border border-cloudflare-secondary-gray-dark mb-8">
-      <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-semibold mb-6 text-cloudflare-light-text tracking-tight">
-        <BarChart3 size={24} className="text-cloudflare-orange" />
+    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 sm:p-8 mb-8">
+      <h2 className="flex items-center gap-3 text-xl sm:text-2xl font-semibold mb-6 text-gray-800 tracking-tight">
+        <BarChart3 size={24} className="text-blue-600" />
         System Metrics
         <button
-          className="ml-auto py-1 px-2 rounded-md font-semibold flex items-center justify-center gap-1 transition-all transition-transform duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-cloudflare-secondary-gray bg-cloudflare-orange hover:bg-cloudflare-orange-dark active:bg-cloudflare-orange-dark active:scale-95 text-white border border-cloudflare-orange/50 hover:border-cloudflare-orange text-xs"
+          className="ml-auto py-1 px-3 rounded-md font-semibold flex items-center justify-center gap-1 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white shadow-sm text-xs"
           onClick={loadMetrics}
           aria-label="Refresh metrics"
         >
@@ -57,16 +57,16 @@ const Dashboard: React.FC = () => {
             { label: "LLM Invocations", value: metrics.llm_invocations },
             { label: "LLM Usage Rate", value: `${(metrics.llm_usage_rate * 100).toFixed(1)}%` },
           ].map(metric => (
-            <div key={metric.label} className="bg-cloudflare-secondary-gray-dark/80 p-4 sm:p-5 rounded-lg shadow border border-cloudflare-secondary-gray-dark transition-all hover:shadow-md hover:-translate-y-0.5">
-              <div className="text-3xl sm:text-4xl font-bold text-cloudflare-orange mb-1">
+            <div key={metric.label} className="bg-white p-4 sm:p-5 rounded-lg shadow border border-gray-200 transition-all hover:shadow-sm hover:-translate-y-px">
+              <div className="text-3xl sm:text-4xl font-bold text-blue-600 mb-1">
                 {metric.value}
               </div>
-              <div className="text-sm sm:text-base text-cloudflare-secondary-gray-light uppercase tracking-wider">{metric.label}</div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider">{metric.label}</div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="text-center text-cloudflare-secondary-gray-light py-8 sm:py-12 text-lg">Loading metrics...</div>
+        <div className="text-center text-gray-500 py-8 sm:py-12 text-lg">Loading metrics...</div>
       )}
     </div>
   );
