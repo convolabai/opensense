@@ -196,7 +196,7 @@ Wildcards:
 
 Publishers: github, stripe, slack, jira, custom-app, etc.
 Resource types: pull_request, issue, payment_intent, user, order, etc.
-Actions: create, read, update, delete
+Actions: created, read, updated, deleted
 
 Respond with just the pattern, nothing else."""
 
@@ -257,15 +257,15 @@ Pattern:"""
         if id_match:
             resource_id = id_match.group(1)
 
-        # Try to detect action
+        # Try to detect action (convert to past tense)
         if any(word in description_lower for word in ["create", "created", "new"]):
-            action = "create"
+            action = "created"
         elif any(word in description_lower for word in ["update", "updated", "change", "modified"]):
-            action = "update"
+            action = "updated"
         elif any(word in description_lower for word in ["delete", "deleted", "remove", "removed"]):
-            action = "delete"
+            action = "deleted"
         elif any(word in description_lower for word in ["approve", "approved"]):
-            action = "update"  # Approval is typically an update action
+            action = "updated"  # Approval is typically an update action
 
         pattern = f"langhook.events.{publisher}.{resource_type}.{resource_id}.{action}"
 

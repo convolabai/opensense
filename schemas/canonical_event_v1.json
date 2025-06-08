@@ -37,8 +37,8 @@
     },
     "action": {
       "type": "string",
-      "enum": ["create", "read", "update", "delete"],
-      "description": "CRUD action enum"
+      "enum": ["created", "read", "updated", "deleted"],
+      "description": "CRUD action enum in past tense"
     },
     "timestamp": {
       "type": "string",

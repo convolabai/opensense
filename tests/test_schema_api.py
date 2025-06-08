@@ -21,7 +21,7 @@ def test_schema_endpoint_success(client):
             "github": ["pull_request", "repository"],
             "stripe": ["refund"]
         },
-        "actions": ["create", "update", "delete"]
+        "actions": ["created", "updated", "deleted"]
     }
     
     with patch('langhook.app.schema_registry_service.get_schema_summary', 

@@ -24,7 +24,7 @@ async def test_register_event_schema_success(schema_service):
         await schema_service.register_event_schema(
             publisher="github",
             resource_type="pull_request", 
-            action="create"
+            action="created"
         )
         
         # Verify database interaction
@@ -44,7 +44,7 @@ async def test_register_event_schema_sql_error(schema_service):
         await schema_service.register_event_schema(
             publisher="github",
             resource_type="pull_request",
-            action="create"
+            action="created"
         )
 
 
@@ -57,10 +57,10 @@ async def test_get_schema_summary_success(schema_service):
         
         # Mock database entries
         mock_entries = [
-            Mock(publisher="github", resource_type="pull_request", action="create"),
-            Mock(publisher="github", resource_type="pull_request", action="update"),
-            Mock(publisher="github", resource_type="repository", action="create"),
-            Mock(publisher="stripe", resource_type="refund", action="create"),
+            Mock(publisher="github", resource_type="pull_request", action="created"),
+            Mock(publisher="github", resource_type="pull_request", action="updated"),
+            Mock(publisher="github", resource_type="repository", action="created"),
+            Mock(publisher="stripe", resource_type="refund", action="created"),
         ]
         mock_session.query.return_value.all.return_value = mock_entries
         
@@ -72,7 +72,7 @@ async def test_get_schema_summary_success(schema_service):
                 "github": ["pull_request", "repository"],
                 "stripe": ["refund"]
             },
-            "actions": ["create", "update"]
+            "actions": ["created", "updated"]
         }
         
         assert result == expected

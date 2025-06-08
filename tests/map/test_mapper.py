@@ -38,7 +38,7 @@ def test_mapping_engine_loads_jsonata_files():
             assert result["publisher"] == "test"
             assert result["resource"]["type"] == "item"
             assert result["resource"]["id"] == 123
-            assert result["action"] == "create"
+            assert result["action"] == "created"
             
         finally:
             settings.mappings_dir = original_mappings_dir
@@ -101,7 +101,7 @@ def test_github_mapping():
         assert result["publisher"] == "github"
         assert result["resource"]["type"] == "pull_request"
         assert result["resource"]["id"] == 1374
-        assert result["action"] == "create"  # "opened" maps to "create"
+        assert result["action"] == "created"  # "opened" maps to "create" which converts to "created"
     else:
         print("GitHub mapping not found - test skipped")
 

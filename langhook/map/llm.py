@@ -188,7 +188,7 @@ Example canonical format:
             )
             return False
 
-        # Validate action is CRUD enum
+        # Validate action is CRUD enum and convert to past tense
         valid_actions = ['create', 'read', 'update', 'delete']
         if canonical_data['action'] not in valid_actions:
             logger.error(
@@ -197,6 +197,15 @@ Example canonical format:
                 action=canonical_data['action']
             )
             return False
+
+        # Convert to past tense for canonical format
+        action_mapping = {
+            'create': 'created',
+            'update': 'updated', 
+            'delete': 'deleted',
+            'read': 'read'
+        }
+        canonical_data['action'] = action_mapping[canonical_data['action']]
 
         # Validate atomic ID (no composite keys with # or space, but allow /)
         resource_id = str(resource['id'])

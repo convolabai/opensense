@@ -27,7 +27,7 @@ class SchemaRegistryService:
         Args:
             publisher: Event publisher (e.g., 'github', 'stripe')
             resource_type: Resource type (e.g., 'pull_request', 'refund')
-            action: Action type (e.g., 'create', 'update', 'delete')
+            action: Action type (e.g., 'created', 'updated', 'deleted')
         """
         try:
             with db_service.get_session() as session:

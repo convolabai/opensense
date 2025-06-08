@@ -22,7 +22,7 @@ async def test_mapping_service_registers_schema():
         canonical_data = {
             "publisher": "github",
             "resource": {"type": "pull_request", "id": 1374},
-            "action": "create"
+            "action": "created"
         }
         mock_engine.apply_mapping.return_value = canonical_data
         
@@ -50,7 +50,7 @@ async def test_mapping_service_registers_schema():
         mock_schema_service.register_event_schema.assert_called_once_with(
             publisher="github",
             resource_type="pull_request",
-            action="create"
+            action="created"
         )
         
         # Verify canonical event was sent
@@ -72,7 +72,7 @@ async def test_mapping_service_handles_schema_registration_failure():
         canonical_data = {
             "publisher": "github",
             "resource": {"type": "pull_request", "id": 1374},
-            "action": "create"
+            "action": "created"
         }
         mock_engine.apply_mapping.return_value = canonical_data
         
