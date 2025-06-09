@@ -42,6 +42,14 @@ class TestLLMGateE2E:
             # Mock LLM service
             mock_llm.convert_to_pattern = AsyncMock(return_value="langhook.events.security.*.*.*")
             mock_llm.generate_gate_prompt = AsyncMock(return_value="You are evaluating security events...")
+            
+            def mock_convert_to_pattern_and_gate(description, gate_enabled=False):
+                result = {"pattern": "langhook.events.security.*.*.*"}
+                if gate_enabled:
+                    result["gate_prompt"] = "You are evaluating security events..."
+                return result
+            
+            mock_llm.convert_to_pattern_and_gate = AsyncMock(side_effect=mock_convert_to_pattern_and_gate)
 
             # Mock gate service
             mock_gate.evaluate_event = AsyncMock(return_value=(True, "Security issue detected"))
@@ -110,8 +118,11 @@ class TestLLMGateE2E:
         assert data["gate"] is not None
         assert data["gate"]["enabled"] is True
 
-        # Verify LLM service was called to generate pattern
-        mock_services["llm"].convert_to_pattern.assert_called_once_with("Critical security alerts from GitHub")
+        # Verify LLM service was called to generate pattern and gate prompt
+        mock_services["llm"].convert_to_pattern_and_gate.assert_called_once_with(
+            "Critical security alerts from GitHub", 
+            gate_enabled=True
+        )
 
         # Verify database service was called with gate config
         mock_services["db"].create_subscription.assert_called_once()
