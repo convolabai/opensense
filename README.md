@@ -53,8 +53,9 @@ LangHook transforms chaotic webhook payloads into standardized CloudEvents with 
 
 The API server will be available at `http://localhost:8000` with:
 - Webhook ingestion at `/ingest/{source}`
-- Event schema registry at `/schema`
-- Interactive demo at `/demo`
+- Event schema registry at `/schema/`
+- Schema management at `/schema/publishers/...` (DELETE endpoints)
+- Interactive console at `/console`
 - API docs at `/docs`
 
 ## 🎯 Core Features
@@ -79,6 +80,7 @@ The API server will be available at `http://localhost:8000` with:
 ### Dynamic Schema Registry
 - **Automatic schema discovery** collects publisher, resource type, and action combinations from all processed events
 - **Real-time schema API** at `/schema` exposes available event types for accurate subscription generation
+- **Schema management** with deletion capabilities at publisher, resource type, and action levels
 - **LLM grounding** ensures natural language subscriptions only use actually available event schemas
 - **Non-blocking collection** - schema registry failures don't affect event processing
 
@@ -135,7 +137,7 @@ curl -X POST http://localhost:8000/map/suggest-map \
 ### 3. Query Available Event Schemas
 
 ```bash
-curl http://localhost:8000/schema
+curl http://localhost:8000/schema/
 ```
 
 Response:
@@ -151,7 +153,28 @@ Response:
 }
 ```
 
-### 4. Monitor System Metrics
+### 4. Manage Schema Registry
+
+Delete schema entries for specific publishers, resource types, or actions:
+
+```bash
+# Delete entire publisher and all associated schemas
+curl -X DELETE http://localhost:8000/schema/publishers/github
+
+# Delete specific resource type under a publisher
+curl -X DELETE http://localhost:8000/schema/publishers/github/resource-types/pull_request
+
+# Delete specific action for a publisher/resource type combination
+curl -X DELETE http://localhost:8000/schema/publishers/github/resource-types/pull_request/actions/created
+```
+
+All deletion operations:
+- Return `204 No Content` on success
+- Return `404 Not Found` if the schema entry doesn't exist
+- Require confirmation in the frontend interface
+- Automatically refresh schema data after successful deletion
+
+### 5. Monitor System Metrics
 
 LangHook provides comprehensive Prometheus metrics for monitoring:
 
@@ -186,11 +209,12 @@ langhook
 
 ## 🎭 Interactive Demo
 
-Visit `http://localhost:8000/demo` to:
+Visit `http://localhost:8000/console` to:
 - Send sample webhooks from popular services
 - See real-time event transformation
 - Test natural language subscriptions
 - Explore the canonical event format
+- Manage schema registry with delete capabilities
 
 ## ⚙ Configuration
 
