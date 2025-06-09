@@ -128,6 +128,186 @@ class SchemaRegistryService:
                 "actions": []
             }
 
+    async def delete_publisher(self, publisher: str) -> bool:
+        """
+        Delete all schema entries for a publisher.
+
+        Args:
+            publisher: Publisher name to delete
+
+        Returns:
+            bool: True if any entries were deleted, False if publisher didn't exist
+        """
+        try:
+            with db_service.get_session() as session:
+                # Count entries to delete
+                count_query = session.query(EventSchemaRegistry).filter(
+                    EventSchemaRegistry.publisher == publisher
+                ).count()
+
+                if count_query == 0:
+                    logger.info(
+                        "Publisher not found for deletion",
+                        publisher=publisher
+                    )
+                    return False
+
+                # Delete entries
+                delete_query = session.query(EventSchemaRegistry).filter(
+                    EventSchemaRegistry.publisher == publisher
+                )
+                deleted_count = delete_query.delete()
+                session.commit()
+
+                logger.info(
+                    "Publisher deleted from schema registry",
+                    publisher=publisher,
+                    deleted_count=deleted_count
+                )
+                return True
+
+        except SQLAlchemyError as e:
+            logger.error(
+                "Failed to delete publisher from schema registry",
+                publisher=publisher,
+                error=str(e),
+                exc_info=True
+            )
+            raise
+        except Exception as e:
+            logger.error(
+                "Unexpected error deleting publisher from schema registry",
+                publisher=publisher,
+                error=str(e),
+                exc_info=True
+            )
+            raise
+
+    async def delete_resource_type(self, publisher: str, resource_type: str) -> bool:
+        """
+        Delete all schema entries for a publisher/resource_type combination.
+
+        Args:
+            publisher: Publisher name
+            resource_type: Resource type to delete
+
+        Returns:
+            bool: True if any entries were deleted, False if combination didn't exist
+        """
+        try:
+            with db_service.get_session() as session:
+                # Count entries to delete
+                count_query = session.query(EventSchemaRegistry).filter(
+                    EventSchemaRegistry.publisher == publisher,
+                    EventSchemaRegistry.resource_type == resource_type
+                ).count()
+
+                if count_query == 0:
+                    logger.info(
+                        "Resource type not found for deletion",
+                        publisher=publisher,
+                        resource_type=resource_type
+                    )
+                    return False
+
+                # Delete entries
+                delete_query = session.query(EventSchemaRegistry).filter(
+                    EventSchemaRegistry.publisher == publisher,
+                    EventSchemaRegistry.resource_type == resource_type
+                )
+                deleted_count = delete_query.delete()
+                session.commit()
+
+                logger.info(
+                    "Resource type deleted from schema registry",
+                    publisher=publisher,
+                    resource_type=resource_type,
+                    deleted_count=deleted_count
+                )
+                return True
+
+        except SQLAlchemyError as e:
+            logger.error(
+                "Failed to delete resource type from schema registry",
+                publisher=publisher,
+                resource_type=resource_type,
+                error=str(e),
+                exc_info=True
+            )
+            raise
+        except Exception as e:
+            logger.error(
+                "Unexpected error deleting resource type from schema registry",
+                publisher=publisher,
+                resource_type=resource_type,
+                error=str(e),
+                exc_info=True
+            )
+            raise
+
+    async def delete_action(self, publisher: str, resource_type: str, action: str) -> bool:
+        """
+        Delete a specific schema entry.
+
+        Args:
+            publisher: Publisher name
+            resource_type: Resource type
+            action: Action to delete
+
+        Returns:
+            bool: True if entry was deleted, False if it didn't exist
+        """
+        try:
+            with db_service.get_session() as session:
+                # Find the specific entry
+                entry = session.query(EventSchemaRegistry).filter(
+                    EventSchemaRegistry.publisher == publisher,
+                    EventSchemaRegistry.resource_type == resource_type,
+                    EventSchemaRegistry.action == action
+                ).first()
+
+                if not entry:
+                    logger.info(
+                        "Action not found for deletion",
+                        publisher=publisher,
+                        resource_type=resource_type,
+                        action=action
+                    )
+                    return False
+
+                # Delete the entry
+                session.delete(entry)
+                session.commit()
+
+                logger.info(
+                    "Action deleted from schema registry",
+                    publisher=publisher,
+                    resource_type=resource_type,
+                    action=action
+                )
+                return True
+
+        except SQLAlchemyError as e:
+            logger.error(
+                "Failed to delete action from schema registry",
+                publisher=publisher,
+                resource_type=resource_type,
+                action=action,
+                error=str(e),
+                exc_info=True
+            )
+            raise
+        except Exception as e:
+            logger.error(
+                "Unexpected error deleting action from schema registry",
+                publisher=publisher,
+                resource_type=resource_type,
+                action=action,
+                error=str(e),
+                exc_info=True
+            )
+            raise
+
 
 # Global schema registry service instance
 schema_registry_service = SchemaRegistryService()
