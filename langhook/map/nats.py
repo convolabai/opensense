@@ -20,7 +20,7 @@ class MapNATSProducer(BaseNATSProducer):
     def _build_subject(self, canonical_data: dict[str, Any]) -> str:
         """
         Build NATS subject from canonical event data.
-        
+
         Subject pattern: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>
         """
         publisher = canonical_data.get("publisher", "unknown")

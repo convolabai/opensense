@@ -48,13 +48,13 @@ class CloudEventWrapper:
     ) -> dict[str, Any]:
         """
         Create a canonical event in the new v1 format.
-        
+
         Args:
             event_id: Unique event identifier
-            source: Source identifier  
+            source: Source identifier
             canonical_data: Canonical data from mapping {publisher, resource, action, ...}
             raw_payload: Original raw webhook payload
-            
+
         Returns:
             Canonical event as dictionary (not CloudEvents wrapped)
         """
@@ -77,11 +77,11 @@ class CloudEventWrapper:
     ) -> dict[str, Any]:
         """
         Wrap canonical event in CloudEvents envelope for CNCF compatibility.
-        
+
         Args:
-            event_id: Unique event identifier  
+            event_id: Unique event identifier
             canonical_event: Canonical event data
-            
+
         Returns:
             CloudEvent envelope with canonical event as data
         """
@@ -106,10 +106,10 @@ class CloudEventWrapper:
     def validate_canonical_event(self, event: dict[str, Any]) -> bool:
         """
         Validate a canonical event against the JSON schema.
-        
+
         Args:
             event: Canonical event dictionary to validate (not CloudEvents envelope)
-            
+
         Returns:
             True if valid, False otherwise
         """
@@ -143,16 +143,16 @@ class CloudEventWrapper:
     ) -> dict[str, Any]:
         """
         Create and validate a canonical event, then wrap in CloudEvents envelope.
-        
+
         Args:
             event_id: Unique event identifier
             source: Source identifier
             canonical_data: Canonical data from mapping
             raw_payload: Original raw webhook payload
-            
+
         Returns:
             CloudEvents envelope containing validated canonical event
-            
+
         Raises:
             ValueError: If canonical event validation fails
         """

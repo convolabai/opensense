@@ -22,18 +22,18 @@ async def test_end_to_end_fingerprinting_workflow():
     from langhook.map.llm import llm_service
     
     # Mock the database and LLM services
-    original_get_webhook_mapping = db_service.get_webhook_mapping
-    original_create_webhook_mapping = db_service.create_webhook_mapping
-    original_transform_to_canonical = llm_service.transform_to_canonical
+    original_get_ingestion_mapping = db_service.get_ingestion_mapping
+    original_create_ingestion_mapping = db_service.create_ingestion_mapping
+    original_generate_jsonata_mapping = llm_service.generate_jsonata_mapping
     original_is_available = llm_service.is_available
     
     # Setup mocks
     stored_mappings = {}
     
-    async def mock_get_webhook_mapping(fingerprint: str):
+    async def mock_get_ingestion_mapping(fingerprint: str):
         return stored_mappings.get(fingerprint)
     
-    async def mock_create_webhook_mapping(fingerprint: str, publisher: str, event_name: str, mapping_expr: str):
+    async def mock_create_ingestion_mapping(fingerprint: str, publisher: str, event_name: str, mapping_expr: str):
         mapping = MagicMock()
         mapping.fingerprint = fingerprint
         mapping.publisher = publisher
@@ -42,23 +42,19 @@ async def test_end_to_end_fingerprinting_workflow():
         stored_mappings[fingerprint] = mapping
         return mapping
     
-    async def mock_transform_to_canonical(source: str, raw_payload: dict):
-        # Mock LLM response for GitHub PR opened
-        if "action" in raw_payload and raw_payload["action"] == "opened":
-            return {
-                "publisher": source,
-                "resource": {"type": "pull_request", "id": raw_payload.get("pull_request", {}).get("number", 123)},
-                "action": "created"
-            }
+    async def mock_generate_jsonata_mapping(source: str, raw_payload: dict):
+        # Mock JSONata generation based on payload structure
+        if "pull_request" in raw_payload:
+            return '{"publisher": "' + source + '", "resource": {"type": "pull_request", "id": pull_request.number}, "action": "created"}'
         return None
     
     def mock_is_available():
         return True
     
     # Apply mocks
-    db_service.get_webhook_mapping = mock_get_webhook_mapping
-    db_service.create_webhook_mapping = mock_create_webhook_mapping
-    llm_service.transform_to_canonical = mock_transform_to_canonical
+    db_service.get_ingestion_mapping = mock_get_ingestion_mapping
+    db_service.create_ingestion_mapping = mock_create_ingestion_mapping
+    llm_service.generate_jsonata_mapping = mock_generate_jsonata_mapping
     llm_service.is_available = mock_is_available
     
     try:
@@ -90,12 +86,12 @@ async def test_end_to_end_fingerprinting_workflow():
         # Should return None since no mapping exists yet
         assert result1 is None
         
-        # Simulate what the service would do: call LLM and store mapping
-        canonical_data = await mock_transform_to_canonical("github", payload1)
-        assert canonical_data is not None
+        # Simulate what the service would do: call LLM to generate JSONata mapping
+        jsonata_expr = await mock_generate_jsonata_mapping("github", payload1)
+        assert jsonata_expr is not None
         
-        # Store the mapping (simulating what the service would do)
-        await engine.store_mapping_from_canonical("github", payload1, canonical_data)
+        # Store the JSONata mapping (simulating what the service would do)
+        await engine.store_jsonata_mapping("github", payload1, jsonata_expr)
         
         # Verify mapping was stored
         assert fingerprint1 in stored_mappings
@@ -123,9 +119,9 @@ async def test_end_to_end_fingerprinting_workflow():
         
     finally:
         # Restore original methods
-        db_service.get_webhook_mapping = original_get_webhook_mapping
-        db_service.create_webhook_mapping = original_create_webhook_mapping
-        llm_service.transform_to_canonical = original_transform_to_canonical
+        db_service.get_ingestion_mapping = original_get_ingestion_mapping
+        db_service.create_ingestion_mapping = original_create_ingestion_mapping
+        llm_service.generate_jsonata_mapping = original_generate_jsonata_mapping
         llm_service.is_available = original_is_available
 
 
@@ -136,18 +132,18 @@ async def test_fingerprinting_with_different_structures():
     from langhook.map.llm import llm_service
     
     # Mock services
-    original_get_webhook_mapping = db_service.get_webhook_mapping
+    original_get_ingestion_mapping = db_service.get_ingestion_mapping
     original_is_available = llm_service.is_available
     
     stored_mappings = {}
     
-    async def mock_get_webhook_mapping(fingerprint: str):
+    async def mock_get_ingestion_mapping(fingerprint: str):
         return stored_mappings.get(fingerprint)
     
     def mock_is_available():
         return False  # Force no LLM to test fingerprint differentiation
     
-    db_service.get_webhook_mapping = mock_get_webhook_mapping
+    db_service.get_ingestion_mapping = mock_get_ingestion_mapping
     llm_service.is_available = mock_is_available
     
     try:
@@ -181,7 +177,7 @@ async def test_fingerprinting_with_different_structures():
         
     finally:
         # Restore original methods
-        db_service.get_webhook_mapping = original_get_webhook_mapping  
+        db_service.get_ingestion_mapping = original_get_ingestion_mapping  
         llm_service.is_available = original_is_available
 
 

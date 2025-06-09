@@ -1,12 +1,10 @@
 """JSONata mapping engine for transforming raw events to canonical format."""
 
-from pathlib import Path
 from typing import Any
 
 import jsonata
 import structlog
 
-from langhook.map.config import settings
 from langhook.map.fingerprint import generate_fingerprint
 from langhook.subscriptions.database import db_service
 
@@ -14,87 +12,46 @@ logger = structlog.get_logger("langhook")
 
 
 class MappingEngine:
-    """Engine for loading and applying JSONata mappings."""
+    """Engine for applying JSONata mappings from fingerprint-based database storage."""
 
     def __init__(self) -> None:
-        self._mappings: dict[str, str] = {}
-        self._load_mappings()
-
-    def _load_mappings(self) -> None:
-        """Load all JSONata mapping files from the mappings directory."""
-        mappings_path = Path(settings.mappings_dir)
-        if not mappings_path.exists():
-            logger.warning(
-                "Mappings directory does not exist",
-                mappings_dir=settings.mappings_dir
-            )
-            return
-
-        for mapping_file in mappings_path.glob("*.jsonata"):
-            source = mapping_file.stem  # filename without extension
-            try:
-                with open(mapping_file) as f:
-                    jsonata_expression = f.read().strip()
-
-                # Store the JSONata expression string
-                self._mappings[source] = jsonata_expression
-
-                logger.info(
-                    "Loaded mapping",
-                    source=source,
-                    file=str(mapping_file)
-                )
-            except Exception as e:
-                logger.error(
-                    "Failed to load mapping",
-                    source=source,
-                    file=str(mapping_file),
-                    error=str(e),
-                    exc_info=True
-                )
-
-    def get_mapping(self, source: str) -> str | None:
-        """Get JSONata mapping expression for a source."""
-        return self._mappings.get(source)
-
-    def has_mapping(self, source: str) -> bool:
-        """Check if mapping exists for a source."""
-        return source in self._mappings
+        # No longer loading file-based mappings
+        pass
 
     async def apply_mapping(self, source: str, raw_payload: dict[str, Any]) -> dict[str, Any] | None:
         """
         Apply JSONata mapping to transform raw payload to canonical format.
-        
+
         First checks fingerprint-based mappings in database, then falls back to file-based mappings.
-        
+
         Args:
             source: Source identifier (e.g., 'github', 'stripe')
             raw_payload: Raw webhook payload
-            
+
         Returns:
             Canonical event dict or None if mapping fails
         """
         # Generate fingerprint for the payload
         fingerprint = generate_fingerprint(raw_payload)
-        
+
         logger.debug(
             "Generated payload fingerprint",
             source=source,
             fingerprint=fingerprint
         )
-        
+
         # First, try to get mapping from database using fingerprint
         try:
-            webhook_mapping = await db_service.get_webhook_mapping(fingerprint)
-            if webhook_mapping:
+            ingestion_mapping = await db_service.get_ingestion_mapping(fingerprint)
+            if ingestion_mapping:
                 logger.debug(
                     "Found fingerprint-based mapping",
                     source=source,
                     fingerprint=fingerprint,
-                    publisher=webhook_mapping.publisher
+                    publisher=ingestion_mapping.publisher
                 )
-                
-                return await self._apply_jsonata_mapping(webhook_mapping.mapping_expr, raw_payload, source)
+
+                return await self._apply_jsonata_mapping(ingestion_mapping.mapping_expr, raw_payload, source)
         except Exception as e:
             logger.warning(
                 "Failed to lookup fingerprint mapping",
@@ -102,40 +59,23 @@ class MappingEngine:
                 fingerprint=fingerprint,
                 error=str(e)
             )
-        
-        # Fallback to file-based mapping if no fingerprint match
-        mapping_expr = self.get_mapping(source)
-        if not mapping_expr:
-            logger.debug(
-                "No mapping found for source",
-                source=source,
-                fingerprint=fingerprint
-            )
-            return None
-
-        return await self._apply_jsonata_mapping(mapping_expr, raw_payload, source)
+        # No fingerprint match found, return None to trigger LLM mapping generation
+        logger.debug(
+            "No fingerprint mapping found",
+            source=source,
+            fingerprint=fingerprint
+        )
+        return None
 
     async def _apply_jsonata_mapping(self, mapping_expr: str, raw_payload: dict[str, Any], source: str) -> dict[str, Any] | None:
         """
         Apply a JSONata mapping expression to transform raw payload to canonical format.
-        
+
         Args:
             mapping_expr: JSONata expression to apply
             raw_payload: Raw webhook payload
             source: Source identifier for logging
-            
-        Returns:
-            Canonical event dict or None if mapping fails
-        """
-    async def _apply_jsonata_mapping(self, mapping_expr: str, raw_payload: dict[str, Any], source: str) -> dict[str, Any] | None:
-        """
-        Apply a JSONata mapping expression to transform raw payload to canonical format.
-        
-        Args:
-            mapping_expr: JSONata expression to apply
-            raw_payload: Raw webhook payload
-            source: Source identifier for logging
-            
+
         Returns:
             Canonical event dict or None if mapping fails
         """
@@ -233,62 +173,56 @@ class MappingEngine:
             )
             return None
 
-    async def store_mapping_from_canonical(
+    async def store_jsonata_mapping(
         self,
         source: str,
         raw_payload: dict[str, Any],
-        canonical_data: dict[str, Any]
+        jsonata_expr: str
     ) -> None:
         """
-        Store a mapping generated from canonical data in the database.
-        
+        Store a JSONata mapping expression in the database.
+
         Args:
-            source: Source identifier  
+            source: Source identifier
             raw_payload: Raw webhook payload
-            canonical_data: Canonical data produced by LLM
+            jsonata_expr: JSONata expression that transforms payload to canonical format
         """
         try:
-            from langhook.map.jsonata_generator import generate_jsonata_from_canonical
-            
             # Generate fingerprint
             fingerprint = generate_fingerprint(raw_payload)
-            
-            # Generate JSONata expression
-            jsonata_expr = generate_jsonata_from_canonical(canonical_data, raw_payload)
-            
-            # Create event name from canonical data
-            resource = canonical_data.get("resource", {})
-            event_name = f"{resource.get('type', 'unknown')} {canonical_data.get('action', 'unknown')}"
-            
+
+            # Test the JSONata expression to extract event name
+            import jsonata
+            canonical_result = jsonata.transform(jsonata_expr, raw_payload)
+
+            if canonical_result and isinstance(canonical_result, dict):
+                resource = canonical_result.get("resource", {})
+                event_name = f"{resource.get('type', 'unknown')} {canonical_result.get('action', 'unknown')}"
+            else:
+                event_name = "unknown unknown"
+
             # Store in database
-            await db_service.create_webhook_mapping(
+            await db_service.create_ingestion_mapping(
                 fingerprint=fingerprint,
                 publisher=source,
                 event_name=event_name,
                 mapping_expr=jsonata_expr
             )
-            
+
             logger.info(
-                "Stored new mapping from canonical data",
+                "Stored new JSONata mapping",
                 source=source,
                 fingerprint=fingerprint,
                 event_name=event_name
             )
-            
+
         except Exception as e:
             logger.error(
-                "Failed to store mapping from canonical data",
+                "Failed to store JSONata mapping",
                 source=source,
                 error=str(e),
                 exc_info=True
             )
-
-    def reload_mappings(self) -> None:
-        """Reload all mappings from disk."""
-        self._mappings.clear()
-        self._load_mappings()
-        logger.info("Mappings reloaded", mapping_count=len(self._mappings))
-
 
 # Global mapping engine instance
 mapping_engine = MappingEngine()

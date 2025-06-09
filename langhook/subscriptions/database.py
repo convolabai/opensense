@@ -391,22 +391,22 @@ class DatabaseService:
             return subscription_events, total
 
 
-    async def get_webhook_mapping(self, fingerprint: str) -> WebhookMapping | None:
-        """Get a webhook mapping by fingerprint."""
+    async def get_ingestion_mapping(self, fingerprint: str) -> WebhookMapping | None:
+        """Get an ingestion mapping by fingerprint."""
         with self.get_session() as session:
             mapping = session.query(WebhookMapping).filter(
                 WebhookMapping.fingerprint == fingerprint
             ).first()
             return mapping
 
-    async def create_webhook_mapping(
+    async def create_ingestion_mapping(
         self,
         fingerprint: str,
         publisher: str,
         event_name: str,
         mapping_expr: str
     ) -> WebhookMapping:
-        """Create a new webhook mapping."""
+        """Create a new ingestion mapping."""
         with self.get_session() as session:
             mapping = WebhookMapping(
                 fingerprint=fingerprint,
