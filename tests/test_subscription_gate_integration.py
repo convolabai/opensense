@@ -25,11 +25,7 @@ class TestSubscriptionWithGate:
             mock_subscription.channel_config = {"url": "https://example.com/webhook"}
             mock_subscription.gate = {
                 "enabled": True,
-                "model": "gpt-4o-mini",
-                "prompt": "important_only",
-                "threshold": 0.8,
-                "audit": True,
-                "failover_policy": "fail_open"
+                "prompt": "You are evaluating GitHub events for importance..."
             }
             mock_subscription.active = True
 
@@ -44,11 +40,7 @@ class TestSubscriptionWithGate:
         """Test creating a subscription with LLM gate configuration."""
         gate_config = GateConfig(
             enabled=True,
-            model="gpt-4o-mini",
-            prompt="important_only",
-            threshold=0.9,
-            audit=True,
-            failover_policy="fail_closed"
+            prompt="Custom evaluation prompt for important events"
         )
         
         subscription_data = SubscriptionCreate(
@@ -69,21 +61,14 @@ class TestSubscriptionWithGate:
         mock_db_service.create_subscription.assert_called_once()
         call_args = mock_db_service.create_subscription.call_args
         assert call_args[1]["subscription_data"].gate.enabled is True
-        assert call_args[1]["subscription_data"].gate.model == "gpt-4o-mini"
-        assert call_args[1]["subscription_data"].gate.prompt == "important_only"
-        assert call_args[1]["subscription_data"].gate.threshold == 0.9
-        assert call_args[1]["subscription_data"].gate.failover_policy == "fail_closed"
+        assert call_args[1]["subscription_data"].gate.prompt == "Custom evaluation prompt for important events"
 
     @pytest.mark.asyncio
     async def test_update_subscription_gate_config(self, mock_db_service):
         """Test updating a subscription's gate configuration."""
         new_gate_config = GateConfig(
             enabled=False,
-            model="gpt-4",
-            prompt="security_focused",
-            threshold=0.7,
-            audit=False,
-            failover_policy="fail_open"
+            prompt="Updated evaluation prompt"
         )
         
         update_data = SubscriptionUpdate(
@@ -102,8 +87,7 @@ class TestSubscriptionWithGate:
         mock_db_service.update_subscription.assert_called_once()
         call_args = mock_db_service.update_subscription.call_args
         assert call_args[1]["update_data"].gate.enabled is False
-        assert call_args[1]["update_data"].gate.model == "gpt-4"
-        assert call_args[1]["update_data"].gate.prompt == "security_focused"
+        assert call_args[1]["update_data"].gate.prompt == "Updated evaluation prompt"
 
     @pytest.mark.asyncio
     async def test_create_subscription_without_gate(self, mock_db_service):
@@ -131,30 +115,16 @@ class TestSubscriptionWithGate:
         # Valid config
         valid_config = GateConfig(
             enabled=True,
-            model="gpt-4o-mini",
-            prompt="default",
-            threshold=0.8,
-            audit=True,
-            failover_policy="fail_open"
+            prompt="Custom evaluation prompt"
         )
+        
         assert valid_config.enabled is True
-        assert valid_config.threshold == 0.8
-
-        # Test invalid threshold
-        with pytest.raises(ValueError):
-            GateConfig(threshold=1.5)
-
-        # Test invalid failover policy
-        with pytest.raises(ValueError):
-            GateConfig(failover_policy="invalid")
-
-        # Test defaults
+        assert valid_config.prompt == "Custom evaluation prompt"
+        
+        # Test default values
         default_config = GateConfig()
         assert default_config.enabled is False
-        assert default_config.model == "gpt-4o-mini"
-        assert default_config.threshold == 0.8
-        assert default_config.audit is True
-        assert default_config.failover_policy == "fail_open"
+        assert default_config.prompt == ""
 
 
 class TestSubscriptionConsumerWithGate:
@@ -172,11 +142,7 @@ class TestSubscriptionConsumerWithGate:
         subscription.channel_config = {"url": "https://example.com/webhook"}
         subscription.gate = {
             "enabled": True,
-            "model": "gpt-4o-mini",
-            "prompt": "important_only",
-            "threshold": 0.8,
-            "audit": True,
-            "failover_policy": "fail_open"
+            "prompt": "Evaluate GitHub events for importance..."
         }
         subscription.active = True
         return subscription
@@ -229,7 +195,7 @@ class TestSubscriptionConsumerWithGate:
              patch('httpx.AsyncClient') as mock_http:
             
             # Mock gate passes
-            mock_gate.evaluate_event = AsyncMock(return_value=(True, "Important security fix", 0.9))
+            mock_gate.evaluate_event = AsyncMock(return_value=(True, "Important security fix"))
             
             # Mock database save
             mock_db.get_session = Mock()
@@ -269,7 +235,7 @@ class TestSubscriptionConsumerWithGate:
              patch('httpx.AsyncClient') as mock_http:
             
             # Mock gate blocks
-            mock_gate.evaluate_event = AsyncMock(return_value=(False, "Not important enough", 0.3))
+            mock_gate.evaluate_event = AsyncMock(return_value=(False, "Not important enough"))
             
             # Mock database save
             mock_db.get_session = Mock()
