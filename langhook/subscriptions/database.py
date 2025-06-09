@@ -7,7 +7,7 @@ from sqlalchemy import and_, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from langhook.subscriptions.config import subscription_settings
-from langhook.subscriptions.models import Base, Subscription, EventLog, SubscriptionEventLog, WebhookMapping
+from langhook.subscriptions.models import Base, Subscription, EventLog, SubscriptionEventLog, IngestMapping
 from langhook.subscriptions.schemas import SubscriptionCreate, SubscriptionUpdate
 
 logger = structlog.get_logger("langhook")
@@ -39,8 +39,8 @@ class DatabaseService:
         self.create_event_logs_table()
         # Explicitly ensure subscription event logs table exists
         self.create_subscription_event_logs_table()
-        # Explicitly ensure webhook mappings table exists
-        self.create_webhook_mappings_table()
+        # Explicitly ensure ingest mappings table exists
+        self.create_ingest_mappings_table()
         logger.info("Subscription database tables created")
 
     def create_schema_registry_table(self) -> None:
@@ -164,17 +164,18 @@ class DatabaseService:
                 exc_info=True
             )
 
-    def create_webhook_mappings_table(self) -> None:
-        """Create the webhook mappings table if it doesn't exist."""
+    def create_ingest_mappings_table(self) -> None:
+        """Create the ingest mappings table if it doesn't exist."""
         try:
             with self.get_session() as session:
                 # Create table with explicit SQL to ensure it exists
                 create_table_sql = text("""
-                    CREATE TABLE IF NOT EXISTS webhook_mappings (
+                    CREATE TABLE IF NOT EXISTS ingest_mappings (
                         fingerprint VARCHAR(64) PRIMARY KEY NOT NULL,
                         publisher VARCHAR(255) NOT NULL,
                         event_name VARCHAR(255) NOT NULL,
                         mapping_expr TEXT NOT NULL,
+                        structure JSONB NOT NULL,
                         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                         updated_at TIMESTAMPTZ
                     )
@@ -183,19 +184,19 @@ class DatabaseService:
                 
                 # Create indexes for better query performance
                 index_sqls = [
-                    "CREATE INDEX IF NOT EXISTS idx_webhook_mappings_publisher ON webhook_mappings(publisher)",
-                    "CREATE INDEX IF NOT EXISTS idx_webhook_mappings_event_name ON webhook_mappings(event_name)",
-                    "CREATE INDEX IF NOT EXISTS idx_webhook_mappings_created_at ON webhook_mappings(created_at)",
+                    "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_publisher ON ingest_mappings(publisher)",
+                    "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_event_name ON ingest_mappings(event_name)",
+                    "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_created_at ON ingest_mappings(created_at)",
                 ]
                 
                 for index_sql in index_sqls:
                     session.execute(text(index_sql))
                 
                 session.commit()
-                logger.info("Webhook mappings table ensured")
+                logger.info("Ingest mappings table ensured")
         except Exception as e:
             logger.error(
-                "Failed to create webhook mappings table",
+                "Failed to create ingest mappings table",
                 error=str(e),
                 exc_info=True
             )
@@ -391,11 +392,11 @@ class DatabaseService:
             return subscription_events, total
 
 
-    async def get_ingestion_mapping(self, fingerprint: str) -> WebhookMapping | None:
+    async def get_ingestion_mapping(self, fingerprint: str) -> IngestMapping | None:
         """Get an ingestion mapping by fingerprint."""
         with self.get_session() as session:
-            mapping = session.query(WebhookMapping).filter(
-                WebhookMapping.fingerprint == fingerprint
+            mapping = session.query(IngestMapping).filter(
+                IngestMapping.fingerprint == fingerprint
             ).first()
             return mapping
 
@@ -404,15 +405,17 @@ class DatabaseService:
         fingerprint: str,
         publisher: str,
         event_name: str,
-        mapping_expr: str
-    ) -> WebhookMapping:
+        mapping_expr: str,
+        structure: dict[str, any]
+    ) -> IngestMapping:
         """Create a new ingestion mapping."""
         with self.get_session() as session:
-            mapping = WebhookMapping(
+            mapping = IngestMapping(
                 fingerprint=fingerprint,
                 publisher=publisher,
                 event_name=event_name,
-                mapping_expr=mapping_expr
+                mapping_expr=mapping_expr,
+                structure=structure
             )
 
             session.add(mapping)
@@ -420,13 +423,27 @@ class DatabaseService:
             session.refresh(mapping)
 
             logger.info(
-                "Webhook mapping created",
+                "Ingest mapping created",
                 fingerprint=fingerprint,
                 publisher=publisher,
                 event_name=event_name
             )
 
             return mapping
+
+    async def get_all_ingestion_mappings(
+        self,
+        skip: int = 0,
+        limit: int = 100
+    ) -> tuple[list[IngestMapping], int]:
+        """Get all ingestion mappings with pagination."""
+        with self.get_session() as session:
+            query = session.query(IngestMapping).order_by(IngestMapping.created_at.desc())
+
+            total = query.count()
+            mappings = query.offset(skip).limit(limit).all()
+
+            return mappings, total
 
 
 # Global database service instance

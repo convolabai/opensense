@@ -126,3 +126,25 @@ class SubscriptionEventLogListResponse(BaseModel):
     total: int
     page: int
     size: int
+
+
+class IngestMappingResponse(BaseModel):
+    """Schema for ingest mapping response."""
+    fingerprint: str
+    publisher: str
+    event_name: str
+    mapping_expr: str
+    structure: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class IngestMappingListResponse(BaseModel):
+    """Schema for listing ingest mappings."""
+    mappings: list[IngestMappingResponse]
+    total: int
+    page: int
+    size: int

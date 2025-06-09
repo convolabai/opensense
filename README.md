@@ -55,6 +55,7 @@ The API server will be available at `http://localhost:8000` with:
 - Webhook ingestion at `/ingest/{source}`
 - Event schema registry at `/schema/`
 - Schema management at `/schema/publishers/...` (DELETE endpoints)
+- Ingest mapping management at `/subscriptions/ingest-mappings`
 - Interactive console at `/console`
 - API docs at `/docs`
 
@@ -69,6 +70,7 @@ The API server will be available at `http://localhost:8000` with:
 ### Intelligent Event Transformation
 - **JSONata mapping engine** converts raw payloads to canonical format
 - **LLM-powered fallback** generates mappings for unknown events
+- **Ingest mapping cache** stores fingerprint-based mappings for fast transformation
 - **CloudEvents 1.0 compliance** for interoperability
 - **Schema validation** ensures data quality
 
@@ -212,6 +214,7 @@ langhook
 Visit `http://localhost:8000/console` to:
 - Send sample webhooks from popular services
 - See real-time event transformation
+- View and manage ingest mappings with payload structure visualization
 - Test natural language subscriptions
 - Explore the canonical event format
 - Manage schema registry with delete capabilities

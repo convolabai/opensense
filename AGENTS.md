@@ -50,6 +50,7 @@ We want an engineer, product manager, or support rep to describe *what they care
 | **Subscription** | Natural-language sentence + LLM-generated **NATS filter pattern** + delivery channels. |
 | **Channel** | Output target (Slack, e-mail, webhook, etc.). |
 | **Mapping** | JSONata or LLM-generated rule that converts a raw payload into a canonical event. |
+| **Ingest Mapping** | Cached fingerprint-based mapping with payload structure for fast transformation. |
 
 ---
 

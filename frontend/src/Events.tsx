@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import { Send, Zap, ListChecks, Bell, Eye, RefreshCw, X } from 'lucide-react';
+import { Send, ListChecks, Eye, RefreshCw, X } from 'lucide-react';
 import { samplePayloads, payloadCategories } from './sampleWebhookPayloads';
 
 interface EventLog {
@@ -23,19 +23,6 @@ interface EventLogListResponse {
   total: number;
   page: number;
   size: number;
-}
-
-// Copied from App.tsx
-interface CanonicalEvent {
-  publisher: string;
-  resource: {
-    type: string;
-    id: string | number;
-  };
-  action: string;
-  timestamp: string;
-  summary?: string;
-  raw: any;
 }
 
 // Copied from App.tsx (assuming Subscription type is needed for checkSubscriptionMatches)
