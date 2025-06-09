@@ -2,6 +2,11 @@ import React, { useState } from 'react'; // useEffect might not be needed if no 
 import { Plus, Eye, RefreshCw, Bell, Trash2, List } from 'lucide-react';
 
 // Interfaces (copied from App.tsx, ensure they are consistent)
+interface GateConfig {
+  enabled: boolean;
+  prompt: string;
+}
+
 interface Subscription {
   id: number;
   subscriber_id: string;
@@ -10,6 +15,7 @@ interface Subscription {
   channel_type: string | null;
   channel_config: any;
   active: boolean;
+  gate: GateConfig | null;
   created_at: string;
   updated_at?: string;
 }
@@ -32,6 +38,10 @@ interface EventLog {
   canonical_data: any;
   raw_payload?: any;
   timestamp: string;
+  webhook_sent: boolean;
+  webhook_response_status?: number;
+  gate_passed?: boolean;
+  gate_reason?: string;
   logged_at: string;
 }
 
@@ -237,8 +247,20 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                         <div className="space-y-1 text-sm">
                           {selectedSubscription.channel_type === 'webhook' && selectedSubscription.channel_config?.url ? (
                             <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                              <span className="text-green-600">Webhook notification sent</span>
+                              {event.webhook_sent ? (
+                                <>
+                                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                  <span className="text-green-600">Webhook notification sent</span>
+                                  {event.webhook_response_status && (
+                                    <span className="text-xs text-gray-500">({event.webhook_response_status})</span>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                                  <span className="text-red-600">Webhook not sent</span>
+                                </>
+                              )}
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
@@ -254,6 +276,36 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                         </div>
                       </div>
                     </div>
+
+                    {/* Gate Evaluation Section */}
+                    {selectedSubscription.gate?.enabled && (event.gate_passed !== null || event.gate_passed !== undefined) && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium text-gray-500 mb-2">LLM Gate Evaluation</h4>
+                        <div className="bg-gray-50 p-3 rounded-md space-y-2">
+                          <div className="flex items-center gap-2">
+                            {event.gate_passed ? (
+                              <>
+                                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                <span className="text-green-600 font-medium">Passed</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                                <span className="text-red-600 font-medium">Blocked</span>
+                              </>
+                            )}
+                          </div>
+                          {event.gate_reason && (
+                            <div className="text-xs text-gray-600">
+                              <span className="font-medium">Reason:</span> {event.gate_reason}
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-500">
+                            <span className="font-medium">Gate Prompt:</span> {selectedSubscription.gate.prompt}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-4">
                       <div>
@@ -404,12 +456,15 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                     NATS Pattern
                   </th>
                   <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    LLM Gate
+                  </th>
+                  <th className="hidden xl:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Notification
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="hidden xl:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="hidden 2xl:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -430,7 +485,25 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                         {sub.pattern}
                       </code>
                     </td>
-                    <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="hidden lg:table-cell px-6 py-4 text-sm text-gray-500">
+                      {sub.gate?.enabled ? (
+                        <div className="space-y-1">
+                          <span className="text-green-600 flex items-center gap-1">
+                            <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                            Enabled
+                          </span>
+                          <div className="text-xs text-gray-600 max-w-xs truncate" title={sub.gate.prompt}>
+                            {sub.gate.prompt}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 flex items-center gap-1">
+                          <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
+                          Disabled
+                        </span>
+                      )}
+                    </td>
+                    <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {sub.channel_type === 'webhook' && sub.channel_config?.url ? (
                         <span className="text-blue-600 flex items-center gap-1">
                           <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
@@ -456,7 +529,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                         </span>
                       )}
                     </td>
-                    <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="hidden 2xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(sub.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

@@ -60,6 +60,9 @@ class SubscriptionSettings(BaseModel):
     # Event logging settings
     event_logging_enabled: bool = Field(default=False, env="EVENT_LOGGING_ENABLED")
     nats_consumer_group: str = Field(default="langhook_consumer", env="NATS_CONSUMER_GROUP")
+    
+    # LLM Gate settings - simplified
+    # Gate configuration is now handled per-subscription
 
 
 class RouterSettings(BaseModel):

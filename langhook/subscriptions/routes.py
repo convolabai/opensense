@@ -38,9 +38,26 @@ async def create_subscription(
     subscriber_id = "default"
 
     try:
-        # Convert natural language description to NATS filter pattern
+        # Check if gate is enabled to determine if we need gate prompt generation
+        gate_enabled = subscription_data.gate and subscription_data.gate.enabled
+        
+        # Convert natural language description to NATS filter pattern and generate gate prompt if needed
         try:
-            pattern = await llm_service.convert_to_pattern(subscription_data.description)
+            result = await llm_service.convert_to_pattern_and_gate(
+                subscription_data.description, 
+                gate_enabled=gate_enabled and not subscription_data.gate.prompt
+            )
+            pattern = result["pattern"]
+            
+            # Set auto-generated gate prompt if gate is enabled and no custom prompt provided
+            if gate_enabled and not subscription_data.gate.prompt and "gate_prompt" in result:
+                subscription_data.gate.prompt = result["gate_prompt"]
+                logger.info(
+                    "Auto-generated gate prompt for subscription",
+                    subscriber_id=subscriber_id,
+                    description=subscription_data.description,
+                    prompt_length=len(result["gate_prompt"])
+                )
         except NoSuitableSchemaError as e:
             logger.warning(
                 "Subscription rejected - no suitable schema found",
@@ -226,11 +243,47 @@ async def update_subscription(
     subscriber_id = "default"
 
     try:
-        # If description is being updated, regenerate the pattern
+        # If description is being updated, regenerate the pattern and gate prompt if needed
         pattern = None
         if update_data.description is not None:
+            # Check if gate is enabled in the update or will remain enabled
+            gate_enabled = False
+            if update_data.gate is not None:
+                gate_enabled = update_data.gate.enabled
+            else:
+                # Get current subscription to check gate status
+                current_subscription = await db_service.get_subscription(subscription_id, subscriber_id)
+                if current_subscription and current_subscription.gate:
+                    gate_enabled = current_subscription.gate.get("enabled", False)
+            
             try:
-                pattern = await llm_service.convert_to_pattern(update_data.description)
+                # Check if we need to auto-generate gate prompt
+                need_gate_prompt = gate_enabled and (
+                    not update_data.gate or 
+                    not update_data.gate.prompt
+                )
+                
+                result = await llm_service.convert_to_pattern_and_gate(
+                    update_data.description,
+                    gate_enabled=need_gate_prompt
+                )
+                pattern = result["pattern"]
+                
+                # Set auto-generated gate prompt if needed
+                if need_gate_prompt and "gate_prompt" in result:
+                    if update_data.gate is None:
+                        from langhook.subscriptions.schemas import GateConfig
+                        update_data.gate = GateConfig(enabled=True, prompt=result["gate_prompt"])
+                    else:
+                        update_data.gate.prompt = result["gate_prompt"]
+                    
+                    logger.info(
+                        "Auto-generated gate prompt for subscription update",
+                        subscription_id=subscription_id,
+                        subscriber_id=subscriber_id,
+                        description=update_data.description,
+                        prompt_length=len(result["gate_prompt"])
+                    )
             except NoSuitableSchemaError as e:
                 logger.warning(
                     "Subscription update rejected - no suitable schema found",

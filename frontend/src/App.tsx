@@ -9,6 +9,11 @@ import Sidebar from './Sidebar'; // Import the new Sidebar component
 
 type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema' | 'Ingest Mapping';
 
+interface GateConfig {
+  enabled: boolean;
+  prompt: string;
+}
+
 interface Subscription {
   id: number;
   subscriber_id: string;
@@ -17,6 +22,7 @@ interface Subscription {
   channel_type: string;
   channel_config: any;
   active: boolean;
+  gate: GateConfig | null;
   created_at: string;
   updated_at?: string;
 }

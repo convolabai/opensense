@@ -190,7 +190,12 @@ Example JSONata expression:
                     result_type=type(result).__name__
                 )
                 return False
-
+            # if timestamp is not in result, add it with current time
+            if 'timestamp' not in result:
+                logger.warning(
+                    f"JSONata expression {jsonata_expr} result missing timestamp, adding current time")
+                from datetime import datetime
+                result['timestamp'] = datetime.utcnow().isoformat() + 'Z'
             # Validate required fields
             required_fields = ['publisher', 'resource', 'action', 'timestamp']
             missing_fields = [field for field in required_fields if field not in result]
