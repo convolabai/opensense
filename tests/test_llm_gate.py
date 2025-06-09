@@ -40,11 +40,7 @@ class TestLLMGateService:
         """Sample gate configuration."""
         return {
             "enabled": True,
-            "model": "gpt-4o-mini",
-            "prompt": "Is this event important?",
-            "threshold": 0.8,
-            "audit": True,
-            "failover_policy": "fail_open"
+            "prompt": "You are evaluating whether this event matches the user's intent. Return only {\"decision\": true/false}. Event: {event_data}"
         }
 
     @pytest.mark.asyncio
@@ -52,110 +48,64 @@ class TestLLMGateService:
         """Test that an important event passes the gate."""
         # Mock LLM response
         mock_response = Mock()
-        mock_response.content = '{"decision": true, "confidence": 0.9, "reasoning": "This is a critical bug fix"}'
+        mock_response.content = '{"decision": true}'
         gate_service.llm_service.llm.ainvoke.return_value = mock_response
 
-        should_pass, reason, confidence = await gate_service.evaluate_event(
+        should_pass, reason = await gate_service.evaluate_event(
             event_data=sample_event_data,
             gate_config=gate_config,
-            subscription_description="Important GitHub pull requests",
             subscription_id=1
         )
 
         assert should_pass is True
-        assert confidence == 0.9
-        assert "critical bug fix" in reason
+        assert reason is not None
 
     @pytest.mark.asyncio
     async def test_evaluate_event_blocks_gate(self, gate_service, sample_event_data, gate_config):
         """Test that an unimportant event is blocked by the gate."""
         # Mock LLM response
         mock_response = Mock()
-        mock_response.content = '{"decision": false, "confidence": 0.3, "reasoning": "This is not important"}'
+        mock_response.content = '{"decision": false}'
         gate_service.llm_service.llm.ainvoke.return_value = mock_response
 
-        should_pass, reason, confidence = await gate_service.evaluate_event(
+        should_pass, reason = await gate_service.evaluate_event(
             event_data=sample_event_data,
             gate_config=gate_config,
-            subscription_description="Important GitHub pull requests",
             subscription_id=1
         )
 
         assert should_pass is False
-        assert confidence == 0.3
-        assert "not important" in reason
-
-    @pytest.mark.asyncio
-    async def test_evaluate_event_threshold_filtering(self, gate_service, sample_event_data, gate_config):
-        """Test that threshold filtering works correctly."""
-        # Set high threshold
-        gate_config["threshold"] = 0.9
-        
-        # Mock LLM response with decision=true but low confidence
-        mock_response = Mock()
-        mock_response.content = '{"decision": true, "confidence": 0.7, "reasoning": "Somewhat important"}'
-        gate_service.llm_service.llm.ainvoke.return_value = mock_response
-
-        should_pass, reason, confidence = await gate_service.evaluate_event(
-            event_data=sample_event_data,
-            gate_config=gate_config,
-            subscription_description="Important GitHub pull requests",
-            subscription_id=1
-        )
-
-        # Should be blocked due to confidence below threshold
-        assert should_pass is False
-        assert confidence == 0.7
+        assert reason is not None
 
     @pytest.mark.asyncio
     async def test_failover_policy_fail_open(self, gate_service, sample_event_data, gate_config):
         """Test fail-open policy when LLM is unavailable."""
         gate_service.llm_service.is_available.return_value = False
 
-        should_pass, reason, confidence = await gate_service.evaluate_event(
+        should_pass, reason = await gate_service.evaluate_event(
             event_data=sample_event_data,
             gate_config=gate_config,
-            subscription_description="Important GitHub pull requests",
             subscription_id=1
         )
 
         assert should_pass is True
         assert "unavailable" in reason
-        assert confidence == 0.0
-
-    @pytest.mark.asyncio
-    async def test_failover_policy_fail_closed(self, gate_service, sample_event_data, gate_config):
-        """Test fail-closed policy when LLM is unavailable."""
-        gate_service.llm_service.is_available.return_value = False
-        gate_config["failover_policy"] = "fail_closed"
-
-        should_pass, reason, confidence = await gate_service.evaluate_event(
-            event_data=sample_event_data,
-            gate_config=gate_config,
-            subscription_description="Important GitHub pull requests",
-            subscription_id=1
-        )
-
-        assert should_pass is False
-        assert "unavailable" in reason
-        assert confidence == 0.0
 
     def test_parse_llm_response_valid_json(self, gate_service):
         """Test parsing of valid LLM JSON response."""
-        response = '{"decision": true, "confidence": 0.8, "reasoning": "Important event"}'
+        response = '{"decision": true}'
         
         parsed = gate_service._parse_llm_response(response)
         
         assert parsed["decision"] is True
-        assert parsed["confidence"] == 0.8
-        assert parsed["reasoning"] == "Important event"
+        assert "reasoning" in parsed
 
     def test_parse_llm_response_with_code_blocks(self, gate_service):
         """Test parsing of LLM response with JSON code blocks."""
         response = '''Here's my analysis:
 
 ```json
-{"decision": false, "confidence": 0.2, "reasoning": "Not relevant"}
+{"decision": false}
 ```
 
 Hope this helps!'''
@@ -163,8 +113,7 @@ Hope this helps!'''
         parsed = gate_service._parse_llm_response(response)
         
         assert parsed["decision"] is False
-        assert parsed["confidence"] == 0.2
-        assert parsed["reasoning"] == "Not relevant"
+        assert "reasoning" in parsed
 
     def test_parse_llm_response_invalid_json(self, gate_service):
         """Test parsing of invalid LLM response."""
@@ -174,43 +123,7 @@ Hope this helps!'''
         
         # Should return safe defaults
         assert parsed["decision"] is False
-        assert parsed["confidence"] == 0.0
         assert "Failed to parse" in parsed["reasoning"]
-
-    def test_get_default_prompt(self, gate_service):
-        """Test default prompt generation."""
-        description = "Important GitHub pull requests"
-        
-        prompt = gate_service._get_default_prompt(description)
-        
-        assert description in prompt
-        assert "JSON object" in prompt
-        assert "decision" in prompt
-        assert "confidence" in prompt
-        assert "reasoning" in prompt
-
-    def test_estimate_cost(self, gate_service):
-        """Test cost estimation."""
-        prompt = "This is a test prompt" * 100  # Make it longer
-        response = "This is a response" * 50
-        model = "gpt-4o-mini"
-        
-        cost = gate_service._estimate_cost(prompt, response, model)
-        
-        assert cost > 0
-        assert isinstance(cost, float)
-
-    def test_estimate_cost_unknown_model(self, gate_service):
-        """Test cost estimation for unknown model."""
-        prompt = "Test prompt"
-        response = "Test response"
-        model = "unknown-model"
-        
-        cost = gate_service._estimate_cost(prompt, response, model)
-        
-        # Should default to gpt-4o-mini pricing
-        assert cost > 0
-        assert isinstance(cost, float)
 
 
 class TestGateConfigSchema:
@@ -221,47 +134,25 @@ class TestGateConfigSchema:
         config = GateConfig()
         
         assert config.enabled is False
-        assert config.model == "gpt-4o-mini"
-        assert config.threshold == 0.8
-        assert config.audit is True
-        assert config.failover_policy == "fail_open"
+        assert config.prompt == ""
 
     def test_gate_config_validation(self):
         """Test gate config validation."""
         # Valid config
         config = GateConfig(
             enabled=True,
-            model="gpt-4",
-            prompt="Test prompt",
-            threshold=0.9,
-            audit=False,
-            failover_policy="fail_closed"
+            prompt="Test prompt for evaluation"
         )
         
         assert config.enabled is True
-        assert config.model == "gpt-4"
-        assert config.threshold == 0.9
-        assert config.failover_policy == "fail_closed"
-
-    def test_gate_config_invalid_threshold(self):
-        """Test that invalid threshold values are rejected."""
-        with pytest.raises(ValueError):
-            GateConfig(threshold=1.5)  # Above 1.0
-            
-        with pytest.raises(ValueError):
-            GateConfig(threshold=-0.1)  # Below 0.0
-
-    def test_gate_config_invalid_failover_policy(self):
-        """Test that invalid failover policy is rejected."""
-        with pytest.raises(ValueError):
-            GateConfig(failover_policy="invalid_policy")
+        assert config.prompt == "Test prompt for evaluation"
 
 
 class TestPromptLibrary:
-    """Test prompt library functionality."""
+    """Test prompt library functionality (fallback templates)."""
 
     def test_prompt_library_loads_defaults(self):
-        """Test that prompt library loads default templates."""
+        """Test that prompt library loads default fallback templates."""
         library = PromptLibrary()
         
         assert "default" in library.templates
@@ -275,7 +166,8 @@ class TestPromptLibrary:
         
         default_template = library.get_template("default")
         assert "intelligent event filter" in default_template.lower()
-        assert "{description}" in default_template
+        # Updated to only expect decision in JSON response
+        assert "decision" in default_template
         assert "{event_data}" in default_template
 
     def test_get_nonexistent_template(self):
