@@ -10,9 +10,7 @@ templates:
 
     Return ONLY a JSON object with this exact format:
     {{
-        "decision": true or false,
-        "confidence": 0.0 to 1.0,
-        "reasoning": "brief explanation"
+        "decision": true or false
     }}
 
     Event to evaluate:
@@ -20,60 +18,53 @@ templates:
 
     Consider:
     - Does this event truly match what the user wants to be notified about?
-    - Is this event important enough to warrant an alert?
     - Would a reasonable person consider this relevant to their subscription?
 
     Be selective - only pass events that clearly match the user's intent.
 
-  important_only: |
-    You are a strict event filter that only allows truly important events.
+  strict: |
+    You are a strict event filter that only allows events that clearly match the subscription.
 
     The user wants to be notified about: "{description}"
 
-    Your job is to be VERY selective and only allow events that are genuinely important or urgent.
+    Your job is to be VERY selective and only allow events that genuinely match the user's criteria.
 
     Return ONLY a JSON object:
     {{
-        "decision": true or false,
-        "confidence": 0.0 to 1.0,
-        "reasoning": "brief explanation"
+        "decision": true or false
     }}
 
     Event to evaluate:
     {event_data}
 
     Only return true if:
-    - The event is urgent or time-sensitive
-    - The event indicates a problem or critical change
-    - The event requires immediate attention
-    - The event is clearly what the user specifically wants
+    - The event clearly matches the user's specific criteria
+    - The event is exactly what the user requested
+    - There is no ambiguity about the match
 
     Be strict - when in doubt, block the event.
 
-  high_value: |
-    You are filtering events for a busy professional who only wants high-value notifications.
+  precise: |
+    You are filtering events to match precise user criteria.
 
     Subscription intent: "{description}"
 
-    Evaluate if this event provides genuine business value or actionable information.
+    Evaluate if this event matches the user's specific requirements exactly as stated.
 
     Return ONLY a JSON object:
     {{
-        "decision": true or false,
-        "confidence": 0.0 to 1.0,
-        "reasoning": "brief explanation"
+        "decision": true or false
     }}
 
     Event to evaluate:
     {event_data}
 
     Allow events that:
-    - Require decision-making or action
-    - Indicate significant business impact
-    - Represent meaningful progress or completion
-    - Signal problems that need attention
+    - Match the exact criteria specified by the user
+    - Fulfill the specific conditions requested
+    - Are exactly what the user described in their subscription
 
-    Block routine/informational events unless specifically requested.
+    Only pass events that precisely match the user's stated requirements.
 
   security_focused: |
     You are a security-focused event filter.
@@ -84,9 +75,7 @@ templates:
 
     Return ONLY a JSON object:
     {{
-        "decision": true or false,
-        "confidence": 0.0 to 1.0,
-        "reasoning": "brief explanation"
+        "decision": true or false
     }}
 
     Event to evaluate:
@@ -100,30 +89,26 @@ templates:
     - Suspicious activity
     - Security-related configuration changes
 
-    Be vigilant about potential security implications.
+    Evaluate based on the user's specific security criteria.
 
-  critical_only: |
-    You are an emergency-level event filter for critical systems.
+  exact_match: |
+    You are filtering events for exact matching to user criteria.
 
     The user monitors: "{description}"
 
-    ONLY allow events that require immediate action or indicate system failures.
+    ONLY allow events that exactly match the user's specific criteria.
 
     Return ONLY a JSON object:
     {{
-        "decision": true or false,
-        "confidence": 0.0 to 1.0,
-        "reasoning": "brief explanation"
+        "decision": true or false
     }}
 
     Event to evaluate:
     {event_data}
 
-    Allow ONLY if:
-    - System outage or failure
-    - Critical error that breaks functionality
-    - Security breach or incident
-    - Data loss or corruption
-    - Service completely unavailable
+    Allow ONLY if the event matches the user's exact specification including:
+    - Specific source, type, or content mentioned
+    - Exact conditions or filters specified
+    - Precise criteria outlined in the description
 
-    Block everything else, including warnings, info, or minor issues.
+    Block anything that doesn't precisely match the user's stated requirements.

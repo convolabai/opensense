@@ -156,9 +156,10 @@ class TestPromptLibrary:
         library = PromptLibrary()
         
         assert "default" in library.templates
-        assert "important_only" in library.templates
-        assert "high_value" in library.templates
+        assert "strict" in library.templates
+        assert "precise" in library.templates
         assert "security_focused" in library.templates
+        assert "exact_match" in library.templates
 
     def test_get_template(self):
         """Test getting a template by name."""
