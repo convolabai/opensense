@@ -7,7 +7,7 @@ from sqlalchemy import and_, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from langhook.subscriptions.config import subscription_settings
-from langhook.subscriptions.models import Base, Subscription
+from langhook.subscriptions.models import Base, Subscription, EventLog
 from langhook.subscriptions.schemas import SubscriptionCreate, SubscriptionUpdate
 
 logger = structlog.get_logger("langhook")
@@ -264,6 +264,20 @@ class DatabaseService:
                 subscription.channel_config = json.loads(subscription.channel_config)
 
             return subscriptions
+
+    async def get_event_logs(
+        self,
+        skip: int = 0,
+        limit: int = 100
+    ) -> tuple[list[EventLog], int]:
+        """Get event logs with pagination."""
+        with self.get_session() as session:
+            query = session.query(EventLog).order_by(EventLog.logged_at.desc())
+
+            total = query.count()
+            event_logs = query.offset(skip).limit(limit).all()
+
+            return event_logs, total
 
 
 # Global database service instance
