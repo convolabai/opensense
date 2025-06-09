@@ -1,11 +1,12 @@
 """Shared NATS producer and consumer base classes."""
 
-import json
 import asyncio
-from typing import Any, Callable, Dict, Optional
+import json
+from collections.abc import Callable
+from typing import Any
 
-import structlog
 import nats
+import structlog
 from nats.js import JetStreamContext
 from nats.js.api import ConsumerConfig, DeliverPolicy
 
@@ -41,8 +42,8 @@ class BaseNATSProducer:
     async def publish_message(
         self,
         subject: str,
-        message: Dict[str, Any],
-        headers: Optional[Dict[str, str]] = None,
+        message: dict[str, Any],
+        headers: dict[str, str] | None = None,
         log_success: bool = False,
     ) -> None:
         """
@@ -60,14 +61,14 @@ class BaseNATSProducer:
         try:
             # Serialize message to JSON bytes
             message_bytes = json.dumps(message).encode('utf-8')
-            
+
             # Publish to JetStream
             await self.js.publish(
                 subject,
                 message_bytes,
                 headers=headers,
             )
-            
+
             if log_success:
                 logger.debug(
                     "Message published to NATS",
@@ -94,7 +95,7 @@ class BaseNATSConsumer:
         stream_name: str,
         consumer_name: str,
         filter_subject: str,
-        message_handler: Callable[[Dict[str, Any]], Any],
+        message_handler: Callable[[dict[str, Any]], Any],
         deliver_policy: DeliverPolicy = DeliverPolicy.NEW,
     ) -> None:
         self.nats_url = nats_url
@@ -113,14 +114,14 @@ class BaseNATSConsumer:
         if self.nc is None:
             self.nc = await nats.connect(self.nats_url)
             self.js = self.nc.jetstream()
-            
+
             # Create consumer if it doesn't exist
             consumer_config = ConsumerConfig(
                 name=self.consumer_name,
                 deliver_policy=self.deliver_policy,
                 filter_subject=self.filter_subject,
             )
-            
+
             try:
                 await self.js.add_consumer(self.stream_name, consumer_config)
                 logger.info(
@@ -185,18 +186,18 @@ class BaseNATSConsumer:
                 try:
                     # Fetch messages in batches
                     messages = await self._subscription.fetch(batch=10, timeout=1.0)
-                    
+
                     for msg in messages:
                         try:
                             # Parse JSON message
                             message_data = json.loads(msg.data.decode('utf-8'))
-                            
+
                             # Process message
                             await self.message_handler(message_data)
-                            
+
                             # Acknowledge message
                             await msg.ack()
-                            
+
                         except Exception as e:
                             logger.error(
                                 "Error processing message",
@@ -206,8 +207,8 @@ class BaseNATSConsumer:
                             )
                             # NAK the message to retry later
                             await msg.nak()
-                            
-                except asyncio.TimeoutError:
+
+                except TimeoutError:
                     # No messages available, continue loop
                     continue
                 except Exception as e:
@@ -216,7 +217,7 @@ class BaseNATSConsumer:
                         error=str(e),
                         exc_info=True,
                     )
-                    
+
                     # Wait a bit before retrying
                     await asyncio.sleep(1.0)
 

@@ -1,8 +1,9 @@
 """Test the schema API endpoint."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, AsyncMock
 
 from langhook.app import app
 
@@ -23,13 +24,13 @@ def test_schema_endpoint_success(client):
         },
         "actions": ["created", "updated", "deleted"]
     }
-    
-    with patch('langhook.app.schema_registry_service.get_schema_summary', 
+
+    with patch('langhook.app.schema_registry_service.get_schema_summary',
                new_callable=AsyncMock) as mock_get_summary:
         mock_get_summary.return_value = mock_schema_data
-        
+
         response = client.get("/schema")
-        
+
         assert response.status_code == 200
         assert response.json() == mock_schema_data
         mock_get_summary.assert_called_once()
@@ -42,13 +43,13 @@ def test_schema_endpoint_empty_response(client):
         "resource_types": {},
         "actions": []
     }
-    
+
     with patch('langhook.app.schema_registry_service.get_schema_summary',
                new_callable=AsyncMock) as mock_get_summary:
         mock_get_summary.return_value = mock_empty_data
-        
+
         response = client.get("/schema")
-        
+
         assert response.status_code == 200
         assert response.json() == mock_empty_data
 
@@ -63,9 +64,9 @@ def test_schema_endpoint_service_error(client):
             "resource_types": {},
             "actions": []
         }
-        
+
         response = client.get("/schema")
-        
+
         assert response.status_code == 200
         assert response.json() == {
             "publishers": [],

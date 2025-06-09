@@ -7,10 +7,11 @@ from typing import Any
 import structlog
 
 from langhook.map.cloudevents import cloud_event_wrapper
-from langhook.map.nats import MapNATSConsumer, map_producer
+from langhook.map.config import settings
 from langhook.map.llm import llm_service
 from langhook.map.mapper import mapping_engine
 from langhook.map.metrics import metrics
+from langhook.map.nats import MapNATSConsumer, map_producer
 from langhook.subscriptions.schema_registry import schema_registry_service
 
 logger = structlog.get_logger("langhook")
@@ -33,6 +34,15 @@ class MappingService:
         """Start the mapping service."""
         logger.info("Starting LangHook Canonicaliser", version="0.3.0")
 
+        # Configure Prometheus push gateway if enabled
+        if settings.prometheus_pushgateway_url:
+            metrics.configure_push_gateway(
+                settings.prometheus_pushgateway_url,
+                settings.prometheus_job_name,
+                settings.prometheus_push_interval
+            )
+            await metrics.start_push_task()
+
         # Update active mappings count in metrics
         metrics.update_active_mappings(len(mapping_engine._mappings))
 
@@ -50,6 +60,9 @@ class MappingService:
         """Stop the mapping service."""
         logger.info("Stopping mapping service")
         self._running = False
+
+        # Stop metrics push task
+        await metrics.stop_push_task()
 
         if self.consumer:
             await self.consumer.stop()
@@ -194,11 +207,11 @@ class MappingService:
             resource = canonical_data.get("resource", {})
             resource_type = resource.get("type")
             action = canonical_data.get("action")
-            
+
             if publisher and resource_type and action:
                 await schema_registry_service.register_event_schema(
                     publisher=publisher,
-                    resource_type=resource_type, 
+                    resource_type=resource_type,
                     action=action
                 )
         except Exception as e:

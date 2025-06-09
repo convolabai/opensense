@@ -5,10 +5,9 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-import logging
 # logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
 import json
+import logging
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -26,8 +25,8 @@ from langhook.core.fastapi import (
     global_exception_handler,
 )
 from langhook.ingest.config import settings as ingest_settings
-from langhook.ingest.nats import nats_producer
 from langhook.ingest.middleware import RateLimitMiddleware
+from langhook.ingest.nats import nats_producer
 from langhook.ingest.security import verify_signature
 from langhook.map.config import settings as map_settings
 from langhook.map.metrics import metrics
@@ -80,10 +79,9 @@ async def lifespan(app):
     mapping_task = asyncio.create_task(mapping_service.run())
 
     # Initialize subscription database tables with retry logic
-    import time
     max_retries = 10
     retry_delay = 2
-    
+
     for attempt in range(max_retries):
         try:
             from langhook.subscriptions.database import db_service
@@ -92,11 +90,11 @@ async def lifespan(app):
             break
         except Exception as e:
             if attempt == max_retries - 1:
-                logger.error("Failed to initialize subscription database after max retries", 
+                logger.error("Failed to initialize subscription database after max retries",
                            error=str(e), attempts=max_retries, exc_info=True)
                 raise RuntimeError(f"Cannot start application - database initialization failed after {max_retries} attempts: {e}") from e
             else:
-                logger.warning("Database initialization failed, retrying", 
+                logger.warning("Database initialization failed, retrying",
                              error=str(e), attempt=attempt + 1, max_retries=max_retries)
                 await asyncio.sleep(retry_delay)
 
