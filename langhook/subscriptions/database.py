@@ -406,7 +406,7 @@ class DatabaseService:
         publisher: str,
         event_name: str,
         mapping_expr: str,
-        structure: dict[str, any]
+        structure: dict[str, Any]
     ) -> IngestMapping:
         """Create a new ingestion mapping."""
         with self.get_session() as session:

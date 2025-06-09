@@ -1,7 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, ListChecks, MailQuestion, BookOpen, GitMerge } from 'lucide-react'; // Add GitMerge for Ingest Mapping
 
-type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema' | 'IngestMapping';
+type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema' | 'Ingest Mapping';
 
 interface SidebarProps {
   activeTab: TabName;
@@ -13,7 +13,7 @@ const navItems = [
   { name: 'Events', icon: ListChecks },
   { name: 'Subscriptions', icon: MailQuestion },
   { name: 'Schema', icon: BookOpen },
-  { name: 'IngestMapping', icon: GitMerge },
+  { name: 'Ingest Mapping', icon: GitMerge },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
