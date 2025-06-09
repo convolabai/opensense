@@ -348,8 +348,8 @@ async def get_gate_budget_status():
     from langhook.subscriptions.budget import budget_monitor
     
     try:
-        status = budget_monitor.get_budget_status()
-        return status
+        budget_status = budget_monitor.get_budget_status()
+        return budget_status
     except Exception as e:
         logger.error("Failed to get budget status", error=str(e), exc_info=True)
         raise HTTPException(
