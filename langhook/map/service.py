@@ -7,10 +7,10 @@ from typing import Any
 import structlog
 
 from langhook.map.cloudevents import cloud_event_wrapper
-from langhook.map.nats import MapNATSConsumer, map_producer
 from langhook.map.llm import llm_service
 from langhook.map.mapper import mapping_engine
 from langhook.map.metrics import metrics
+from langhook.map.nats import MapNATSConsumer, map_producer
 from langhook.subscriptions.schema_registry import schema_registry_service
 
 logger = structlog.get_logger("langhook")
@@ -194,11 +194,11 @@ class MappingService:
             resource = canonical_data.get("resource", {})
             resource_type = resource.get("type")
             action = canonical_data.get("action")
-            
+
             if publisher and resource_type and action:
                 await schema_registry_service.register_event_schema(
                     publisher=publisher,
-                    resource_type=resource_type, 
+                    resource_type=resource_type,
                     action=action
                 )
         except Exception as e:

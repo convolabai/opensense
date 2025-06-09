@@ -1,6 +1,6 @@
 """NATS producer for sending events to the event bus."""
 
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -16,7 +16,7 @@ class NATSEventProducer(BaseNATSProducer):
     def __init__(self) -> None:
         super().__init__(settings.nats_url)
 
-    def _build_subject(self, canonical_data: Dict[str, Any]) -> str:
+    def _build_subject(self, canonical_data: dict[str, Any]) -> str:
         """
         Build NATS subject from canonical event data.
         
@@ -33,14 +33,14 @@ class NATSEventProducer(BaseNATSProducer):
         resource_type = resource.get("type", "unknown")
         resource_id = str(resource.get("id", "unknown"))
         action = canonical_data.get("action", "unknown")
-        
+
         # Clean up resource_id to be NATS-subject safe
         # Replace any problematic characters with underscores
         resource_id = resource_id.replace("/", "_").replace("#", "_").replace(" ", "_")
-        
+
         return f"langhook.events.{publisher}.{resource_type}.{resource_id}.{action}"
 
-    async def send_canonical_event(self, canonical_data: Dict[str, Any]) -> None:
+    async def send_canonical_event(self, canonical_data: dict[str, Any]) -> None:
         """
         Send canonical event to the events stream using subject routing.
         
@@ -49,21 +49,21 @@ class NATSEventProducer(BaseNATSProducer):
         """
         # Build subject from canonical data
         subject = self._build_subject(canonical_data)
-        
+
         # Build headers with timestamp and summary
         headers = {}
         if "timestamp" in canonical_data:
             headers["ts"] = canonical_data["timestamp"]
         if "summary" in canonical_data:
             headers["su"] = canonical_data["summary"]
-        
+
         await self.publish_message(
             subject,
             canonical_data,
             headers=headers,
             log_success=True
         )
-        
+
         logger.debug(
             "Canonical event published to NATS",
             subject=subject,
@@ -73,7 +73,7 @@ class NATSEventProducer(BaseNATSProducer):
             action=canonical_data.get("action"),
         )
 
-    async def send_raw_event(self, event: Dict[str, Any]) -> None:
+    async def send_raw_event(self, event: dict[str, Any]) -> None:
         """
         Send raw ingest event to a processing subject.
         For now, we'll send these to a special subject for the mapper service.
@@ -83,13 +83,13 @@ class NATSEventProducer(BaseNATSProducer):
         """
         # Use a special subject for raw events that need processing
         subject = f"raw.{event.get('source', 'unknown')}.{event['id']}"
-        
+
         await self.publish_message(
             subject,
             event,
             log_success=True
         )
-        
+
         logger.debug(
             "Raw event published to NATS for processing",
             subject=subject,
@@ -97,7 +97,7 @@ class NATSEventProducer(BaseNATSProducer):
             source=event.get("source"),
         )
 
-    async def send_dlq(self, dlq_event: Dict[str, Any]) -> None:
+    async def send_dlq(self, dlq_event: dict[str, Any]) -> None:
         """
         Send malformed event to the dead letter queue subject.
         
@@ -106,7 +106,7 @@ class NATSEventProducer(BaseNATSProducer):
         """
         # Use a special DLQ subject
         subject = f"dlq.{dlq_event.get('source', 'unknown')}.{dlq_event['id']}"
-        
+
         try:
             await self.publish_message(
                 subject,
