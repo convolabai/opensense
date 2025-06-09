@@ -43,8 +43,8 @@ class MappingService:
             )
             await metrics.start_push_task()
 
-        # Update active mappings count in metrics
-        metrics.update_active_mappings(len(mapping_engine._mappings))
+        # No file-based mappings to count anymore
+        metrics.update_active_mappings(0)
 
         # Start NATS producer
         await map_producer.start()
@@ -107,14 +107,14 @@ class MappingService:
         )
 
         try:
-            # Try to apply existing mapping first (if any still exist)
-            canonical_data = mapping_engine.apply_mapping(source, payload)
+            # Try to apply existing mapping first (fingerprint or file-based)
+            canonical_data = await mapping_engine.apply_mapping(source, payload)
 
             if canonical_data is None:
-                # No mapping available, use LLM for direct transformation
+                # No mapping available, use LLM to generate JSONata expression directly
                 if llm_service.is_available():
                     logger.info(
-                        "No mapping found, using LLM for direct transformation",
+                        "No mapping found, using LLM to generate JSONata expression",
                         event_id=event_id,
                         source=source
                     )
@@ -122,16 +122,39 @@ class MappingService:
                     self.llm_invocations += 1
                     metrics.record_llm_invocation(source or "unknown")
 
-                    # Transform payload directly to canonical format using LLM
-                    canonical_data = await llm_service.transform_to_canonical(source, payload)
+                    # Generate JSONata expression using LLM
+                    jsonata_expr = await llm_service.generate_jsonata_mapping(source, payload)
+
+                    if jsonata_expr is None:
+                        await self._send_mapping_failure(
+                            raw_event,
+                            "LLM failed to generate valid JSONata expression"
+                        )
+                        metrics.record_event_failed(source or "unknown", "llm_jsonata_generation_failed")
+                        return
+
+                    # Apply the generated JSONata expression
+                    canonical_data = await mapping_engine._apply_jsonata_mapping(jsonata_expr, payload, source)
 
                     if canonical_data is None:
                         await self._send_mapping_failure(
                             raw_event,
-                            "LLM failed to transform payload to canonical format"
+                            "Generated JSONata expression failed to produce valid canonical data"
                         )
-                        metrics.record_event_failed(source or "unknown", "llm_transformation_failed")
+                        metrics.record_event_failed(source or "unknown", "jsonata_expression_invalid")
                         return
+
+                    # Store the generated JSONata expression for future use
+                    try:
+                        await mapping_engine.store_jsonata_mapping(source, payload, jsonata_expr)
+                    except Exception as e:
+                        # Log the error but don't fail the event processing
+                        logger.warning(
+                            "Failed to store generated JSONata mapping",
+                            event_id=event_id,
+                            source=source,
+                            error=str(e)
+                        )
                 else:
                     await self._send_mapping_failure(raw_event, "No mapping available and LLM service unavailable")
                     metrics.record_event_failed(source or "unknown", "no_mapping_no_llm")

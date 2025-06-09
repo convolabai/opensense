@@ -17,8 +17,9 @@ async def test_llm_transformation_flow():
         mock_producer.send_canonical_event = AsyncMock()
         mock_producer.send_mapping_failure = AsyncMock()
 
-        # Mock LLM service to be available and return canonical data
+        # Mock LLM service to be available and return JSONata expression
         mock_llm.is_available.return_value = True
+        mock_llm.generate_jsonata_mapping = AsyncMock(return_value='{"publisher": "github", "resource": {"type": "pull_request", "id": pull_request.number}, "action": "created"}')
         mock_llm.transform_to_canonical = AsyncMock(return_value={
             "publisher": "github",
             "resource": {"type": "pull_request", "id": 1374},
@@ -48,11 +49,11 @@ async def test_llm_transformation_flow():
         # Process the event
         await service._process_raw_event(raw_event)
 
-        # Verify LLM was called for transformation
-        assert mock_llm.transform_to_canonical.called
-        transform_call = mock_llm.transform_to_canonical.call_args
-        assert transform_call[0][0] == 'github'  # source
-        assert transform_call[0][1] == raw_event['payload']  # payload
+        # Verify LLM was called for JSONata generation
+        assert mock_llm.generate_jsonata_mapping.called
+        jsonata_call = mock_llm.generate_jsonata_mapping.call_args
+        assert jsonata_call[0][0] == 'github'  # source
+        assert jsonata_call[0][1] == raw_event['payload']  # payload
 
         # Verify canonical event was sent
         assert mock_producer.send_canonical_event.called
@@ -131,9 +132,9 @@ async def test_llm_transformation_failure():
         mock_producer.send_canonical_event = AsyncMock()
         mock_producer.send_mapping_failure = AsyncMock()
 
-        # Mock LLM service to be available but return None (transformation failed)
+        # Mock LLM service to be available but return None (JSONata generation failed)
         mock_llm.is_available.return_value = True
-        mock_llm.transform_to_canonical = AsyncMock(return_value=None)
+        mock_llm.generate_jsonata_mapping = AsyncMock(return_value=None)
 
         service = MappingService()
 
@@ -153,13 +154,13 @@ async def test_llm_transformation_failure():
         await service._process_raw_event(raw_event)
 
         # Verify LLM was called
-        assert mock_llm.transform_to_canonical.called
+        assert mock_llm.generate_jsonata_mapping.called
 
         # Verify failure was sent to DLQ
         assert mock_producer.send_mapping_failure.called
         failure_call = mock_producer.send_mapping_failure.call_args
         failure_event = failure_call[0][0]
-        assert 'LLM failed to transform payload to canonical format' in failure_event['error']
+        assert 'LLM failed to generate valid JSONata expression' in failure_event['error']
 
         # Verify canonical event was NOT sent
         assert not mock_producer.send_canonical_event.called
