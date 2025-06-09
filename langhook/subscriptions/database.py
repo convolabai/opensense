@@ -126,7 +126,7 @@ class DatabaseService:
                 description=subscription_data.description,
                 pattern=pattern,
                 channel_type=subscription_data.channel_type,
-                channel_config=json.dumps(subscription_data.channel_config),
+                channel_config=json.dumps(subscription_data.channel_config) if subscription_data.channel_config else None,
                 active=True
             )
 
@@ -134,8 +134,9 @@ class DatabaseService:
             session.commit()
             session.refresh(subscription)
 
-            # Parse the channel_config JSON back to dict for response
-            subscription.channel_config = json.loads(subscription.channel_config)
+            # Parse the channel_config JSON back to dict for response if it exists
+            if subscription.channel_config:
+                subscription.channel_config = json.loads(subscription.channel_config)
 
             logger.info(
                 "Subscription created",
@@ -157,8 +158,9 @@ class DatabaseService:
             ).first()
 
             if subscription:
-                # Parse the channel_config JSON
-                subscription.channel_config = json.loads(subscription.channel_config)
+                # Parse the channel_config JSON if it exists
+                if subscription.channel_config:
+                    subscription.channel_config = json.loads(subscription.channel_config)
 
             return subscription
 
@@ -175,9 +177,10 @@ class DatabaseService:
             total = query.count()
             subscriptions = query.offset(skip).limit(limit).all()
 
-            # Parse channel_config JSON for each subscription
+            # Parse channel_config JSON for each subscription if it exists
             for subscription in subscriptions:
-                subscription.channel_config = json.loads(subscription.channel_config)
+                if subscription.channel_config:
+                    subscription.channel_config = json.loads(subscription.channel_config)
 
             return subscriptions, total
 
@@ -215,8 +218,9 @@ class DatabaseService:
             session.commit()
             session.refresh(subscription)
 
-            # Parse the channel_config JSON
-            subscription.channel_config = json.loads(subscription.channel_config)
+            # Parse the channel_config JSON if it exists
+            if subscription.channel_config:
+                subscription.channel_config = json.loads(subscription.channel_config)
 
             logger.info(
                 "Subscription updated",

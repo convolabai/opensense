@@ -89,6 +89,15 @@ async def create_subscription(
         ) from e
 
 
+@router.get("/events", response_model=EventLogListResponse)
+async def list_events(
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(50, ge=1, le=100, description="Items per page")
+) -> EventLogListResponse:
+    """List events with pagination (alias for event-logs endpoint)."""
+    return await list_event_logs(page, size)
+
+
 @router.get("/event-logs", response_model=EventLogListResponse)
 async def list_event_logs(
     page: int = Query(1, ge=1, description="Page number"),

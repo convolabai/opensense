@@ -17,8 +17,8 @@ class Subscription(Base):
     subscriber_id = Column(String(255), nullable=False, index=True)  # Subscriber identifier
     description = Column(Text, nullable=False)  # Natural language description
     pattern = Column(String(255), nullable=False)  # Generated NATS filter subject pattern
-    channel_type = Column(String(50), nullable=False)  # 'webhook'
-    channel_config = Column(Text, nullable=False)  # JSON config for channel
+    channel_type = Column(String(50), nullable=True)  # 'webhook' or None for polling-only
+    channel_config = Column(Text, nullable=True)  # JSON config for channel or None
     active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

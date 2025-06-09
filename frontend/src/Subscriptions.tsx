@@ -7,7 +7,7 @@ interface Subscription {
   subscriber_id: string;
   description: string;
   pattern: string;
-  channel_type: string;
+  channel_type: string | null;
   channel_config: any;
   active: boolean;
   created_at: string;
@@ -16,8 +16,8 @@ interface Subscription {
 
 interface SubscriptionCreate {
   description: string;
-  channel_type: string;
-  channel_config: any;
+  channel_type?: string;
+  channel_config?: any;
 }
 
 interface SubscriptionsProps {
@@ -34,8 +34,8 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
   const [deletingSubscriptionId, setDeletingSubscriptionId] = useState<number | null>(null);
 
   const createSubscription = async () => {
-    if (!subscriptionDescription.trim() || !webhookUrl.trim()) {
-      setSubscriptionError('Please provide both description and webhook URL');
+    if (!subscriptionDescription.trim()) {
+      setSubscriptionError('Please provide a description');
       return;
     }
 
@@ -46,8 +46,10 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
     try {
       const subscriptionData: SubscriptionCreate = {
         description: subscriptionDescription.trim(),
-        channel_type: 'webhook',
-        channel_config: { url: webhookUrl.trim(), method: 'POST' }
+        ...(webhookUrl.trim() && {
+          channel_type: 'webhook',
+          channel_config: { url: webhookUrl.trim(), method: 'POST' }
+        })
       };
 
       const response = await fetch('/subscriptions/', {
@@ -129,7 +131,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
 
           <div>
             <label htmlFor="webhookUrl" className="block text-sm font-medium text-gray-500 mb-2">
-              Webhook URL:
+              Webhook URL (Optional):
             </label>
             <input
               id="webhookUrl"
@@ -137,7 +139,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
               className="w-full bg-gray-50 border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
               value={webhookUrl}
               onChange={(e) => setWebhookUrl(e.target.value)}
-              placeholder="https://your-service.com/webhook"
+              placeholder="https://your-service.com/webhook (leave empty for polling only)"
             />
           </div>
         </div>
@@ -146,7 +148,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
           <button
             className="w-full sm:w-auto py-2 px-6 rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
             onClick={createSubscription}
-            disabled={isSubscriptionLoading || !subscriptionDescription.trim() || !webhookUrl.trim()}
+            disabled={isSubscriptionLoading || !subscriptionDescription.trim()}
           >
             {isSubscriptionLoading ? (
               <span className="flex items-center gap-2">
@@ -191,10 +193,13 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                   <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     NATS Pattern
                   </th>
+                  <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Notification
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="hidden xl:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -215,6 +220,19 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                         {sub.pattern}
                       </code>
                     </td>
+                    <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {sub.channel_type === 'webhook' && sub.channel_config?.url ? (
+                        <span className="text-blue-600 flex items-center gap-1">
+                          <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                          Webhook
+                        </span>
+                      ) : (
+                        <span className="text-purple-600 flex items-center gap-1">
+                          <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
+                          Polling
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {sub.active ? (
                         <span className="text-green-600 flex items-center gap-1">
@@ -228,7 +246,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                         </span>
                       )}
                     </td>
-                    <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(sub.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
