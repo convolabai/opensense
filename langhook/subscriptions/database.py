@@ -1,6 +1,7 @@
 """Database service for subscription management."""
 
 import json
+from typing import Any
 
 import structlog
 from sqlalchemy import and_, create_engine, text
