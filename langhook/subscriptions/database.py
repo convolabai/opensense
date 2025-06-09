@@ -7,7 +7,7 @@ from sqlalchemy import and_, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from langhook.subscriptions.config import subscription_settings
-from langhook.subscriptions.models import Base, Subscription, EventLog, SubscriptionEventLog
+from langhook.subscriptions.models import Base, Subscription, EventLog, SubscriptionEventLog, WebhookMapping
 from langhook.subscriptions.schemas import SubscriptionCreate, SubscriptionUpdate
 
 logger = structlog.get_logger("langhook")
@@ -43,6 +43,8 @@ class DatabaseService:
         self.add_gate_column_to_subscriptions()
         # Add gate evaluation columns to subscription event logs table if they don't exist
         self.add_gate_columns_to_subscription_event_logs()
+        # Explicitly ensure webhook mappings table exists
+        self.create_webhook_mappings_table()
         logger.info("Subscription database tables created")
 
     def create_schema_registry_table(self) -> None:
@@ -239,6 +241,38 @@ class DatabaseService:
         except Exception as e:
             logger.error(
                 "Failed to add gate columns to subscription_event_logs table",
+    def create_webhook_mappings_table(self) -> None:
+        """Create the webhook mappings table if it doesn't exist."""
+        try:
+            with self.get_session() as session:
+                # Create table with explicit SQL to ensure it exists
+                create_table_sql = text("""
+                    CREATE TABLE IF NOT EXISTS webhook_mappings (
+                        fingerprint VARCHAR(64) PRIMARY KEY NOT NULL,
+                        publisher VARCHAR(255) NOT NULL,
+                        event_name VARCHAR(255) NOT NULL,
+                        mapping_expr TEXT NOT NULL,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ
+                    )
+                """)
+                session.execute(create_table_sql)
+                
+                # Create indexes for better query performance
+                index_sqls = [
+                    "CREATE INDEX IF NOT EXISTS idx_webhook_mappings_publisher ON webhook_mappings(publisher)",
+                    "CREATE INDEX IF NOT EXISTS idx_webhook_mappings_event_name ON webhook_mappings(event_name)",
+                    "CREATE INDEX IF NOT EXISTS idx_webhook_mappings_created_at ON webhook_mappings(created_at)",
+                ]
+                
+                for index_sql in index_sqls:
+                    session.execute(text(index_sql))
+                
+                session.commit()
+                logger.info("Webhook mappings table ensured")
+        except Exception as e:
+            logger.error(
+                "Failed to create webhook mappings table",
                 error=str(e),
                 exc_info=True
             )
@@ -436,6 +470,44 @@ class DatabaseService:
             subscription_events = query.offset(skip).limit(limit).all()
 
             return subscription_events, total
+
+
+    async def get_ingestion_mapping(self, fingerprint: str) -> WebhookMapping | None:
+        """Get an ingestion mapping by fingerprint."""
+        with self.get_session() as session:
+            mapping = session.query(WebhookMapping).filter(
+                WebhookMapping.fingerprint == fingerprint
+            ).first()
+            return mapping
+
+    async def create_ingestion_mapping(
+        self,
+        fingerprint: str,
+        publisher: str,
+        event_name: str,
+        mapping_expr: str
+    ) -> WebhookMapping:
+        """Create a new ingestion mapping."""
+        with self.get_session() as session:
+            mapping = WebhookMapping(
+                fingerprint=fingerprint,
+                publisher=publisher,
+                event_name=event_name,
+                mapping_expr=mapping_expr
+            )
+
+            session.add(mapping)
+            session.commit()
+            session.refresh(mapping)
+
+            logger.info(
+                "Webhook mapping created",
+                fingerprint=fingerprint,
+                publisher=publisher,
+                event_name=event_name
+            )
+
+            return mapping
 
 
 # Global database service instance

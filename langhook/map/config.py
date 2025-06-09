@@ -1,7 +1,8 @@
 """Configuration settings for the canonicaliser service."""
 
-from typing import Optional
+
 from pydantic import BaseModel
+
 from langhook.core.config import app_config
 
 
@@ -21,17 +22,17 @@ class Settings(BaseModel):
     mappings_dir: str
 
     # LLM settings
-    openai_api_key: Optional[str]
-    ollama_base_url: Optional[str]
+    openai_api_key: str | None
+    ollama_base_url: str | None
 
     # Postgres settings for mapping suggestions cache
-    postgres_dsn: Optional[str]
+    postgres_dsn: str | None
 
     # Performance settings
     max_events_per_second: int
 
     # Prometheus settings
-    prometheus_pushgateway_url: Optional[str]
+    prometheus_pushgateway_url: str | None
     prometheus_job_name: str
     prometheus_push_interval: int
 

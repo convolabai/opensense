@@ -76,3 +76,16 @@ class SubscriptionEventLog(Base):
     gate_passed = Column(Boolean, nullable=True)  # Whether LLM gate passed (null if gate not enabled)
     gate_reason = Column(Text, nullable=True)  # Reason from LLM gate evaluation
     logged_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)  # Log timestamp
+
+
+class WebhookMapping(Base):
+    """Database model for webhook mappings with fingerprints."""
+
+    __tablename__ = "webhook_mappings"
+
+    fingerprint = Column(String(64), primary_key=True, nullable=False)  # SHA-256 fingerprint
+    publisher = Column(String(255), nullable=False, index=True)  # Publisher (source)
+    event_name = Column(String(255), nullable=False, index=True)  # Event name description
+    mapping_expr = Column(Text, nullable=False)  # JSONata mapping expression
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
