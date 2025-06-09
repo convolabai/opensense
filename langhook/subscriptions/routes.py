@@ -89,6 +89,39 @@ async def create_subscription(
         ) from e
 
 
+@router.get("/event-logs", response_model=EventLogListResponse)
+async def list_event_logs(
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(50, ge=1, le=100, description="Items per page")
+) -> EventLogListResponse:
+    """List event logs with pagination."""
+    try:
+        skip = (page - 1) * size
+        event_logs, total = await db_service.get_event_logs(
+            skip=skip,
+            limit=size
+        )
+
+        from langhook.subscriptions.schemas import EventLogResponse
+        return EventLogListResponse(
+            event_logs=[EventLogResponse.from_orm(log) for log in event_logs],
+            total=total,
+            page=page,
+            size=size
+        )
+
+    except Exception as e:
+        logger.error(
+            "Failed to list event logs",
+            error=str(e),
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list event logs"
+        ) from e
+
+
 @router.get("/", response_model=SubscriptionListResponse)
 async def list_subscriptions(
     page: int = Query(1, ge=1, description="Page number"),
@@ -246,37 +279,4 @@ async def delete_subscription(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete subscription"
-        ) from e
-
-
-@router.get("/event-logs", response_model=EventLogListResponse)
-async def list_event_logs(
-    page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(50, ge=1, le=100, description="Items per page")
-) -> EventLogListResponse:
-    """List event logs with pagination."""
-    try:
-        skip = (page - 1) * size
-        event_logs, total = await db_service.get_event_logs(
-            skip=skip,
-            limit=size
-        )
-
-        from langhook.subscriptions.schemas import EventLogResponse
-        return EventLogListResponse(
-            event_logs=[EventLogResponse.from_orm(log) for log in event_logs],
-            total=total,
-            page=page,
-            size=size
-        )
-
-    except Exception as e:
-        logger.error(
-            "Failed to list event logs",
-            error=str(e),
-            exc_info=True
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list event logs"
         ) from e
