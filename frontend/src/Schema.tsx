@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, ChevronDown, ChevronRight, RefreshCw, AlertTriangle } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronRight, RefreshCw, AlertTriangle, Trash2 } from 'lucide-react';
 
 interface SchemaData {
   publishers: string[];
@@ -12,12 +12,20 @@ const Schema: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedPublishers, setExpandedPublishers] = useState<Set<string>>(new Set());
+  const [deleteLoading, setDeleteLoading] = useState<{
+    type: 'publisher' | 'resource_type' | 'action';
+    publisher?: string;
+    resource_type?: string;
+    action?: string;
+  } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
 
   const loadSchema = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/schema');
+      const response = await fetch('/schema/');
       if (response.ok) {
         const data = await response.json();
         setSchemaData(data);
@@ -46,6 +54,102 @@ const Schema: React.FC = () => {
     setExpandedPublishers(newExpanded);
   };
 
+  const deletePublisher = async (publisher: string) => {
+    if (!window.confirm(`Are you sure you want to delete all schema entries for publisher "${publisher}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeleteLoading({ type: 'publisher', publisher });
+    setDeleteError(null);
+    setDeleteSuccess(null);
+
+    try {
+      const response = await fetch(`/schema/publishers/${encodeURIComponent(publisher)}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to delete publisher' }));
+        throw new Error(errorData.detail || 'Failed to delete publisher');
+      }
+
+      setDeleteSuccess(`Publisher "${publisher}" deleted successfully`);
+      await loadSchema(); // Refresh the schema data
+
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete publisher');
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
+  const deleteResourceType = async (publisher: string, resourceType: string) => {
+    if (!window.confirm(`Are you sure you want to delete all schema entries for resource type "${resourceType}" under publisher "${publisher}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeleteLoading({ type: 'resource_type', publisher, resource_type: resourceType });
+    setDeleteError(null);
+    setDeleteSuccess(null);
+
+    try {
+      const response = await fetch(`/schema/publishers/${encodeURIComponent(publisher)}/resource-types/${encodeURIComponent(resourceType)}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to delete resource type' }));
+        throw new Error(errorData.detail || 'Failed to delete resource type');
+      }
+
+      setDeleteSuccess(`Resource type "${resourceType}" deleted successfully`);
+      await loadSchema(); // Refresh the schema data
+
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete resource type');
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
+  const deleteAction = async (publisher: string, resourceType: string, action: string) => {
+    if (!window.confirm(`Are you sure you want to delete action "${action}" for publisher "${publisher}" and resource type "${resourceType}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeleteLoading({ type: 'action', publisher, resource_type: resourceType, action });
+    setDeleteError(null);
+    setDeleteSuccess(null);
+
+    try {
+      const response = await fetch(`/schema/publishers/${encodeURIComponent(publisher)}/resource-types/${encodeURIComponent(resourceType)}/actions/${encodeURIComponent(action)}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to delete action' }));
+        throw new Error(errorData.detail || 'Failed to delete action');
+      }
+
+      setDeleteSuccess(`Action "${action}" deleted successfully`);
+      await loadSchema(); // Refresh the schema data
+
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete action');
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
+  const isDeleteLoading = (type: string, publisher?: string, resourceType?: string, action?: string) => {
+    if (!deleteLoading) return false;
+    if (deleteLoading.type !== type) return false;
+    if (publisher && deleteLoading.publisher !== publisher) return false;
+    if (resourceType && deleteLoading.resource_type !== resourceType) return false;
+    if (action && deleteLoading.action !== action) return false;
+    return true;
+  };
+
   const isEmpty = schemaData && schemaData.publishers.length === 0;
 
   return (
@@ -71,9 +175,25 @@ const Schema: React.FC = () => {
       )}
 
       {error && (
-        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 mb-4">
           <AlertTriangle size={20} />
           <span>{error}</span>
+        </div>
+      )}
+
+      {deleteError && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 mb-4">
+          <AlertTriangle size={20} />
+          <span>{deleteError}</span>
+        </div>
+      )}
+
+      {deleteSuccess && (
+        <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 mb-4">
+          <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center">
+            <div className="w-2 h-2 bg-white rounded-full"></div>
+          </div>
+          <span>{deleteSuccess}</span>
         </div>
       )}
 
@@ -96,24 +216,39 @@ const Schema: React.FC = () => {
             
             return (
               <div key={publisher} className="border border-gray-200 rounded-lg">
-                <button
-                  onClick={() => togglePublisher(publisher)}
-                  className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors duration-150 ease-in-out"
-                >
-                  <div className="flex items-center gap-3">
-                    {isExpanded ? (
-                      <ChevronDown size={20} className="text-gray-400" />
-                    ) : (
-                      <ChevronRight size={20} className="text-gray-400" />
-                    )}
-                    <span className="font-semibold text-gray-800 text-lg">
-                      Publisher: {publisher}
+                <div className="flex items-center justify-between p-4">
+                  <button
+                    onClick={() => togglePublisher(publisher)}
+                    className="flex-1 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors duration-150 ease-in-out rounded"
+                  >
+                    <div className="flex items-center gap-3">
+                      {isExpanded ? (
+                        <ChevronDown size={20} className="text-gray-400" />
+                      ) : (
+                        <ChevronRight size={20} className="text-gray-400" />
+                      )}
+                      <span className="font-semibold text-gray-800 text-lg">
+                        Publisher: {publisher}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                      {resourceTypes.length} resource{resourceTypes.length !== 1 ? 's' : ''}
                     </span>
-                  </div>
-                  <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                    {resourceTypes.length} resource{resourceTypes.length !== 1 ? 's' : ''}
-                  </span>
-                </button>
+                  </button>
+                  
+                  <button
+                    onClick={() => deletePublisher(publisher)}
+                    disabled={isDeleteLoading('publisher', publisher)}
+                    className="ml-2 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={`Delete publisher "${publisher}"`}
+                  >
+                    {isDeleteLoading('publisher', publisher) ? (
+                      <div className="w-4 h-4 border-2 border-red-600/50 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                  </button>
+                </div>
 
                 {isExpanded && (
                   <div className="border-t border-gray-200 bg-gray-50">
@@ -124,18 +259,44 @@ const Schema: React.FC = () => {
                       
                       return (
                         <div key={resourceType} className="p-4 border-b border-gray-200 last:border-b-0">
-                          <div className="font-medium text-gray-700 mb-2 flex items-center gap-2">
-                            <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                            {resourceType}
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="font-medium text-gray-700 flex items-center gap-2">
+                              <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                              {resourceType}
+                            </div>
+                            <button
+                              onClick={() => deleteResourceType(publisher, resourceType)}
+                              disabled={isDeleteLoading('resource_type', publisher, resourceType)}
+                              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={`Delete resource type "${resourceType}"`}
+                            >
+                              {isDeleteLoading('resource_type', publisher, resourceType) ? (
+                                <div className="w-3 h-3 border-2 border-red-600/50 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Trash2 size={12} />
+                              )}
+                            </button>
                           </div>
                           <div className="ml-4 flex flex-wrap gap-2">
                             {relevantActions.map((action) => (
-                              <span
+                              <div
                                 key={action}
-                                className="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-md"
+                                className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-md group"
                               >
-                                {action}
-                              </span>
+                                <span>{action}</span>
+                                <button
+                                  onClick={() => deleteAction(publisher, resourceType, action)}
+                                  disabled={isDeleteLoading('action', publisher, resourceType, action)}
+                                  className="ml-1 p-0.5 text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title={`Delete action "${action}"`}
+                                >
+                                  {isDeleteLoading('action', publisher, resourceType, action) ? (
+                                    <div className="w-2 h-2 border border-red-600/50 border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <Trash2 size={8} />
+                                  )}
+                                </button>
+                              </div>
                             ))}
                           </div>
                         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import { Send, ArrowRight, Zap, ListChecks, Bell, Eye, RefreshCw, X } from 'lucide-react';
+import { Send, Zap, ListChecks, Bell, Eye, RefreshCw, X } from 'lucide-react';
 
 interface EventLog {
   id: number;
