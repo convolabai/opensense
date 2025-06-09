@@ -240,7 +240,7 @@ class DatabaseService:
                 
         except Exception as e:
             logger.error(
-                "Failed to add gate columns to subscription_event_logs table",
+                "Failed to add gate columns to subscription_event_logs table")
     def create_webhook_mappings_table(self) -> None:
         """Create the webhook mappings table if it doesn't exist."""
         try:
