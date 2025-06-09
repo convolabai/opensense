@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, ArrowRight, Zap, ListChecks, Bell } from 'lucide-react'; // Add other icons as needed
+import { Send, Zap, ListChecks, Bell } from 'lucide-react';
 
 // Copied from App.tsx
 interface CanonicalEvent {
@@ -202,88 +202,141 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Input Section */}
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 sm:p-8">
-          <h2 className="flex items-center gap-3 text-xl font-semibold mb-6 text-gray-800 tracking-tight">
-            <Send size={24} className="text-blue-600" />
-            Webhook Input
-          </h2>
-
-          <div className="mb-6">
-            <label htmlFor="source" className="block text-sm font-medium text-gray-500 mb-2">Source:</label>
-            <select
-              id="source"
-              value={selectedSource}
-              onChange={(e) => setSelectedSource(e.target.value)}
-              className="w-full bg-gray-50 border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
-            >
-              <option value="github">GitHub</option>
-              <option value="stripe">Stripe</option>
-              <option value="slack">Slack</option>
-            </select>
-          </div>
-
-          <textarea
-            className="w-full min-h-[200px] bg-gray-50 border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
-            value={inputPayload}
-            onChange={(e) => setInputPayload(e.target.value)}
-            placeholder="Enter webhook payload JSON..."
-          />
-
-          <div className="flex flex-col sm:flex-row gap-4 mt-6">
-            <button
-              className="flex-1 py-2 px-4 rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-              onClick={sendWebhook}
-              disabled={isLoading || !inputPayload.trim()}
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white/50 border-t-transparent rounded-full animate-spin" />
-                  Processing...
-                </span>
-              ) : ( <> <Send size={16} /> Send Webhook </> )}
-            </button>
-
-            <button
-              className="flex-1 py-2 px-4 rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 bg-white hover:bg-gray-50 active:bg-gray-100 active:scale-95 text-gray-700 border border-gray-300 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-              onClick={generateMapping}
-              disabled={isLoading || !inputPayload.trim()}
-            >
-              <Zap size={16} /> Suggest Mapping
-            </button>
-          </div>
-
-          {error && <div className="p-4 rounded-md mt-6 text-sm bg-red-100 border border-red-400 text-red-700">{error}</div>}
-          {success && <div className="p-4 rounded-md mt-6 text-sm bg-green-100 border border-green-400 text-green-700">{success}</div>}
-        </div>
-
-        {/* Output Section */}
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 sm:p-8">
-          <h2 className="flex items-center gap-3 text-xl font-semibold mb-6 text-gray-800 tracking-tight">
-            <ArrowRight size={24} className="text-blue-600" />
-            Processed Event
-          </h2>
-          <div className="bg-gray-800 text-gray-200 p-4 rounded-md font-mono text-sm min-h-[420px] whitespace-pre-wrap overflow-x-auto">
-            {outputEvent ? JSON.stringify(outputEvent, null, 2) : <span className="text-gray-500">Send a webhook to see the canonical event output...</span>}
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Events Section */}
+      {/* Event Creation Section */}
       <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 sm:p-8">
         <h2 className="flex items-center gap-3 text-xl font-semibold mb-6 text-gray-800 tracking-tight">
-          <ListChecks size={24} className="text-blue-600" /> {/* Changed icon */}
+          <Send size={24} className="text-blue-600" />
+          Create New Event
+        </h2>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Input Section */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-4">Webhook Input</h3>
+            
+            <div className="mb-4">
+              <label htmlFor="source" className="block text-sm font-medium text-gray-500 mb-2">Source:</label>
+              <select
+                id="source"
+                value={selectedSource}
+                onChange={(e) => setSelectedSource(e.target.value)}
+                className="w-full bg-gray-50 border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+              >
+                <option value="github">GitHub</option>
+                <option value="stripe">Stripe</option>
+                <option value="slack">Slack</option>
+              </select>
+            </div>
+
+            <textarea
+              className="w-full min-h-[200px] bg-gray-50 border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
+              value={inputPayload}
+              onChange={(e) => setInputPayload(e.target.value)}
+              placeholder="Enter webhook payload JSON..."
+            />
+
+            <div className="flex flex-col sm:flex-row gap-4 mt-4">
+              <button
+                className="flex-1 py-2 px-4 rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={sendWebhook}
+                disabled={isLoading || !inputPayload.trim()}
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white/50 border-t-transparent rounded-full animate-spin" />
+                    Processing...
+                  </span>
+                ) : ( <> <Send size={16} /> Send Webhook </> )}
+              </button>
+
+              <button
+                className="flex-1 py-2 px-4 rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 bg-white hover:bg-gray-50 active:bg-gray-100 active:scale-95 text-gray-700 border border-gray-300 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={generateMapping}
+                disabled={isLoading || !inputPayload.trim()}
+              >
+                <Zap size={16} /> Suggest Mapping
+              </button>
+            </div>
+          </div>
+
+          {/* Output Section */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-4">Processed Event</h3>
+            <div className="bg-gray-800 text-gray-200 p-4 rounded-md font-mono text-sm min-h-[300px] whitespace-pre-wrap overflow-x-auto">
+              {outputEvent ? JSON.stringify(outputEvent, null, 2) : <span className="text-gray-500">Send a webhook to see the canonical event output...</span>}
+            </div>
+          </div>
+        </div>
+
+        {error && <div className="p-4 rounded-md mt-6 text-sm bg-red-100 border border-red-400 text-red-700">{error}</div>}
+        {success && <div className="p-4 rounded-md mt-6 text-sm bg-green-100 border border-green-400 text-green-700">{success}</div>}
+      </div>
+
+      {/* Recent Events Table Section */}
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 sm:p-8">
+        <h2 className="flex items-center gap-3 text-xl font-semibold mb-6 text-gray-800 tracking-tight">
+          <ListChecks size={24} className="text-blue-600" />
           Recent Events Stream
         </h2>
         {recentEvents.length > 0 ? (
-          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-            {recentEvents.map((event, index) => (
-              <div key={index} className="bg-gray-800 text-gray-200 p-3 sm:p-4 rounded-md font-mono text-xs whitespace-pre-wrap overflow-x-auto">
-                <p className="text-blue-400 font-semibold mb-1 text-sm">Event {recentEvents.length - index} ({event.summary || `${event.publisher}/${event.resource.type}`})</p>
-                {JSON.stringify(event, null, 2)}
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    #
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Publisher
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Resource
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Summary
+                  </th>
+                  <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Timestamp
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {recentEvents.map((event, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {recentEvents.length - index}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {event.publisher}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div>
+                        <div className="font-medium">{event.resource.type}</div>
+                        <div className="text-gray-500 text-xs">ID: {event.resource.id}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {event.action}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <div className="max-w-xs truncate" title={event.summary}>
+                        {event.summary || `${event.publisher}/${event.resource.type}`}
+                      </div>
+                    </td>
+                    <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(event.timestamp).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : (
           <p className="text-gray-500 text-center py-8 sm:py-12 text-base">No events processed yet in this session.</p>
@@ -294,18 +347,36 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
       {matchedSubscriptions.length > 0 && (
         <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 sm:p-8">
           <h2 className="flex items-center gap-3 text-xl font-semibold mb-6 text-gray-800 tracking-tight">
-            <Bell size={24} className="text-blue-600" /> {/* Added Bell icon */}
+            <Bell size={24} className="text-blue-600" />
             Notified Subscribers (for last event)
           </h2>
-          <div className="space-y-3">
-            {matchedSubscriptions.map((sub) => (
-              <div key={sub.id} className="p-3 bg-green-100 border border-green-300 rounded-lg shadow">
-                <div className="flex justify-between items-center">
-                  <span className="text-green-700 font-medium text-sm">{sub.description}</span>
-                  <code className="bg-green-200 text-green-800 px-2 py-1 rounded-md text-xs font-mono">{sub.pattern}</code>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Pattern
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {matchedSubscriptions.map((sub) => (
+                  <tr key={sub.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {sub.description}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">
+                      <code className="bg-gray-100 px-2 py-1 rounded text-xs">
+                        {sub.pattern}
+                      </code>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

@@ -16,7 +16,7 @@ from typing import Any
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request, Response, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from structlog.dev import ConsoleRenderer
@@ -158,6 +158,11 @@ if frontend_path.exists():
         if index_path.exists():
             return FileResponse(str(index_path))
         raise HTTPException(status_code=404, detail="File not found")
+        
+    @app.get("/")
+    async def root():
+        """Redirect root path to console."""
+        return RedirectResponse(url="/console", status_code=302)
 else:
     @app.get("/console")
     async def console_not_available():
@@ -166,6 +171,11 @@ else:
             "message": "Console not available",
             "instructions": "To build the frontend console:\n1. cd frontend\n2. npm install\n3. npm run build"
         }
+        
+    @app.get("/")
+    async def root_not_available():
+        """Redirect root path to console (not available)."""
+        return RedirectResponse(url="/console", status_code=302)
 
 
 # ================================
