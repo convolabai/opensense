@@ -47,7 +47,7 @@ class DatabaseService:
         # Add gate evaluation columns to subscription event logs table if they don't exist
         self.add_gate_columns_to_subscription_event_logs()
         # Explicitly ensure webhook mappings table exists
-        self.create_webhook_mappings_table()
+        self.create_ingest_mappings_table()
         logger.info("Subscription database tables created")
 
     def create_schema_registry_table(self) -> None:
