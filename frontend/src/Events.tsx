@@ -110,14 +110,28 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
           raw: payload
         };
       case 'slack':
-        return {
-          publisher: 'slack',
-          resource: { type: 'file', id: payload.file?.id || 'F_unknown' },
-          action: 'read',
-          timestamp,
-          summary: `File ${payload.file?.name} shared to channel`,
-          raw: payload
-        };
+        // Handle different Slack event types
+        const eventType = payload.event?.type;
+        if (eventType === 'message') {
+          return {
+            publisher: 'slack',
+            resource: { type: 'message', id: payload.event?.channel || 'C_unknown' },
+            action: 'created',
+            timestamp,
+            summary: `Message posted to channel ${payload.event?.channel || 'unknown'}`,
+            raw: payload
+          };
+        } else {
+          // Default to file sharing event (original behavior)
+          return {
+            publisher: 'slack',
+            resource: { type: 'file', id: payload.file?.id || 'F_unknown' },
+            action: 'read',
+            timestamp,
+            summary: `File ${payload.file?.name} shared to channel`,
+            raw: payload
+          };
+        }
       default:
         return { publisher: source, resource: { type: 'unknown', id: 'unknown' }, action: 'create', timestamp, raw: payload };
     }
