@@ -7,7 +7,7 @@ from sqlalchemy import and_, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from langhook.subscriptions.config import subscription_settings
-from langhook.subscriptions.models import Base, Subscription, EventLog
+from langhook.subscriptions.models import Base, Subscription, EventLog, SubscriptionEventLog
 from langhook.subscriptions.schemas import SubscriptionCreate, SubscriptionUpdate
 
 logger = structlog.get_logger("langhook")
@@ -37,6 +37,8 @@ class DatabaseService:
         self.create_schema_registry_table()
         # Explicitly ensure event logs table exists
         self.create_event_logs_table()
+        # Explicitly ensure subscription event logs table exists
+        self.create_subscription_event_logs_table()
         logger.info("Subscription database tables created")
 
     def create_schema_registry_table(self) -> None:
@@ -109,6 +111,57 @@ class DatabaseService:
                 exc_info=True
             )
 
+    def create_subscription_event_logs_table(self) -> None:
+        """Create the subscription event logs table if it doesn't exist."""
+        try:
+            with self.get_session() as session:
+                # Create table with explicit SQL to ensure it exists
+                create_table_sql = text("""
+                    CREATE TABLE IF NOT EXISTS subscription_event_logs (
+                        id SERIAL PRIMARY KEY,
+                        subscription_id INTEGER NOT NULL,
+                        event_id VARCHAR(255) NOT NULL,
+                        source VARCHAR(255) NOT NULL,
+                        subject VARCHAR(255) NOT NULL,
+                        publisher VARCHAR(255) NOT NULL,
+                        resource_type VARCHAR(255) NOT NULL,
+                        resource_id VARCHAR(255) NOT NULL,
+                        action VARCHAR(255) NOT NULL,
+                        canonical_data JSONB NOT NULL,
+                        raw_payload JSONB,
+                        timestamp TIMESTAMPTZ NOT NULL,
+                        webhook_sent BOOLEAN NOT NULL DEFAULT FALSE,
+                        webhook_response_status INTEGER,
+                        logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                session.execute(create_table_sql)
+                
+                # Create indexes for better query performance
+                index_sqls = [
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_subscription_id ON subscription_event_logs(subscription_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_event_id ON subscription_event_logs(event_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_source ON subscription_event_logs(source)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_publisher ON subscription_event_logs(publisher)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_resource_type ON subscription_event_logs(resource_type)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_resource_id ON subscription_event_logs(resource_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_action ON subscription_event_logs(action)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_timestamp ON subscription_event_logs(timestamp)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_logged_at ON subscription_event_logs(logged_at)",
+                ]
+                
+                for index_sql in index_sqls:
+                    session.execute(text(index_sql))
+                
+                session.commit()
+                logger.info("Subscription event logs table ensured")
+        except Exception as e:
+            logger.error(
+                "Failed to create subscription event logs table",
+                error=str(e),
+                exc_info=True
+            )
+
     def get_session(self) -> Session:
         """Get a database session."""
         return self.SessionLocal()
@@ -126,7 +179,7 @@ class DatabaseService:
                 description=subscription_data.description,
                 pattern=pattern,
                 channel_type=subscription_data.channel_type,
-                channel_config=json.dumps(subscription_data.channel_config),
+                channel_config=json.dumps(subscription_data.channel_config) if subscription_data.channel_config else None,
                 active=True
             )
 
@@ -134,8 +187,9 @@ class DatabaseService:
             session.commit()
             session.refresh(subscription)
 
-            # Parse the channel_config JSON back to dict for response
-            subscription.channel_config = json.loads(subscription.channel_config)
+            # Parse the channel_config JSON back to dict for response if it exists
+            if subscription.channel_config:
+                subscription.channel_config = json.loads(subscription.channel_config)
 
             logger.info(
                 "Subscription created",
@@ -157,8 +211,9 @@ class DatabaseService:
             ).first()
 
             if subscription:
-                # Parse the channel_config JSON
-                subscription.channel_config = json.loads(subscription.channel_config)
+                # Parse the channel_config JSON if it exists
+                if subscription.channel_config:
+                    subscription.channel_config = json.loads(subscription.channel_config)
 
             return subscription
 
@@ -175,9 +230,10 @@ class DatabaseService:
             total = query.count()
             subscriptions = query.offset(skip).limit(limit).all()
 
-            # Parse channel_config JSON for each subscription
+            # Parse channel_config JSON for each subscription if it exists
             for subscription in subscriptions:
-                subscription.channel_config = json.loads(subscription.channel_config)
+                if subscription.channel_config:
+                    subscription.channel_config = json.loads(subscription.channel_config)
 
             return subscriptions, total
 
@@ -215,8 +271,9 @@ class DatabaseService:
             session.commit()
             session.refresh(subscription)
 
-            # Parse the channel_config JSON
-            subscription.channel_config = json.loads(subscription.channel_config)
+            # Parse the channel_config JSON if it exists
+            if subscription.channel_config:
+                subscription.channel_config = json.loads(subscription.channel_config)
 
             logger.info(
                 "Subscription updated",
@@ -257,9 +314,10 @@ class DatabaseService:
                 Subscription.active
             ).all()
 
-            # Parse channel_config JSON for each subscription
+            # Parse channel_config JSON for each subscription if it exists
             for subscription in subscriptions:
-                subscription.channel_config = json.loads(subscription.channel_config)
+                if subscription.channel_config:
+                    subscription.channel_config = json.loads(subscription.channel_config)
 
             return subscriptions
 
@@ -276,6 +334,23 @@ class DatabaseService:
             event_logs = query.offset(skip).limit(limit).all()
 
             return event_logs, total
+
+    async def get_subscription_events(
+        self,
+        subscription_id: int,
+        skip: int = 0,
+        limit: int = 100
+    ) -> tuple[list[SubscriptionEventLog], int]:
+        """Get subscription event logs with pagination."""
+        with self.get_session() as session:
+            query = session.query(SubscriptionEventLog).filter(
+                SubscriptionEventLog.subscription_id == subscription_id
+            ).order_by(SubscriptionEventLog.logged_at.desc())
+
+            total = query.count()
+            subscription_events = query.offset(skip).limit(limit).all()
+
+            return subscription_events, total
 
 
 # Global database service instance

@@ -12,9 +12,17 @@ from langhook.subscriptions.schemas import (
     SubscriptionResponse,
     SubscriptionUpdate,
     EventLogListResponse,
+    SubscriptionEventLogListResponse,
+    SubscriptionEventLogResponse,
 )
 
 logger = structlog.get_logger("langhook")
+
+# Import the consumer service
+def get_consumer_service():
+    """Lazy import to avoid circular dependencies."""
+    from langhook.subscriptions.consumer_service import subscription_consumer_service
+    return subscription_consumer_service
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 
@@ -57,6 +65,19 @@ async def create_subscription(
             pattern=pattern
         )
 
+        # Add subscription to consumer service if it's active
+        if subscription.active:
+            try:
+                consumer_service = get_consumer_service()
+                await consumer_service.add_subscription(subscription)
+            except Exception as e:
+                logger.warning(
+                    "Failed to add subscription to consumer service",
+                    subscription_id=subscription.id,
+                    error=str(e),
+                    exc_info=True
+                )
+
         return SubscriptionResponse.from_orm(subscription)
 
     except HTTPException:
@@ -89,36 +110,51 @@ async def create_subscription(
         ) from e
 
 
-@router.get("/event-logs", response_model=EventLogListResponse)
-async def list_event_logs(
+@router.get("/{subscription_id}/events", response_model=SubscriptionEventLogListResponse)
+async def list_subscription_events(
+    subscription_id: int,
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(50, ge=1, le=100, description="Items per page")
-) -> EventLogListResponse:
-    """List event logs with pagination."""
+) -> SubscriptionEventLogListResponse:
+    """List events for a specific subscription with pagination."""
+    # Use placeholder subscriber ID since auth is out of scope
+    subscriber_id = "default"
+    
     try:
+        # First verify subscription exists and belongs to subscriber
+        subscription = await db_service.get_subscription(subscription_id, subscriber_id)
+        if not subscription:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Subscription not found"
+            )
+        
         skip = (page - 1) * size
-        event_logs, total = await db_service.get_event_logs(
+        subscription_events, total = await db_service.get_subscription_events(
+            subscription_id=subscription_id,
             skip=skip,
             limit=size
         )
 
-        from langhook.subscriptions.schemas import EventLogResponse
-        return EventLogListResponse(
-            event_logs=[EventLogResponse.from_orm(log) for log in event_logs],
+        return SubscriptionEventLogListResponse(
+            event_logs=[SubscriptionEventLogResponse.from_orm(log) for log in subscription_events],
             total=total,
             page=page,
             size=size
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(
-            "Failed to list event logs",
+            "Failed to list subscription events",
+            subscription_id=subscription_id,
             error=str(e),
             exc_info=True
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list event logs"
+            detail="Failed to list subscription events"
         ) from e
 
 
@@ -225,6 +261,18 @@ async def update_subscription(
             subscriber_id=subscriber_id
         )
 
+        # Update subscription in consumer service
+        try:
+            consumer_service = get_consumer_service()
+            await consumer_service.update_subscription(subscription)
+        except Exception as e:
+            logger.warning(
+                "Failed to update subscription in consumer service",
+                subscription_id=subscription.id,
+                error=str(e),
+                exc_info=True
+            )
+
         return SubscriptionResponse.from_orm(subscription)
 
     except HTTPException:
@@ -265,6 +313,18 @@ async def delete_subscription(
             subscription_id=subscription_id,
             subscriber_id=subscriber_id
         )
+
+        # Remove subscription from consumer service
+        try:
+            consumer_service = get_consumer_service()
+            await consumer_service.remove_subscription(subscription_id)
+        except Exception as e:
+            logger.warning(
+                "Failed to remove subscription from consumer service",
+                subscription_id=subscription_id,
+                error=str(e),
+                exc_info=True
+            )
 
     except HTTPException:
         raise

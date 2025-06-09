@@ -21,13 +21,13 @@ class WebhookChannelConfig(ChannelConfig):
 class SubscriptionCreate(BaseModel):
     """Schema for creating a new subscription."""
     description: str = Field(..., description="Natural language description of what to watch for")
-    channel_type: str = Field(..., description="Type of notification channel")
-    channel_config: dict[str, Any] = Field(..., description="Configuration for the notification channel")
+    channel_type: str | None = Field(None, description="Type of notification channel")
+    channel_config: dict[str, Any] | None = Field(None, description="Configuration for the notification channel")
 
     @field_validator('channel_type')
     @classmethod
     def validate_channel_type(cls, v):
-        if v not in ['webhook']:
+        if v is not None and v not in ['webhook']:
             raise ValueError('channel_type must be: webhook')
         return v
 
@@ -53,8 +53,8 @@ class SubscriptionResponse(BaseModel):
     subscriber_id: str
     description: str
     pattern: str
-    channel_type: str
-    channel_config: dict[str, Any]
+    channel_type: str | None
+    channel_config: dict[str, Any] | None
     active: bool
     created_at: datetime
     updated_at: datetime | None = None
@@ -93,6 +93,36 @@ class EventLogResponse(BaseModel):
 class EventLogListResponse(BaseModel):
     """Schema for listing event logs."""
     event_logs: list[EventLogResponse]
+    total: int
+    page: int
+    size: int
+
+
+class SubscriptionEventLogResponse(BaseModel):
+    """Schema for subscription event log response."""
+    id: int
+    subscription_id: int
+    event_id: str
+    source: str
+    subject: str
+    publisher: str
+    resource_type: str
+    resource_id: str
+    action: str
+    canonical_data: dict[str, Any]
+    raw_payload: dict[str, Any] | None = None
+    timestamp: datetime
+    webhook_sent: bool
+    webhook_response_status: int | None = None
+    logged_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SubscriptionEventLogListResponse(BaseModel):
+    """Schema for listing subscription event logs."""
+    event_logs: list[SubscriptionEventLogResponse]
     total: int
     page: int
     size: int
