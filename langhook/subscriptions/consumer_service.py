@@ -90,8 +90,8 @@ class SubscriptionConsumer(BaseNATSConsumer):
                 return
 
             # Evaluate LLM gate if enabled
-            gate_passed = True
-            gate_reason = "Gate not enabled"
+            gate_passed = None  # None means gate not enabled
+            gate_reason = None
             
             if self.subscription.gate and self.subscription.gate.get("enabled", False):
                 gate_passed, gate_reason = await llm_gate_service.evaluate_event(
@@ -122,7 +122,9 @@ class SubscriptionConsumer(BaseNATSConsumer):
                         raw_payload=raw_payload,
                         timestamp=timestamp,
                         webhook_sent=False,
-                        webhook_response_status=None
+                        webhook_response_status=None,
+                        gate_passed=gate_passed,
+                        gate_reason=gate_reason
                     )
                     await self._save_subscription_event_log(subscription_event_log)
                     return
@@ -148,6 +150,8 @@ class SubscriptionConsumer(BaseNATSConsumer):
                 timestamp=timestamp,
                 webhook_sent=webhook_sent,
                 webhook_response_status=webhook_status,
+                gate_passed=gate_passed,
+                gate_reason=gate_reason
             )
 
             # Save to database

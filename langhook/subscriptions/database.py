@@ -41,6 +41,8 @@ class DatabaseService:
         self.create_subscription_event_logs_table()
         # Add gate column to subscriptions table if it doesn't exist
         self.add_gate_column_to_subscriptions()
+        # Add gate evaluation columns to subscription event logs table if they don't exist
+        self.add_gate_columns_to_subscription_event_logs()
         logger.info("Subscription database tables created")
 
     def create_schema_registry_table(self) -> None:
@@ -190,6 +192,53 @@ class DatabaseService:
         except Exception as e:
             logger.error(
                 "Failed to add gate column to subscriptions table",
+                error=str(e),
+                exc_info=True
+            )
+
+    def add_gate_columns_to_subscription_event_logs(self) -> None:
+        """Add gate evaluation columns to subscription_event_logs table if they don't exist."""
+        try:
+            with self.get_session() as session:
+                # Check if gate_passed column exists
+                check_gate_passed_sql = text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name='subscription_event_logs' AND column_name='gate_passed'
+                """)
+                result = session.execute(check_gate_passed_sql).fetchone()
+                
+                if not result:
+                    # Add gate_passed column if it doesn't exist
+                    add_gate_passed_sql = text("""
+                        ALTER TABLE subscription_event_logs 
+                        ADD COLUMN gate_passed BOOLEAN
+                    """)
+                    session.execute(add_gate_passed_sql)
+                    logger.info("Added gate_passed column to subscription_event_logs table")
+                
+                # Check if gate_reason column exists
+                check_gate_reason_sql = text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name='subscription_event_logs' AND column_name='gate_reason'
+                """)
+                result = session.execute(check_gate_reason_sql).fetchone()
+                
+                if not result:
+                    # Add gate_reason column if it doesn't exist
+                    add_gate_reason_sql = text("""
+                        ALTER TABLE subscription_event_logs 
+                        ADD COLUMN gate_reason TEXT
+                    """)
+                    session.execute(add_gate_reason_sql)
+                    logger.info("Added gate_reason column to subscription_event_logs table")
+                
+                session.commit()
+                
+        except Exception as e:
+            logger.error(
+                "Failed to add gate columns to subscription_event_logs table",
                 error=str(e),
                 exc_info=True
             )

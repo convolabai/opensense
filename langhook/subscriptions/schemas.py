@@ -123,6 +123,8 @@ class SubscriptionEventLogResponse(BaseModel):
     timestamp: datetime
     webhook_sent: bool
     webhook_response_status: int | None = None
+    gate_passed: bool | None = None
+    gate_reason: str | None = None
     logged_at: datetime
 
     class Config:
