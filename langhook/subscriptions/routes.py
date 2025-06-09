@@ -340,3 +340,58 @@ async def delete_subscription(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete subscription"
         ) from e
+
+
+@router.get("/gate/budget")
+async def get_gate_budget_status():
+    """Get LLM Gate budget status and spending information."""
+    from langhook.subscriptions.budget import budget_monitor
+    
+    try:
+        status = budget_monitor.get_budget_status()
+        return status
+    except Exception as e:
+        logger.error("Failed to get budget status", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve budget status"
+        ) from e
+
+
+@router.get("/gate/templates")
+async def get_gate_templates():
+    """Get available LLM Gate prompt templates."""
+    from langhook.subscriptions.prompts import prompt_library
+    
+    try:
+        templates = prompt_library.list_templates()
+        return {
+            "templates": templates,
+            "default_template": "default"
+        }
+    except Exception as e:
+        logger.error("Failed to get gate templates", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve gate templates"
+        ) from e
+
+
+@router.post("/gate/templates/reload")
+async def reload_gate_templates():
+    """Reload LLM Gate prompt templates from disk."""
+    from langhook.subscriptions.prompts import prompt_library
+    
+    try:
+        prompt_library.reload_templates()
+        templates = prompt_library.list_templates()
+        return {
+            "message": "Templates reloaded successfully",
+            "templates": templates
+        }
+    except Exception as e:
+        logger.error("Failed to reload gate templates", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reload gate templates"
+        ) from e

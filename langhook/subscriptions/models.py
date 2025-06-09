@@ -20,6 +20,7 @@ class Subscription(Base):
     channel_type = Column(String(50), nullable=True)  # 'webhook' or None for polling-only
     channel_config = Column(Text, nullable=True)  # JSON config for channel or None
     active = Column(Boolean, default=True, nullable=False)
+    gate = Column(JSON, nullable=True)  # LLM gate configuration
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

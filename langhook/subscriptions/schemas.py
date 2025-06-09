@@ -18,11 +18,29 @@ class WebhookChannelConfig(ChannelConfig):
     method: str = "POST"
 
 
+class GateConfig(BaseModel):
+    """LLM gate configuration for subscription filtering."""
+    enabled: bool = Field(default=False, description="Whether the LLM gate is enabled")
+    model: str = Field(default="gpt-4o-mini", description="LLM model to use for evaluation")
+    prompt: str = Field(default="", description="Prompt template for gate evaluation")
+    threshold: float = Field(default=0.8, ge=0.0, le=1.0, description="Confidence threshold for gate evaluation")
+    audit: bool = Field(default=True, description="Whether to audit gate decisions")
+    failover_policy: str = Field(default="fail_open", description="Policy when LLM is unavailable: fail_open or fail_closed")
+
+    @field_validator('failover_policy')
+    @classmethod
+    def validate_failover_policy(cls, v):
+        if v not in ['fail_open', 'fail_closed']:
+            raise ValueError('failover_policy must be: fail_open or fail_closed')
+        return v
+
+
 class SubscriptionCreate(BaseModel):
     """Schema for creating a new subscription."""
     description: str = Field(..., description="Natural language description of what to watch for")
     channel_type: str | None = Field(None, description="Type of notification channel")
     channel_config: dict[str, Any] | None = Field(None, description="Configuration for the notification channel")
+    gate: GateConfig | None = Field(None, description="LLM gate configuration")
 
     @field_validator('channel_type')
     @classmethod
@@ -38,6 +56,7 @@ class SubscriptionUpdate(BaseModel):
     channel_type: str | None = None
     channel_config: dict[str, Any] | None = None
     active: bool | None = None
+    gate: GateConfig | None = None
 
     @field_validator('channel_type')
     @classmethod
@@ -56,6 +75,7 @@ class SubscriptionResponse(BaseModel):
     channel_type: str | None
     channel_config: dict[str, Any] | None
     active: bool
+    gate: dict[str, Any] | None
     created_at: datetime
     updated_at: datetime | None = None
 

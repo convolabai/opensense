@@ -39,6 +39,8 @@ class DatabaseService:
         self.create_event_logs_table()
         # Explicitly ensure subscription event logs table exists
         self.create_subscription_event_logs_table()
+        # Add gate column to subscriptions table if it doesn't exist
+        self.add_gate_column_to_subscriptions()
         logger.info("Subscription database tables created")
 
     def create_schema_registry_table(self) -> None:
@@ -162,9 +164,45 @@ class DatabaseService:
                 exc_info=True
             )
 
+    def add_gate_column_to_subscriptions(self) -> None:
+        """Add gate column to subscriptions table if it doesn't exist."""
+        try:
+            with self.get_session() as session:
+                # Check if column exists
+                check_column_sql = text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name='subscriptions' AND column_name='gate'
+                """)
+                result = session.execute(check_column_sql).fetchone()
+                
+                if not result:
+                    # Add column if it doesn't exist
+                    add_column_sql = text("""
+                        ALTER TABLE subscriptions 
+                        ADD COLUMN gate JSONB
+                    """)
+                    session.execute(add_column_sql)
+                    session.commit()
+                    logger.info("Added gate column to subscriptions table")
+                else:
+                    logger.info("Gate column already exists in subscriptions table")
+        except Exception as e:
+            logger.error(
+                "Failed to add gate column to subscriptions table",
+                error=str(e),
+                exc_info=True
+            )
+
     def get_session(self) -> Session:
         """Get a database session."""
         return self.SessionLocal()
+
+    def _parse_subscription_data(self, subscription: Subscription) -> None:
+        """Parse JSON fields in subscription back to Python objects."""
+        if subscription.channel_config:
+            subscription.channel_config = json.loads(subscription.channel_config)
+        # gate field is already stored as JSON, no need to parse
 
     async def create_subscription(
         self,
@@ -180,6 +218,7 @@ class DatabaseService:
                 pattern=pattern,
                 channel_type=subscription_data.channel_type,
                 channel_config=json.dumps(subscription_data.channel_config) if subscription_data.channel_config else None,
+                gate=subscription_data.gate.model_dump() if subscription_data.gate else None,
                 active=True
             )
 
@@ -188,8 +227,7 @@ class DatabaseService:
             session.refresh(subscription)
 
             # Parse the channel_config JSON back to dict for response if it exists
-            if subscription.channel_config:
-                subscription.channel_config = json.loads(subscription.channel_config)
+            self._parse_subscription_data(subscription)
 
             logger.info(
                 "Subscription created",
@@ -212,8 +250,7 @@ class DatabaseService:
 
             if subscription:
                 # Parse the channel_config JSON if it exists
-                if subscription.channel_config:
-                    subscription.channel_config = json.loads(subscription.channel_config)
+                self._parse_subscription_data(subscription)
 
             return subscription
 
@@ -232,8 +269,7 @@ class DatabaseService:
 
             # Parse channel_config JSON for each subscription if it exists
             for subscription in subscriptions:
-                if subscription.channel_config:
-                    subscription.channel_config = json.loads(subscription.channel_config)
+                self._parse_subscription_data(subscription)
 
             return subscriptions, total
 
@@ -265,6 +301,8 @@ class DatabaseService:
                 subscription.channel_type = update_data.channel_type
             if update_data.channel_config is not None:
                 subscription.channel_config = json.dumps(update_data.channel_config)
+            if update_data.gate is not None:
+                subscription.gate = update_data.gate.model_dump()
             if update_data.active is not None:
                 subscription.active = update_data.active
 
@@ -272,8 +310,7 @@ class DatabaseService:
             session.refresh(subscription)
 
             # Parse the channel_config JSON if it exists
-            if subscription.channel_config:
-                subscription.channel_config = json.loads(subscription.channel_config)
+            self._parse_subscription_data(subscription)
 
             logger.info(
                 "Subscription updated",
@@ -316,8 +353,7 @@ class DatabaseService:
 
             # Parse channel_config JSON for each subscription if it exists
             for subscription in subscriptions:
-                if subscription.channel_config:
-                    subscription.channel_config = json.loads(subscription.channel_config)
+                self._parse_subscription_data(subscription)
 
             return subscriptions
 

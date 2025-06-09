@@ -60,6 +60,10 @@ class SubscriptionSettings(BaseModel):
     # Event logging settings
     event_logging_enabled: bool = Field(default=False, env="EVENT_LOGGING_ENABLED")
     nats_consumer_group: str = Field(default="langhook_consumer", env="NATS_CONSUMER_GROUP")
+    
+    # LLM Gate settings
+    gate_daily_cost_limit_usd: float = Field(default=10.0, env="GATE_DAILY_COST_LIMIT_USD")
+    gate_cost_alert_threshold: float = Field(default=0.8, env="GATE_COST_ALERT_THRESHOLD")
 
 
 class RouterSettings(BaseModel):

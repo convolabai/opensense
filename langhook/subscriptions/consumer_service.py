@@ -13,6 +13,7 @@ from langhook.core.nats import BaseNATSConsumer
 from langhook.subscriptions.config import subscription_settings
 from langhook.subscriptions.database import db_service
 from langhook.subscriptions.models import SubscriptionEventLog, Subscription
+from langhook.subscriptions.gate import llm_gate_service
 
 logger = structlog.get_logger("langhook")
 
@@ -88,7 +89,48 @@ class SubscriptionConsumer(BaseNATSConsumer):
                 )
                 return
 
-            # Send webhook if configured
+            # Evaluate LLM gate if enabled
+            gate_passed = True
+            gate_reason = "Gate not enabled"
+            gate_confidence = 1.0
+            
+            if self.subscription.gate and self.subscription.gate.get("enabled", False):
+                gate_passed, gate_reason, gate_confidence = await llm_gate_service.evaluate_event(
+                    event_data=canonical_data,
+                    gate_config=self.subscription.gate,
+                    subscription_description=self.subscription.description,
+                    subscription_id=self.subscription.id
+                )
+                
+                if not gate_passed:
+                    logger.info(
+                        "Event blocked by LLM gate",
+                        subscription_id=self.subscription.id,
+                        event_id=event_id,
+                        reason=gate_reason,
+                        confidence=gate_confidence
+                    )
+                    # Still log the event but don't send webhook
+                    # Create subscription event log entry (webhook_sent will be False)
+                    subscription_event_log = SubscriptionEventLog(
+                        subscription_id=self.subscription.id,
+                        event_id=event_id,
+                        source=source,
+                        subject=subject,
+                        publisher=publisher,
+                        resource_type=resource_type,
+                        resource_id=resource_id,
+                        action=action,
+                        canonical_data=canonical_data,
+                        raw_payload=raw_payload,
+                        timestamp=timestamp,
+                        webhook_sent=False,
+                        webhook_response_status=None
+                    )
+                    await self._save_subscription_event_log(subscription_event_log)
+                    return
+
+            # Send webhook if configured and gate passed
             webhook_sent = False
             webhook_status = None
             if self.subscription.channel_type == "webhook" and self.subscription.channel_config:
@@ -112,16 +154,17 @@ class SubscriptionConsumer(BaseNATSConsumer):
             )
 
             # Save to database
-            with db_service.get_session() as session:
-                session.add(subscription_event_log)
-                session.commit()
+            await self._save_subscription_event_log(subscription_event_log)
 
             logger.debug(
                 "Subscription event logged successfully",
                 event_id=event_id,
                 subscription_id=self.subscription.id,
                 webhook_sent=webhook_sent,
-                webhook_status=webhook_status
+                webhook_status=webhook_status,
+                gate_passed=gate_passed,
+                gate_reason=gate_reason,
+                gate_confidence=gate_confidence
             )
 
         except SQLAlchemyError as e:
@@ -140,6 +183,22 @@ class SubscriptionConsumer(BaseNATSConsumer):
                 error=str(e),
                 exc_info=True
             )
+
+    async def _save_subscription_event_log(self, subscription_event_log: SubscriptionEventLog) -> None:
+        """Save subscription event log to database."""
+        try:
+            with db_service.get_session() as session:
+                session.add(subscription_event_log)
+                session.commit()
+        except SQLAlchemyError as e:
+            logger.error(
+                "Database error while logging subscription event",
+                event_id=subscription_event_log.event_id,
+                subscription_id=subscription_event_log.subscription_id,
+                error=str(e),
+                exc_info=True
+            )
+            raise
 
     async def _send_webhook(self, canonical_data: Dict[str, Any]) -> tuple[bool, int | None]:
         """
