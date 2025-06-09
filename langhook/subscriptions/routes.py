@@ -14,6 +14,8 @@ from langhook.subscriptions.schemas import (
     EventLogListResponse,
     SubscriptionEventLogListResponse,
     SubscriptionEventLogResponse,
+    IngestMappingListResponse,
+    IngestMappingResponse,
 )
 
 logger = structlog.get_logger("langhook")
@@ -392,4 +394,36 @@ async def delete_subscription(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete subscription"
+        ) from e
+
+
+@router.get("/ingest-mappings", response_model=IngestMappingListResponse)
+async def list_ingest_mappings(
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(50, ge=1, le=100, description="Items per page")
+) -> IngestMappingListResponse:
+    """List ingest mappings with pagination."""
+    try:
+        skip = (page - 1) * size
+        mappings, total = await db_service.get_all_ingestion_mappings(
+            skip=skip,
+            limit=size
+        )
+
+        return IngestMappingListResponse(
+            mappings=[IngestMappingResponse.from_orm(mapping) for mapping in mappings],
+            total=total,
+            page=page,
+            size=size
+        )
+
+    except Exception as e:
+        logger.error(
+            "Failed to list ingest mappings",
+            error=str(e),
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list ingest mappings"
         ) from e

@@ -26,6 +26,7 @@ interface EventLogListResponse {
 }
 
 // Copied from App.tsx (assuming Subscription type is needed for checkSubscriptionMatches)
+
 interface GateConfig {
   enabled: boolean;
   prompt: string;

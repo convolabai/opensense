@@ -5,7 +5,7 @@ from typing import Any
 import jsonata
 import structlog
 
-from langhook.map.fingerprint import generate_fingerprint
+from langhook.map.fingerprint import generate_fingerprint, extract_type_skeleton
 from langhook.subscriptions.database import db_service
 
 logger = structlog.get_logger("langhook")
@@ -188,8 +188,9 @@ class MappingEngine:
             jsonata_expr: JSONata expression that transforms payload to canonical format
         """
         try:
-            # Generate fingerprint
+            # Generate fingerprint and extract structure
             fingerprint = generate_fingerprint(raw_payload)
+            structure = extract_type_skeleton(raw_payload)
 
             # Test the JSONata expression to extract event name
             import jsonata
@@ -206,7 +207,8 @@ class MappingEngine:
                 fingerprint=fingerprint,
                 publisher=source,
                 event_name=event_name,
-                mapping_expr=jsonata_expr
+                mapping_expr=jsonata_expr,
+                structure=structure
             )
 
             logger.info(
