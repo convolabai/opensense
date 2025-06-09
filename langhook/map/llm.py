@@ -81,6 +81,94 @@ class LLMSuggestionService:
             )
             return None
 
+    async def generate_jsonata_mapping_with_event_field(
+        self, 
+        source: str, 
+        raw_payload: dict[str, Any]
+    ) -> tuple[str, str | None] | None:
+        """
+        Generate JSONata mapping expression and event field expression for enhanced fingerprinting.
+
+        Args:
+            source: Source identifier (e.g., 'github', 'stripe')
+            raw_payload: Raw webhook payload to analyze
+
+        Returns:
+            Tuple of (jsonata_expression, event_field_expression) or None if generation fails
+        """
+        if not self.is_available():
+            logger.warning("LLM service not available for JSONata generation")
+            return None
+
+        try:
+            # Import here to avoid errors if langchain is not installed
+            from langchain.schema import HumanMessage, SystemMessage
+            import json
+
+            # Create the prompt
+            system_prompt = self._create_jsonata_system_prompt()
+            user_prompt = self._create_user_prompt(source, raw_payload)
+
+            # Generate JSONata expression
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt)
+            ]
+
+            response = await self.llm.agenerate([messages])
+            response_text = response.generations[0][0].text.strip()
+
+            # Remove any markdown code block formatting if present
+            if response_text.startswith("```"):
+                lines = response_text.split('\n')
+                response_text = '\n'.join(lines[1:-1]) if len(lines) > 2 else response_text
+
+            # Try to parse the response as JSON to extract both jsonata and event_field
+            try:
+                response_data = json.loads(response_text)
+                if isinstance(response_data, dict):
+                    jsonata_expr = response_data.get("jsonata")
+                    event_field_expr = response_data.get("event_field")
+                    
+                    if jsonata_expr:
+                        # Convert the jsonata dict back to string for validation
+                        jsonata_str = json.dumps(jsonata_expr)
+                        
+                        # Validate the JSONata expression by testing it
+                        if not self._validate_jsonata_expression(jsonata_str, raw_payload, source):
+                            return None
+
+                        logger.info(
+                            "LLM JSONata generation with event field completed",
+                            source=source,
+                            expression_length=len(jsonata_str),
+                            event_field_expr=event_field_expr
+                        )
+
+                        return (jsonata_str, event_field_expr)
+                    else:
+                        logger.error("No jsonata field in LLM response", response=response_text)
+                        return None
+                else:
+                    logger.error("LLM response is not a JSON object", response=response_text)
+                    return None
+            except json.JSONDecodeError as e:
+                logger.error(
+                    "Failed to parse LLM response as JSON",
+                    response=response_text,
+                    error=str(e)
+                )
+                return None
+
+        except Exception as e:
+            logger.error(
+                "Failed to generate JSONata mapping with event field",
+                source=source,
+                error=str(e),
+                exc_info=True
+            )
+            return None
+
     async def generate_jsonata_mapping(self, source: str, raw_payload: dict[str, Any]) -> str | None:
         """
         Generate JSONata mapping expression for transforming raw payload to canonical format.
@@ -172,8 +260,14 @@ You are **LangHook Webhook → JSONata Mapper v2**.
 4. If multiple plausible timestamps exist, use the most specific one  
    (e.g., `pull_request.created_at` over `repository.pushed_at`).
 5. Use **object constructor** syntax only (no transform operators).
-6. Return **nothing except** the two required fields in the exact format  
+6. Return **nothing except** the three required fields in the exact format  
    described in OUTPUT FORMAT.
+
+──────────────────────────────  Event Field Rules  ───────────────────────────
+1. Identify the field that indicates the event type or action.
+2. This is typically named "action", "event", "type", "state", etc.
+3. The event_field expression should be a simple JSONata path (e.g., "action", "event.type").
+4. This field's value will be used to distinguish events with the same structure but different actions.
 
 ──────────────────────────────  Fingerprint Rules  ───────────────────────────
 A. Build a **type skeleton**:
@@ -186,7 +280,7 @@ D. Compute SHA-256 of that string; output lower-case hex (64 chars).
 ───────────────────────────────  OUTPUT FORMAT  ──────────────────────────────
 Return ONE line containing a JSON object **without code fences**:
 
-{"fingerprint":"<64-hex>","jsonata":{"publisher":...}}
+{"fingerprint":"<64-hex>","jsonata":{"publisher":...},"event_field":"<jsonata-path>"}
 
 Nothing else – no comments, newlines, or markdown.
 
@@ -202,7 +296,7 @@ Input payload (abridged):
 source_name: "github"
 
 Expected output **exactly one line**:
-{"fingerprint":"3b1eab4cf804c4e1c832b61f6b8ae9f24f5db59b6d5795adbb7d75de5ce3e722","jsonata":{"publisher":"github","resource":{"type":"pull_request","id":pull_request.id},"action":"created","timestamp":pull_request.created_at,"raw":$}}
+{"fingerprint":"3b1eab4cf804c4e1c832b61f6b8ae9f24f5db59b6d5795adbb7d75de5ce3e722","jsonata":{"publisher":"github","resource":{"type":"pull_request","id":pull_request.id},"action":"created","timestamp":pull_request.created_at,"raw":$},"event_field":"action"}
 
 ### Example 2 – GitHub PR review approved
 Input payload (abridged):
@@ -215,7 +309,7 @@ Input payload (abridged):
 source_name: "github"
 
 Output:
-{"fingerprint":"95cfb8b3840d9c8864c7ca7b14b12df9d450e33bb8a42894e54445e2e49d0c9e","jsonata":{"publisher":"github","resource":{"type":"pull_request","id":pull_request.id},"action":"updated","timestamp":pull_request.updated_at,"raw":$}}
+{"fingerprint":"95cfb8b3840d9c8864c7ca7b14b12df9d450e33bb8a42894e54445e2e49d0c9e","jsonata":{"publisher":"github","resource":{"type":"pull_request","id":pull_request.id},"action":"updated","timestamp":pull_request.updated_at,"raw":$},"event_field":"action"}
 
 ( The fingerprints above assume the exact skeleton algorithm; they are shown for illustration. )
 """

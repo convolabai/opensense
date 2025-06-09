@@ -13,8 +13,8 @@ async def test_mapping_engine_fingerprint_lookup():
     from langhook.subscriptions.database import db_service
     
     # Mock the database service
-    original_get_ingestion_mapping = db_service.get_ingestion_mapping
-    db_service.get_ingestion_mapping = AsyncMock(return_value=None)
+    original_get_ingestion_mappings_by_structure = db_service.get_ingestion_mappings_by_structure
+    db_service.get_ingestion_mappings_by_structure = AsyncMock(return_value=[])
     
     try:
         engine = MappingEngine()
@@ -30,11 +30,11 @@ async def test_mapping_engine_fingerprint_lookup():
         
         # Should have attempted database lookup
         fingerprint = generate_fingerprint(payload)
-        db_service.get_ingestion_mapping.assert_called_once_with(fingerprint)
+        db_service.get_ingestion_mappings_by_structure.assert_called_once_with(fingerprint)
         
     finally:
         # Restore original method
-        db_service.get_ingestion_mapping = original_get_ingestion_mapping
+        db_service.get_ingestion_mappings_by_structure = original_get_ingestion_mappings_by_structure
 
 
 @pytest.mark.asyncio 

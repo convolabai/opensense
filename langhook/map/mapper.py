@@ -22,7 +22,7 @@ class MappingEngine:
         """
         Apply JSONata mapping to transform raw payload to canonical format.
 
-        First checks fingerprint-based mappings in database, then falls back to file-based mappings.
+        Uses enhanced fingerprinting to find mappings that match both structure and event field.
 
         Args:
             source: Source identifier (e.g., 'github', 'stripe')
@@ -31,39 +31,78 @@ class MappingEngine:
         Returns:
             Canonical event dict or None if mapping fails
         """
-        # Generate fingerprint for the payload
-        fingerprint = generate_fingerprint(raw_payload)
+        # Generate basic structure fingerprint for the payload
+        structure_fingerprint = generate_fingerprint(raw_payload)
 
         logger.debug(
-            "Generated payload fingerprint",
+            "Generated payload structure fingerprint",
             source=source,
-            fingerprint=fingerprint
+            fingerprint=structure_fingerprint
         )
 
-        # First, try to get mapping from database using fingerprint
+        # First, try to find mappings with matching structure
         try:
-            ingestion_mapping = await db_service.get_ingestion_mapping(fingerprint)
-            if ingestion_mapping:
+            matching_mappings = await db_service.get_ingestion_mappings_by_structure(structure_fingerprint)
+            
+            if matching_mappings:
                 logger.debug(
-                    "Found fingerprint-based mapping",
+                    "Found mappings with matching structure",
                     source=source,
-                    fingerprint=fingerprint,
-                    publisher=ingestion_mapping.publisher
+                    count=len(matching_mappings)
                 )
-
-                return await self._apply_jsonata_mapping(ingestion_mapping.mapping_expr, raw_payload, source)
+                
+                # Try to find a mapping where the event field matches
+                from langhook.map.fingerprint import generate_enhanced_fingerprint
+                
+                for mapping in matching_mappings:
+                    if mapping.event_field_expr:
+                        # Generate enhanced fingerprint using this mapping's event field expression
+                        enhanced_fingerprint = generate_enhanced_fingerprint(
+                            raw_payload, 
+                            mapping.event_field_expr
+                        )
+                        if enhanced_fingerprint == mapping.fingerprint:
+                            logger.debug(
+                                "Found enhanced fingerprint match",
+                                source=source,
+                                fingerprint=enhanced_fingerprint,
+                                event_field_expr=mapping.event_field_expr
+                            )
+                            return await self._apply_jsonata_mapping(mapping.mapping_expr, raw_payload, source)
+                    else:
+                        # No event field, check if basic fingerprint matches
+                        if structure_fingerprint == mapping.fingerprint:
+                            logger.debug(
+                                "Found basic fingerprint match",
+                                source=source,
+                                fingerprint=structure_fingerprint
+                            )
+                            return await self._apply_jsonata_mapping(mapping.mapping_expr, raw_payload, source)
+                
+                logger.debug(
+                    "No exact fingerprint match found among structure matches",
+                    source=source
+                )
+            else:
+                logger.debug(
+                    "No mappings found with matching structure",
+                    source=source,
+                    structure_fingerprint=structure_fingerprint
+                )
+                
         except Exception as e:
             logger.warning(
                 "Failed to lookup fingerprint mapping",
                 source=source,
-                fingerprint=fingerprint,
+                fingerprint=structure_fingerprint,
                 error=str(e)
             )
+        
         # No fingerprint match found, return None to trigger LLM mapping generation
         logger.debug(
             "No fingerprint mapping found",
             source=source,
-            fingerprint=fingerprint
+            fingerprint=structure_fingerprint
         )
         return None
 
@@ -172,6 +211,65 @@ class MappingEngine:
                 exc_info=True
             )
             return None
+
+    async def store_jsonata_mapping_with_event_field(
+        self,
+        source: str,
+        raw_payload: dict[str, Any],
+        jsonata_expr: str,
+        event_field_expr: str | None = None
+    ) -> None:
+        """
+        Store a JSONata mapping expression with event field expression in the database.
+
+        Args:
+            source: Source identifier
+            raw_payload: Raw webhook payload
+            jsonata_expr: JSONata expression that transforms payload to canonical format
+            event_field_expr: Optional JSONata expression to extract event/action field
+        """
+        try:
+            from langhook.map.fingerprint import generate_enhanced_fingerprint, extract_type_skeleton
+            
+            # Generate enhanced fingerprint using event field expression
+            fingerprint = generate_enhanced_fingerprint(raw_payload, event_field_expr)
+            structure = extract_type_skeleton(raw_payload)
+
+            # Test the JSONata expression to extract event name
+            import jsonata
+            canonical_result = jsonata.transform(jsonata_expr, raw_payload)
+
+            if canonical_result and isinstance(canonical_result, dict):
+                resource = canonical_result.get("resource", {})
+                event_name = f"{resource.get('type', 'unknown')} {canonical_result.get('action', 'unknown')}"
+            else:
+                event_name = "unknown unknown"
+
+            # Store in database with event field expression
+            await db_service.create_ingestion_mapping(
+                fingerprint=fingerprint,
+                publisher=source,
+                event_name=event_name,
+                mapping_expr=jsonata_expr,
+                structure=structure,
+                event_field_expr=event_field_expr
+            )
+
+            logger.info(
+                "Stored new JSONata mapping with event field",
+                source=source,
+                fingerprint=fingerprint,
+                event_name=event_name,
+                has_event_field_expr=event_field_expr is not None
+            )
+
+        except Exception as e:
+            logger.error(
+                "Failed to store JSONata mapping with event field",
+                source=source,
+                error=str(e),
+                exc_info=True
+            )
 
     async def store_jsonata_mapping(
         self,

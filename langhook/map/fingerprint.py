@@ -4,6 +4,10 @@ import hashlib
 import json
 from typing import Any
 
+import structlog
+
+logger = structlog.get_logger("langhook")
+
 
 def extract_type_skeleton(payload: dict[str, Any]) -> dict[str, Any]:
     """
@@ -83,5 +87,57 @@ def generate_fingerprint(payload: dict[str, Any]) -> str:
     skeleton = extract_type_skeleton(payload)
     canonical_string = create_canonical_string(skeleton)
 
+    fingerprint = hashlib.sha256(canonical_string.encode('utf-8')).hexdigest()
+    return fingerprint
+
+
+def generate_enhanced_fingerprint(
+    payload: dict[str, Any], 
+    event_field_expr: str | None = None
+) -> str:
+    """
+    Generate an enhanced SHA-256 fingerprint that includes both structure and event field value.
+
+    Args:
+        payload: Raw webhook payload
+        event_field_expr: JSONata expression to extract event/action field (e.g., "action")
+
+    Returns:
+        64-character hexadecimal SHA-256 fingerprint
+    """
+    # Start with the base structure fingerprint
+    skeleton = extract_type_skeleton(payload)
+    canonical_string = create_canonical_string(skeleton)
+    
+    # If event field expression is provided, extract the event value and include it
+    if event_field_expr:
+        try:
+            import jsonata
+            event_value = jsonata.transform(event_field_expr, payload)
+            
+            # Convert event value to string and append to canonical string
+            if event_value is not None:
+                event_str = str(event_value)
+                # Use a separator to distinguish between structure and event value
+                canonical_string = f"{canonical_string}||event:{event_str}"
+                
+                logger.debug(
+                    "Enhanced fingerprint includes event field",
+                    event_field_expr=event_field_expr,
+                    event_value=event_value
+                )
+            else:
+                logger.warning(
+                    "Event field expression returned None",
+                    event_field_expr=event_field_expr
+                )
+        except Exception as e:
+            logger.warning(
+                "Failed to extract event field for enhanced fingerprint",
+                event_field_expr=event_field_expr,
+                error=str(e)
+            )
+            # Fall back to structure-only fingerprint
+    
     fingerprint = hashlib.sha256(canonical_string.encode('utf-8')).hexdigest()
     return fingerprint
