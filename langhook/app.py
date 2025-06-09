@@ -34,6 +34,7 @@ from langhook.map.metrics import metrics
 from langhook.map.service import mapping_service
 from langhook.subscriptions.routes import router as subscriptions_router
 from langhook.subscriptions.schema_registry import schema_registry_service
+from langhook.subscriptions.event_logging import event_logging_service
 
 logger = structlog.get_logger("langhook")
 
@@ -79,6 +80,16 @@ async def lifespan(app):
     # Start mapping service (Kafka consumer for map) in background
     mapping_task = asyncio.create_task(mapping_service.run())
 
+    # Start event logging service in background (if enabled)
+    event_logging_task = None
+    try:
+        await event_logging_service.start()
+        if event_logging_service._running:
+            event_logging_task = asyncio.create_task(event_logging_service.run())
+            logger.info("Event logging service started")
+    except Exception as e:
+        logger.warning("Failed to start event logging service", error=str(e))
+
     # Initialize subscription database tables with retry logic
     import time
     max_retries = 10
@@ -111,6 +122,14 @@ async def lifespan(app):
         await asyncio.wait_for(mapping_task, timeout=5.0)
     except (TimeoutError, asyncio.CancelledError):
         logger.info("Mapping service stopped")
+
+    # Cancel event logging service if running
+    if event_logging_task:
+        event_logging_task.cancel()
+        try:
+            await asyncio.wait_for(event_logging_task, timeout=5.0)
+        except (TimeoutError, asyncio.CancelledError):
+            logger.info("Event logging service stopped")
 
     # Stop NATS producer
     await nats_producer.stop()

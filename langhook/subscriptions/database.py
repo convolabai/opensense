@@ -36,6 +36,9 @@ class DatabaseService:
         # Explicitly ensure event schema registry table exists
         self.create_schema_registry_table()
         
+        # Explicitly ensure event logs table exists
+        self.create_event_logs_table()
+        
         logger.info("Subscription database tables created")
 
     def create_schema_registry_table(self) -> None:
@@ -57,6 +60,53 @@ class DatabaseService:
         except Exception as e:
             logger.error(
                 "Failed to create event schema registry table",
+                error=str(e),
+                exc_info=True
+            )
+
+    def create_event_logs_table(self) -> None:
+        """Create the event logs table if it doesn't exist."""
+        try:
+            with self.get_session() as session:
+                # Create table with explicit SQL to ensure it exists
+                create_table_sql = text("""
+                    CREATE TABLE IF NOT EXISTS event_logs (
+                        id SERIAL PRIMARY KEY,
+                        event_id VARCHAR(255) NOT NULL,
+                        source VARCHAR(255) NOT NULL,
+                        subject VARCHAR(255) NOT NULL,
+                        publisher VARCHAR(255) NOT NULL,
+                        resource_type VARCHAR(255) NOT NULL,
+                        resource_id VARCHAR(255) NOT NULL,
+                        action VARCHAR(255) NOT NULL,
+                        canonical_data JSONB NOT NULL,
+                        raw_payload JSONB,
+                        timestamp TIMESTAMPTZ NOT NULL,
+                        logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                session.execute(create_table_sql)
+                
+                # Create indexes for better query performance
+                index_sqls = [
+                    "CREATE INDEX IF NOT EXISTS idx_event_logs_event_id ON event_logs(event_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_event_logs_source ON event_logs(source)",
+                    "CREATE INDEX IF NOT EXISTS idx_event_logs_publisher ON event_logs(publisher)",
+                    "CREATE INDEX IF NOT EXISTS idx_event_logs_resource_type ON event_logs(resource_type)",
+                    "CREATE INDEX IF NOT EXISTS idx_event_logs_resource_id ON event_logs(resource_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_event_logs_action ON event_logs(action)",
+                    "CREATE INDEX IF NOT EXISTS idx_event_logs_timestamp ON event_logs(timestamp)",
+                    "CREATE INDEX IF NOT EXISTS idx_event_logs_logged_at ON event_logs(logged_at)",
+                ]
+                
+                for index_sql in index_sqls:
+                    session.execute(text(index_sql))
+                
+                session.commit()
+                logger.info("Event logs table ensured")
+        except Exception as e:
+            logger.error(
+                "Failed to create event logs table",
                 error=str(e),
                 exc_info=True
             )

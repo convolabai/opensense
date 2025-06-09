@@ -86,6 +86,7 @@ services:
       - MAX_BODY_BYTES=1048576
       - RATE_LIMIT=200/minute
       - MAPPINGS_DIR=/app/mappings
+      - EVENT_LOGGING_ENABLED=false  # Set to true to enable event logging to PostgreSQL
     env_file:
       - .env
     depends_on:

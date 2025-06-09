@@ -22,6 +22,12 @@ class SubscriptionSettings(BaseModel):
     # Legacy OpenAI support (deprecated - use LLM_* settings)
     openai_api_key: str | None = Field(default=None, env="OPENAI_API_KEY")
 
+    # Event logging settings
+    event_logging_enabled: bool = Field(default=False, env="EVENT_LOGGING_ENABLED")
+    nats_url: str = Field(default="nats://localhost:4222", env="NATS_URL")
+    nats_stream_events: str = Field(default="events", env="NATS_STREAM_EVENTS")
+    nats_consumer_group: str = Field(default="langhook_consumer", env="NATS_CONSUMER_GROUP")
+
     model_config = {
         "env_file": ".env.subscriptions",
         "env_file_encoding": "utf-8"
@@ -52,6 +58,10 @@ def load_subscription_settings() -> SubscriptionSettings:
         'LLM_TEMPERATURE': float(os.getenv('LLM_TEMPERATURE', '0.1')),
         'LLM_MAX_TOKENS': int(os.getenv('LLM_MAX_TOKENS', '500')),
         'OPENAI_API_KEY': os.getenv('OPENAI_API_KEY'),
+        'EVENT_LOGGING_ENABLED': os.getenv('EVENT_LOGGING_ENABLED', 'false').lower() in ('true', '1', 'yes', 'on'),
+        'NATS_URL': os.getenv('NATS_URL', 'nats://localhost:4222'),
+        'NATS_STREAM_EVENTS': os.getenv('NATS_STREAM_EVENTS', 'events'),
+        'NATS_CONSUMER_GROUP': os.getenv('NATS_CONSUMER_GROUP', 'langhook_consumer'),
     })
 
     return SubscriptionSettings(
@@ -63,6 +73,10 @@ def load_subscription_settings() -> SubscriptionSettings:
         llm_temperature=env_vars['LLM_TEMPERATURE'],
         llm_max_tokens=env_vars['LLM_MAX_TOKENS'],
         openai_api_key=env_vars.get('OPENAI_API_KEY'),
+        event_logging_enabled=env_vars['EVENT_LOGGING_ENABLED'],
+        nats_url=env_vars['NATS_URL'],
+        nats_stream_events=env_vars['NATS_STREAM_EVENTS'],
+        nats_consumer_group=env_vars['NATS_CONSUMER_GROUP'],
     )
 
 
