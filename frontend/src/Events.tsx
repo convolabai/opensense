@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 import { Send, Zap, ListChecks, Bell, Eye, RefreshCw, X } from 'lucide-react';
+import { samplePayloads, payloadCategories } from './sampleWebhookPayloads';
 
 interface EventLog {
   id: number;
@@ -50,44 +51,16 @@ interface Subscription {
   updated_at?: string;
 }
 
-const samplePayloads = {
-  github: {
-    name: "GitHub PR Opened",
-    payload: {
-      action: "opened",
-      pull_request: { number: 1374, title: "Add new feature", state: "open", user: { login: "alice" } },
-      repository: { name: "test-repo", id: 12345 }
-    }
-  },
-  stripe: {
-    name: "Stripe Payment Succeeded",
-    payload: {
-      type: "payment_intent.succeeded",
-      data: { object: { id: "pi_3OrFAb47K1Z2xQ8C0123", amount: 2000, currency: "usd", status: "succeeded" } }
-    }
-  },
-  slack: {
-    name: "Slack File Shared",
-    payload: {
-      type: "file_shared",
-      file: { id: "F06A2G45T", name: "design.png", channels: ["C123456"] },
-      user_id: "U123456"
-    }
-  }
-};
-
 interface EventsProps {
   subscriptions: Subscription[]; // Passed from App.tsx
 }
 
 const Events: React.FC<EventsProps> = ({ subscriptions }) => {
-  const [selectedSource, setSelectedSource] = useState<string>('github');
+  const [selectedPayload, setSelectedPayload] = useState<string>('github_pr_opened');
   const [inputPayload, setInputPayload] = useState<string>('');
-  const [outputEvent, setOutputEvent] = useState<CanonicalEvent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
-  const [matchedSubscriptions, setMatchedSubscriptions] = useState<Subscription[]>([]);
   
   // Event logs state
   const [eventLogs, setEventLogs] = useState<EventLog[]>([]);
@@ -102,11 +75,11 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
 
 
   useEffect(() => {
-    const sample = samplePayloads[selectedSource as keyof typeof samplePayloads];
+    const sample = samplePayloads[selectedPayload as keyof typeof samplePayloads];
     if (sample) {
       setInputPayload(JSON.stringify(sample.payload, null, 2));
     }
-  }, [selectedSource]);
+  }, [selectedPayload]);
 
   useEffect(() => {
     loadEventLogs();
@@ -130,84 +103,23 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
     }
   };
 
-  const checkSubscriptionMatches = (event: CanonicalEvent) => {
-    const eventPattern = `langhook.events.${event.publisher}.${event.resource.type}.${event.resource.id}.${event.action}`;
-    const matches = subscriptions.filter(sub => {
-      if (!sub.active) return false;
-      const regexPattern = sub.pattern.replace(/\*/g, '[^.]+').replace(/>/g, '.*');
-      try {
-        const regex = new RegExp(`^${regexPattern}$`);
-        return regex.test(eventPattern);
-      } catch { return false; }
-    });
-    setMatchedSubscriptions(matches);
-  };
-
-  const createMockCanonicalEvent = (source: string, payload: any): CanonicalEvent => {
-    const timestamp = new Date().toISOString();
-    switch (source) {
-      case 'github':
-        return {
-          publisher: 'github',
-          resource: { type: 'pull_request', id: payload.pull_request?.number || 1 },
-          action: payload.action === 'opened' ? 'create' : 'update',
-          timestamp,
-          summary: `PR ${payload.pull_request?.number} ${payload.action} by ${payload.pull_request?.user?.login || 'user'}`,
-          raw: payload
-        };
-      case 'stripe':
-        return {
-          publisher: 'stripe',
-          resource: { type: 'payment_intent', id: payload.data?.object?.id || 'pi_unknown' },
-          action: 'create',
-          timestamp,
-          summary: `PaymentIntent ${payload.data?.object?.id} succeeded`,
-          raw: payload
-        };
-      case 'slack':
-        // Handle different Slack event types
-        const eventType = payload.event?.type;
-        if (eventType === 'message') {
-          return {
-            publisher: 'slack',
-            resource: { type: 'message', id: payload.event?.channel || 'C_unknown' },
-            action: 'created',
-            timestamp,
-            summary: `Message posted to channel ${payload.event?.channel || 'unknown'}`,
-            raw: payload
-          };
-        } else {
-          // Default to file sharing event (original behavior)
-          return {
-            publisher: 'slack',
-            resource: { type: 'file', id: payload.file?.id || 'F_unknown' },
-            action: 'read',
-            timestamp,
-            summary: `File ${payload.file?.name} shared to channel`,
-            raw: payload
-          };
-        }
-      default:
-        return { publisher: source, resource: { type: 'unknown', id: 'unknown' }, action: 'create', timestamp, raw: payload };
-    }
-  };
-
   const sendWebhook = async () => {
     setIsLoading(true);
     setError('');
     setSuccess('');
-    setOutputEvent(null);
-    setMatchedSubscriptions([]);
 
     try {
       let payload;
       try { payload = JSON.parse(inputPayload); }
       catch (e) { throw new Error('Invalid JSON payload'); }
 
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (selectedSource === 'github') { headers['X-GitHub-Event'] = 'pull_request'; }
+      const selectedSample = samplePayloads[selectedPayload as keyof typeof samplePayloads];
+      const source = selectedSample?.source || 'github';
 
-      const response = await fetch(`/ingest/${selectedSource}`, { method: 'POST', headers, body: JSON.stringify(payload) });
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (source === 'github') { headers['X-GitHub-Event'] = 'pull_request'; }
+
+      const response = await fetch(`/ingest/${source}`, { method: 'POST', headers, body: JSON.stringify(payload) });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -216,40 +128,11 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
 
       const result = await response.json();
       setSuccess(`Event accepted with ID: ${result.request_id}`);
-
-      const canonicalEvent = createMockCanonicalEvent(selectedSource, payload);
-      setTimeout(() => { // Simulate processing delay
-        setOutputEvent(canonicalEvent);
-        checkSubscriptionMatches(canonicalEvent);
-        // Refresh event logs to show the new event
-        loadEventLogs();
-      }, 1500);
+      // Refresh event logs to show the new event
+      loadEventLogs();
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const generateMapping = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const payload = JSON.parse(inputPayload);
-      const response = await fetch('/map/suggest-map', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: selectedSource, payload: payload })
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to generate mapping');
-      }
-      const result = await response.json();
-      setSuccess(`Generated JSONata mapping: ${result.jsonata}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate mapping');
     } finally {
       setIsLoading(false);
     }
@@ -311,22 +194,20 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div>
+            {/* Side-by-side Raw and Canonical Payloads */}
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-full md:w-1/2">
+                <h3 className="text-sm font-medium text-gray-500 mb-2">Raw Payload</h3>
+                <div className="bg-gray-800 text-gray-200 p-4 rounded-md font-mono text-sm overflow-x-auto max-h-60 md:max-h-[50vh]">
+                  <pre>{JSON.stringify(selectedEventLog.raw_payload ?? {}, null, 2)}</pre>
+                </div>
+              </div>
+              <div className="w-full md:w-1/2">
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Canonical Data</h3>
-                <div className="bg-gray-800 text-gray-200 p-4 rounded-md font-mono text-sm overflow-x-auto">
+                <div className="bg-gray-800 text-gray-200 p-4 rounded-md font-mono text-sm overflow-x-auto max-h-60 md:max-h-[50vh]">
                   <pre>{JSON.stringify(selectedEventLog.canonical_data, null, 2)}</pre>
                 </div>
               </div>
-
-              {selectedEventLog.raw_payload && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Raw Payload</h3>
-                  <div className="bg-gray-800 text-gray-200 p-4 rounded-md font-mono text-sm overflow-x-auto">
-                    <pre>{JSON.stringify(selectedEventLog.raw_payload, null, 2)}</pre>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -343,22 +224,28 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
           Create New Event
         </h2>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 gap-8">
           {/* Input Section */}
           <div>
             <h3 className="text-lg font-medium text-gray-800 mb-4">Webhook Input</h3>
             
             <div className="mb-4">
-              <label htmlFor="source" className="block text-sm font-medium text-gray-500 mb-2">Source:</label>
+              <label htmlFor="webhook-type" className="block text-sm font-medium text-gray-500 mb-2">Webhook Event Type:</label>
               <select
-                id="source"
-                value={selectedSource}
-                onChange={(e) => setSelectedSource(e.target.value)}
+                id="webhook-type"
+                value={selectedPayload}
+                onChange={(e) => setSelectedPayload(e.target.value)}
                 className="w-full bg-gray-50 border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
               >
-                <option value="github">GitHub</option>
-                <option value="stripe">Stripe</option>
-                <option value="slack">Slack</option>
+                {Object.entries(payloadCategories).map(([category, payloadKeys]) => (
+                  <optgroup key={category} label={category}>
+                    {payloadKeys.map((key) => (
+                      <option key={key} value={key}>
+                        {samplePayloads[key]?.name.replace(`${category} - `, '') || key}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
 
@@ -382,22 +269,6 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
                   </span>
                 ) : ( <> <Send size={16} /> Send Webhook </> )}
               </button>
-
-              <button
-                className="flex-1 py-2 px-4 rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 bg-white hover:bg-gray-50 active:bg-gray-100 active:scale-95 text-gray-700 border border-gray-300 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                onClick={generateMapping}
-                disabled={isLoading || !inputPayload.trim()}
-              >
-                <Zap size={16} /> Suggest Mapping
-              </button>
-            </div>
-          </div>
-
-          {/* Output Section */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-800 mb-4">Processed Event</h3>
-            <div className="bg-gray-800 text-gray-200 p-4 rounded-md font-mono text-sm min-h-[300px] whitespace-pre-wrap overflow-x-auto">
-              {outputEvent ? JSON.stringify(outputEvent, null, 2) : <span className="text-gray-500">Send a webhook to see the canonical event output...</span>}
             </div>
           </div>
         </div>
@@ -517,44 +388,6 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
         )}
       </div>
 
-      {/* Matched Subscriptions for the latest event */}
-      {matchedSubscriptions.length > 0 && (
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 sm:p-8">
-          <h2 className="flex items-center gap-3 text-xl font-semibold mb-6 text-gray-800 tracking-tight">
-            <Bell size={24} className="text-blue-600" />
-            Notified Subscribers (for last event)
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pattern
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {matchedSubscriptions.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {sub.description}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">
-                      <code className="bg-gray-100 px-2 py-1 rounded text-xs">
-                        {sub.pattern}
-                      </code>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-      
       {/* Event Detail Modal */}
       {showEventModal && <EventDetailModal />}
     </div>

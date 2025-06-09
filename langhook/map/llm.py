@@ -89,6 +89,9 @@ class LLMSuggestionService:
                 )
                 return None
 
+            # Set publisher from source parameter
+            canonical_data["publisher"] = source
+
             # Validate the canonical format
             if not self._validate_canonical_format(canonical_data, source):
                 return None
@@ -119,7 +122,6 @@ class LLMSuggestionService:
 Your task is to analyze webhook JSON payloads and transform them directly into a canonical format.
 
 The canonical format is a JSON object with these required fields:
-- publisher: upstream slug/identifier (string, lowercase snake_case)
 - resource: object with "type" (singular noun) and "id" (atomic identifier) fields  
 - action: CRUD verb (string, must be one of: "created", "read", "updated", "deleted")
 
@@ -129,11 +131,9 @@ Guidelines:
 3. Map webhook actions to CRUD verbs: opened/created→created, closed/deleted→deleted, edited/updated→updated, viewed→read
 4. Extract resource ID (atomic identifier)
 5. Return ONLY a valid JSON object with the canonical fields, no explanations or code blocks
-6. Use the source name as the publisher value (lowercase, snake_case)
 
 Example canonical format:
 {
-  "publisher": "github",
   "resource": {"type": "pull_request", "id": 123},
   "action": "created"
 }"""
