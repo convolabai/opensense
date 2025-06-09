@@ -32,6 +32,7 @@ from langhook.map.config import settings as map_settings
 from langhook.map.metrics import metrics
 from langhook.map.service import mapping_service
 from langhook.subscriptions.routes import router as subscriptions_router
+from langhook.subscriptions.schema_routes import router as schema_router
 from langhook.subscriptions.schema_registry import schema_registry_service
 from langhook.subscriptions.event_logging import event_logging_service
 
@@ -171,6 +172,9 @@ app.add_exception_handler(Exception, global_exception_handler)
 # Include subscription API routes
 app.include_router(subscriptions_router)
 
+# Include schema API routes
+app.include_router(schema_router)
+
 # Frontend demo routes
 frontend_path = Path(__file__).parent.parent / "frontend" / "build"
 if frontend_path.exists():
@@ -226,19 +230,6 @@ class HealthResponse(BaseModel):
     services: dict[str, str]
     version: str
 
-
-@app.get("/schema")
-async def get_event_schema() -> dict[str, Any]:
-    """
-    Get the event schema registry with all known publishers, resource types, and actions.
-    
-    Returns:
-        Dictionary containing:
-        - publishers: List of all known publishers
-        - resource_types: Dictionary mapping publishers to their resource types  
-        - actions: List of all known actions
-    """
-    return await schema_registry_service.get_schema_summary()
 
 
 @app.get("/event-logs", response_model=dict)

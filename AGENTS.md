@@ -46,7 +46,7 @@ We want an engineer, product manager, or support rep to describe *what they care
 | Term | Description |
 |------|------------|
 | **Canonical Event** | CloudEvents envelope + standardized structure `{publisher, resource, action, timestamp, payload}` where `resource` contains `{type: string, id: string|number}`. |
-| **Schema Registry** | Dynamic database that automatically collects and tracks all unique combinations of `publisher`, `resource.type`, and `action` from processed canonical events, accessible via `/schema` API. |
+| **Schema Registry** | Dynamic database that automatically collects and tracks all unique combinations of `publisher`, `resource.type`, and `action` from processed canonical events, accessible via `/schema` API with management capabilities (deletion at publisher, resource type, and action levels). |
 | **Subscription** | Natural-language sentence + LLM-generated **NATS filter pattern** + delivery channels. |
 | **Channel** | Output target (Slack, e-mail, webhook, etc.). |
 | **Mapping** | JSONata or LLM-generated rule that converts a raw payload into a canonical event. |
@@ -108,11 +108,19 @@ LangHook is **domain-agnostic**, **LLM-assisted**, and **fully open**.
 | Component | Purpose |
 |-----------|---------|
 | **Auto-Discovery** | Canonical events automatically register their `publisher`, `resource.type`, and `action` combinations into PostgreSQL |
-| **Schema API** | `/schema` endpoint exposes structured JSON of all collected event schemas for LLM consumption |
+| **Schema API** | `/schema/` endpoint exposes structured JSON of all collected event schemas for LLM consumption |
+| **Schema Management** | DELETE endpoints at `/schema/publishers/{publisher}`, `/schema/publishers/{publisher}/resource-types/{resource_type}`, and `/schema/publishers/{publisher}/resource-types/{resource_type}/actions/{action}` for selective schema cleanup |
 | **LLM Grounding** | Natural language subscription generation uses real schema data instead of hardcoded examples |
 | **Error Prevention** | Invalid subscription requests return helpful errors directing users to check `/schema` endpoint |
 
 **Flow Integration**: Schema registration happens after successful canonical event creation but before metrics recording, ensuring data consistency without blocking event processing.
+
+**Management Operations**:
+- Delete entire publishers and all associated schemas
+- Delete specific resource types under a publisher  
+- Delete individual actions for publisher/resource type combinations
+- All operations include confirmation dialogs in frontend interface
+- Automatic schema refresh after successful deletions
 
 ---
 
