@@ -1,15 +1,20 @@
 """Prometheus metrics for the mapping service."""
 
+import asyncio
 import time
 from typing import Any
 
+import structlog
 from prometheus_client import (
     CollectorRegistry,
     Counter,
     Gauge,
     Histogram,
     generate_latest,
+    push_to_gateway,
 )
+
+logger = structlog.get_logger("langhook.metrics")
 
 # Create a custom registry for the mapping service
 mapping_registry = CollectorRegistry()
@@ -62,6 +67,72 @@ class MetricsCollector:
 
     def __init__(self):
         self.start_time = time.time()
+        self._push_task: asyncio.Task | None = None
+        self._push_enabled = False
+        self._pushgateway_url: str | None = None
+        self._job_name = "langhook-map"
+        self._push_interval = 30
+
+    def configure_push_gateway(self, pushgateway_url: str | None, job_name: str = "langhook-map", push_interval: int = 30) -> None:
+        """Configure Prometheus push gateway settings."""
+        self._pushgateway_url = pushgateway_url
+        self._job_name = job_name
+        self._push_interval = push_interval
+        self._push_enabled = pushgateway_url is not None
+
+        if self._push_enabled:
+            logger.info(
+                "Prometheus push gateway configured",
+                url=self._pushgateway_url,
+                job_name=self._job_name,
+                interval=self._push_interval
+            )
+
+    async def start_push_task(self) -> None:
+        """Start the background task to push metrics to gateway."""
+        if not self._push_enabled or self._push_task is not None:
+            return
+
+        logger.info("Starting Prometheus metrics push task")
+        self._push_task = asyncio.create_task(self._push_metrics_loop())
+
+    async def stop_push_task(self) -> None:
+        """Stop the background task."""
+        if self._push_task is not None:
+            logger.info("Stopping Prometheus metrics push task")
+            self._push_task.cancel()
+            try:
+                await self._push_task
+            except asyncio.CancelledError:
+                pass
+            self._push_task = None
+
+    async def _push_metrics_loop(self) -> None:
+        """Background loop to push metrics to gateway."""
+        while True:
+            try:
+                await asyncio.sleep(self._push_interval)
+                if self._push_enabled and self._pushgateway_url:
+                    self._push_metrics_to_gateway()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error("Error pushing metrics to gateway", error=str(e), exc_info=True)
+
+    def _push_metrics_to_gateway(self) -> None:
+        """Push current metrics to the configured push gateway."""
+        if not self._push_enabled or not self._pushgateway_url:
+            return
+
+        try:
+            push_to_gateway(
+                self._pushgateway_url,
+                job=self._job_name,
+                registry=mapping_registry
+            )
+            logger.debug("Successfully pushed metrics to gateway")
+        except Exception as e:
+            logger.error("Failed to push metrics to gateway", error=str(e), exc_info=True)
 
     def record_event_processed(self, source: str) -> None:
         """Record that an event was processed."""

@@ -7,6 +7,7 @@ from typing import Any
 import structlog
 
 from langhook.map.cloudevents import cloud_event_wrapper
+from langhook.map.config import settings
 from langhook.map.llm import llm_service
 from langhook.map.mapper import mapping_engine
 from langhook.map.metrics import metrics
@@ -33,6 +34,15 @@ class MappingService:
         """Start the mapping service."""
         logger.info("Starting LangHook Canonicaliser", version="0.3.0")
 
+        # Configure Prometheus push gateway if enabled
+        if settings.prometheus_pushgateway_url:
+            metrics.configure_push_gateway(
+                settings.prometheus_pushgateway_url,
+                settings.prometheus_job_name,
+                settings.prometheus_push_interval
+            )
+            await metrics.start_push_task()
+
         # Update active mappings count in metrics
         metrics.update_active_mappings(len(mapping_engine._mappings))
 
@@ -50,6 +60,9 @@ class MappingService:
         """Stop the mapping service."""
         logger.info("Stopping mapping service")
         self._running = False
+
+        # Stop metrics push task
+        await metrics.stop_push_task()
 
         if self.consumer:
             await self.consumer.stop()

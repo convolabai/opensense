@@ -153,12 +153,35 @@ Response:
 
 ### 4. Monitor System Metrics
 
+LangHook provides comprehensive Prometheus metrics for monitoring:
+
 ```bash
-# Prometheus metrics
+# View metrics in Prometheus format
 curl http://localhost:8000/map/metrics
 
-# JSON metrics
+# View metrics in JSON format  
 curl http://localhost:8000/map/metrics/json
+```
+
+**Available Metrics:**
+- `langhook_events_processed_total` - Total events processed
+- `langhook_events_mapped_total` - Successfully mapped events  
+- `langhook_events_failed_total` - Failed events with reason labels
+- `langhook_llm_invocations_total` - LLM API calls
+- `langhook_mapping_duration_seconds` - Processing time histogram
+- `langhook_active_mappings` - Number of loaded mapping rules
+
+**Push to Prometheus (Optional):**
+Configure `PROMETHEUS_PUSHGATEWAY_URL` to automatically push metrics to your Prometheus server:
+
+```bash
+# Enable automatic metrics pushing
+export PROMETHEUS_PUSHGATEWAY_URL=http://pushgateway:9091
+export PROMETHEUS_JOB_NAME=langhook-production
+export PROMETHEUS_PUSH_INTERVAL=30  # seconds
+
+# Restart LangHook to enable push gateway
+langhook
 ```
 
 ## 🎭 Interactive Demo
@@ -213,6 +236,11 @@ REDIS_URL=redis://localhost:6379
 
 # PostgreSQL for subscription metadata
 POSTGRES_DSN=postgresql://user:pass@localhost:5432/langhook
+
+# Prometheus metrics (optional)
+PROMETHEUS_PUSHGATEWAY_URL=http://pushgateway:9091  # Enable metrics push to Prometheus
+PROMETHEUS_JOB_NAME=langhook-map                    # Job name for metrics
+PROMETHEUS_PUSH_INTERVAL=30                         # Push interval in seconds
 ```
 
 ## 📈 Performance
