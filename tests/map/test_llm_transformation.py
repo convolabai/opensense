@@ -22,7 +22,7 @@ async def test_transform_to_canonical_success(mock_llm_service):
     # Mock LLM response
     mock_response = Mock()
     mock_response.generations = [[Mock()]]
-    mock_response.generations[0][0].text = '{"publisher": "github", "resource": {"type": "pull_request", "id": 123}, "action": "created"}'
+    mock_response.generations[0][0].text = '{"publisher": "github", "resource": {"type": "pull_request", "id": 123}, "action": "created", "timestamp": "2024-01-01T00:00:00Z"}'
 
     mock_llm_service.llm.agenerate = AsyncMock(return_value=mock_response)
 
@@ -39,6 +39,7 @@ async def test_transform_to_canonical_success(mock_llm_service):
     assert result["resource"]["type"] == "pull_request"
     assert result["resource"]["id"] == 123
     assert result["action"] == "created"
+    assert result["timestamp"] == "2024-01-01T00:00:00Z"
 
 
 @pytest.mark.asyncio
@@ -107,7 +108,8 @@ def test_validate_canonical_format_success():
     canonical_data = {
         "publisher": "github",
         "resource": {"type": "pull_request", "id": 123},
-        "action": "created"
+        "action": "created",
+        "timestamp": "2024-01-01T00:00:00Z"
     }
 
     result = service._validate_canonical_format(canonical_data, "github")
@@ -121,7 +123,8 @@ def test_validate_canonical_format_invalid_action():
     canonical_data = {
         "publisher": "github",
         "resource": {"type": "pull_request", "id": 123},
-        "action": "invalid_action"  # Invalid action
+        "action": "invalid_action",  # Invalid action
+        "timestamp": "2024-01-01T00:00:00Z"
     }
 
     result = service._validate_canonical_format(canonical_data, "github")
@@ -135,7 +138,8 @@ def test_validate_canonical_format_invalid_resource_id():
     canonical_data = {
         "publisher": "github",
         "resource": {"type": "pull_request", "id": "123#456"},  # Invalid ID with hash
-        "action": "created"
+        "action": "created",
+        "timestamp": "2024-01-01T00:00:00Z"
     }
 
     result = service._validate_canonical_format(canonical_data, "github")
@@ -149,7 +153,8 @@ def test_validate_canonical_format_allows_slash_in_resource_id():
     canonical_data = {
         "publisher": "github",
         "resource": {"type": "pull_request", "id": "123/456"},  # Valid ID with slash (now allowed)
-        "action": "created"
+        "action": "created",
+        "timestamp": "2024-01-01T00:00:00Z"
     }
 
     result = service._validate_canonical_format(canonical_data, "github")

@@ -149,21 +149,19 @@ The canonical format is a JSON object with these required fields:
 - publisher: string (use the source name provided)
 - resource: object with "type" (singular noun) and "id" (atomic identifier) fields
 - action: CRUD verb (string, must be one of: "created", "read", "updated", "deleted")
+- timestamp: ISO 8601 timestamp string
 
 JSONata Expression Guidelines:
-1. Analyze the payload structure to identify the main resource and action
-2. Look for event type/action indicators - map webhook actions to CRUD verbs: opened/created→created, closed/deleted→deleted, edited/updated→updated, viewed→read
+1. Analyze the payload structure to identify the main resource
+2. Hardcode the action to one of: "created", "read", "updated", "deleted" (choose the most appropriate one based on the webhook event)
 3. Extract resource ID (atomic identifier) using appropriate JSONata path
-4. Generate a JSONata expression that produces the canonical format
-5. Use proper JSONata syntax with field paths (e.g., pull_request.number, issue.id)
-6. Return ONLY the JSONata expression, no explanations or code blocks
+4. Extract timestamp from payload or use appropriate date field
+5. Use simple JSONata object syntax (not transform operators)
+6. Use proper JSONata field path syntax (e.g., pull_request.number, issue.id)
+7. Return ONLY the JSONata expression, no explanations or code blocks
 
 Example JSONata expression:
-{
-  "publisher": "github",
-  "resource": {"type": "pull_request", "id": pull_request.number},
-  "action": action = "opened" ? "created" : action = "edited" ? "updated" : action = "closed" ? "deleted" : "read"
-}"""
+{"publisher": "github", "resource": {"type": "pull_request", "id": pull_request.id}, "action": "created", "timestamp": pull_request.created_at}"""
 
     def _create_system_prompt(self) -> str:
         """Create the system prompt for the LLM (deprecated - use _create_jsonata_system_prompt)."""
@@ -194,7 +192,7 @@ Example JSONata expression:
                 return False
 
             # Validate required fields
-            required_fields = ['publisher', 'resource', 'action']
+            required_fields = ['publisher', 'resource', 'action', 'timestamp']
             missing_fields = [field for field in required_fields if field not in result]
 
             if missing_fields:
@@ -245,6 +243,17 @@ Example JSONata expression:
                 )
                 return False
 
+            # Validate timestamp is a string (basic validation)
+            timestamp = result.get('timestamp')
+            if not isinstance(timestamp, str):
+                logger.error(
+                    "JSONata expression timestamp must be a string",
+                    source=source,
+                    timestamp=timestamp,
+                    timestamp_type=type(timestamp).__name__
+                )
+                return False
+
             return True
 
         except Exception as e:
@@ -267,7 +276,7 @@ Example JSONata expression:
             return False
 
         # Validate required fields
-        required_fields = ['publisher', 'resource', 'action']
+        required_fields = ['publisher', 'resource', 'action', 'timestamp']
         missing_fields = [field for field in required_fields if field not in canonical_data]
 
         if missing_fields:
@@ -315,6 +324,17 @@ Example JSONata expression:
                 "LLM canonical resource ID contains invalid characters (#, space) - atomic IDs only",
                 source=source,
                 resource_id=resource_id
+            )
+            return False
+
+        # Validate timestamp is a string (basic validation)
+        timestamp = canonical_data.get('timestamp')
+        if not isinstance(timestamp, str):
+            logger.error(
+                "LLM canonical timestamp must be a string",
+                source=source,
+                timestamp=timestamp,
+                timestamp_type=type(timestamp).__name__
             )
             return False
 

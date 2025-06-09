@@ -45,7 +45,7 @@ async def test_end_to_end_fingerprinting_workflow():
     async def mock_generate_jsonata_mapping(source: str, raw_payload: dict):
         # Mock JSONata generation based on payload structure
         if "pull_request" in raw_payload:
-            return '{"publisher": "' + source + '", "resource": {"type": "pull_request", "id": pull_request.number}, "action": "created"}'
+            return '{"publisher": "' + source + '", "resource": {"type": "pull_request", "id": pull_request.number}, "action": "created", "timestamp": pull_request.created_at}'
         return None
     
     def mock_is_available():
@@ -62,14 +62,14 @@ async def test_end_to_end_fingerprinting_workflow():
         payload1 = {
             "action": "opened",
             "number": 42,
-            "pull_request": {"number": 1374, "title": "First PR"},
+            "pull_request": {"number": 1374, "title": "First PR", "created_at": "2024-01-01T00:00:00Z"},
             "repository": {"name": "test-repo"}
         }
         
         payload2 = {
             "action": "opened", 
             "number": 99,
-            "pull_request": {"number": 5678, "title": "Second PR"},
+            "pull_request": {"number": 5678, "title": "Second PR", "created_at": "2024-01-02T00:00:00Z"},
             "repository": {"name": "other-repo"}
         }
         
