@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status, Query
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -219,6 +219,41 @@ async def get_event_schema() -> dict[str, Any]:
         - actions: List of all known actions
     """
     return await schema_registry_service.get_schema_summary()
+
+
+@app.get("/event-logs", response_model=dict)
+async def list_event_logs(
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(50, ge=1, le=100, description="Items per page")
+) -> dict:
+    """List event logs with pagination."""
+    try:
+        from langhook.subscriptions.database import db_service
+        from langhook.subscriptions.schemas import EventLogResponse, EventLogListResponse
+        
+        skip = (page - 1) * size
+        event_logs, total = await db_service.get_event_logs(
+            skip=skip,
+            limit=size
+        )
+
+        return EventLogListResponse(
+            event_logs=[EventLogResponse.from_orm(log) for log in event_logs],
+            total=total,
+            page=page,
+            size=size
+        ).dict()
+
+    except Exception as e:
+        logger.error(
+            "Failed to list event logs",
+            error=str(e),
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list event logs"
+        ) from e
 
 
 @app.get("/health/")

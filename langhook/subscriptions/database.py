@@ -281,6 +281,52 @@ class DatabaseService:
 
             return event_logs, total
 
+    async def get_subscription_events(
+        self,
+        subscription_pattern: str,
+        skip: int = 0,
+        limit: int = 100
+    ) -> tuple[list[EventLog], int]:
+        """Get event logs for a specific subscription pattern with pagination."""
+        with self.get_session() as session:
+            # Convert NATS pattern to SQL pattern for filtering
+            # NATS patterns use * for single level wildcard and > for multi-level wildcard
+            # We need to match events where their subject matches the subscription pattern
+            
+            # For now, we'll get all events and filter in Python since the pattern matching
+            # is complex (NATS-style patterns). In production, this should be optimized.
+            query = session.query(EventLog).order_by(EventLog.logged_at.desc())
+            all_events = query.all()
+            
+            # Filter events that match the subscription pattern
+            matching_events = []
+            for event in all_events:
+                if self._matches_pattern(event.subject, subscription_pattern):
+                    matching_events.append(event)
+            
+            total = len(matching_events)
+            paginated_events = matching_events[skip:skip + limit]
+            
+            return paginated_events, total
+    
+    def _matches_pattern(self, subject: str, pattern: str) -> bool:
+        """Check if a subject matches a NATS pattern."""
+        import re
+        
+        # Convert NATS pattern to regex
+        # * matches a single token (no dots)
+        # > matches one or more tokens (including dots)
+        regex_pattern = pattern.replace('.', r'\.')  # Escape dots
+        regex_pattern = regex_pattern.replace('*', r'[^.]+')  # * -> one or more non-dot chars
+        regex_pattern = regex_pattern.replace('>', r'.*')  # > -> any chars including dots
+        regex_pattern = f'^{regex_pattern}$'
+        
+        try:
+            return bool(re.match(regex_pattern, subject))
+        except re.error:
+            # If pattern is invalid, return False
+            return False
+
 
 # Global database service instance
 db_service = DatabaseService()

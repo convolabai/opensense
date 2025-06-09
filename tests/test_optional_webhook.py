@@ -127,15 +127,46 @@ def test_subscription_creation_with_webhook(client):
         assert subscription["channel_type"] == "webhook"
 
 
-def test_events_endpoint_exists(client):
-    """Test that /events endpoint exists and works."""
+def test_event_logs_endpoint_exists(client):
+    """Test that /event-logs endpoint exists and works."""
     test_client, mock_db_service = client
     
     # Mock the get_event_logs method
     mock_event_logs = []
-    mock_db_service.get_event_logs = AsyncMock(return_value=(mock_event_logs, 0))
+    
+    with patch("langhook.subscriptions.database.db_service") as mock_app_db_service:
+        mock_app_db_service.get_event_logs = AsyncMock(return_value=(mock_event_logs, 0))
 
-    response = test_client.get("/subscriptions/events")
+        response = test_client.get("/event-logs")
+
+        # Should succeed
+        assert response.status_code == 200
+        data = response.json()
+        assert "event_logs" in data
+        assert "total" in data
+        assert "page" in data
+        assert "size" in data
+        assert data["event_logs"] == []
+        assert data["total"] == 0
+        assert data["page"] == 1
+        assert data["size"] == 50
+
+
+def test_subscription_events_endpoint_exists(client):
+    """Test that /subscriptions/{id}/events endpoint exists and works."""
+    test_client, mock_db_service = client
+    
+    # Mock getting a subscription
+    mock_subscription = Mock()
+    mock_subscription.id = 123
+    mock_subscription.pattern = "langhook.events.github.pull_request.*.opened"
+    mock_db_service.get_subscription = AsyncMock(return_value=mock_subscription)
+    
+    # Mock the get_subscription_events method
+    mock_event_logs = []
+    mock_db_service.get_subscription_events = AsyncMock(return_value=(mock_event_logs, 0))
+
+    response = test_client.get("/subscriptions/123/events")
 
     # Should succeed
     assert response.status_code == 200

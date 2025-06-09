@@ -89,24 +89,28 @@ async def create_subscription(
         ) from e
 
 
-@router.get("/events", response_model=EventLogListResponse)
-async def list_events(
+@router.get("/{subscription_id}/events", response_model=EventLogListResponse)
+async def list_subscription_events(
+    subscription_id: int,
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(50, ge=1, le=100, description="Items per page")
 ) -> EventLogListResponse:
-    """List events with pagination (alias for event-logs endpoint)."""
-    return await list_event_logs(page, size)
-
-
-@router.get("/event-logs", response_model=EventLogListResponse)
-async def list_event_logs(
-    page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(50, ge=1, le=100, description="Items per page")
-) -> EventLogListResponse:
-    """List event logs with pagination."""
+    """List events for a specific subscription with pagination."""
+    # Use placeholder subscriber ID since auth is out of scope
+    subscriber_id = "default"
+    
     try:
+        # First verify subscription exists and belongs to subscriber
+        subscription = await db_service.get_subscription(subscription_id, subscriber_id)
+        if not subscription:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Subscription not found"
+            )
+        
         skip = (page - 1) * size
-        event_logs, total = await db_service.get_event_logs(
+        event_logs, total = await db_service.get_subscription_events(
+            subscription_pattern=subscription.pattern,
             skip=skip,
             limit=size
         )
@@ -119,15 +123,18 @@ async def list_event_logs(
             size=size
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(
-            "Failed to list event logs",
+            "Failed to list subscription events",
+            subscription_id=subscription_id,
             error=str(e),
             exc_info=True
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list event logs"
+            detail="Failed to list subscription events"
         ) from e
 
 

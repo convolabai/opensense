@@ -116,7 +116,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
     setEventLogsLoading(true);
     setEventLogsError('');
     try {
-      const response = await fetch(`/subscriptions/event-logs?page=${currentPage}&size=${pageSize}`);
+      const response = await fetch(`/event-logs?page=${currentPage}&size=${pageSize}`);
       if (!response.ok) {
         throw new Error('Failed to fetch event logs');
       }
