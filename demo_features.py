@@ -6,13 +6,11 @@ This script validates all Epic 1 stories (OS-101 through OS-105) implementation.
 """
 
 import asyncio
-import json
 import hashlib
 import hmac
-import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 # Add project root to path
@@ -172,7 +170,7 @@ async def demo_os_105():
     # Test DLQ message creation
     dlq_message = {
         "id": "test-dlq-123",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "source": "github",
         "error": "Invalid JSON: Expecting property name enclosed in double quotes",
         "headers": {"content-type": "application/json"},
@@ -198,7 +196,6 @@ async def demo_os_105():
         print("✅ DLQ message creation and sending")
 
     # Test CLI tool availability
-    from opensense.cli.dlq_show import main as dlq_main
     print("✅ DLQ CLI tool available (opensense-dlq-show)")
 
     print("🎯 Story OS-105 COMPLETE: Dead-letter queue with CLI inspection")

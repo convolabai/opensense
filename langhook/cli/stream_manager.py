@@ -3,12 +3,11 @@
 import argparse
 import asyncio
 import sys
-from typing import Any
 
-import structlog
 import nats
+import structlog
 from nats.js import JetStreamContext
-from nats.js.api import StreamConfig, RetentionPolicy, StorageType
+from nats.js.api import RetentionPolicy, StorageType, StreamConfig
 
 logger = structlog.get_logger("langhook")
 
@@ -64,7 +63,7 @@ class StreamManager:
             print(f"✅ Created stream 'events' with subjects {', '.join(stream_config.subjects)}")
         except Exception as e:
             error_str = str(e).lower()
-            if ("stream name already in use" in error_str or 
+            if ("stream name already in use" in error_str or
                 "insufficient storage resources" in error_str or
                 "err_code=10047" in error_str):
                 logger.info("Stream 'events' already exists")
@@ -80,7 +79,7 @@ class StreamManager:
 
         try:
             streams_info = await self.js.streams_info()
-            
+
             if not streams_info:
                 print("No streams found")
                 return

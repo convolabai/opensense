@@ -32,13 +32,11 @@ class DatabaseService:
     def create_tables(self) -> None:
         """Create database tables."""
         Base.metadata.create_all(bind=self.engine)
-        
+
         # Explicitly ensure event schema registry table exists
         self.create_schema_registry_table()
-        
         # Explicitly ensure event logs table exists
         self.create_event_logs_table()
-        
         logger.info("Subscription database tables created")
 
     def create_schema_registry_table(self) -> None:

@@ -30,6 +30,11 @@ class Settings(BaseModel):
     # Performance settings
     max_events_per_second: int = Field(default=2000, env="MAX_EVENTS_PER_SECOND")
 
+    # Prometheus settings
+    prometheus_pushgateway_url: str | None = Field(default=None, env="PROMETHEUS_PUSHGATEWAY_URL")
+    prometheus_job_name: str = Field(default="langhook-map", env="PROMETHEUS_JOB_NAME")
+    prometheus_push_interval: int = Field(default=30, env="PROMETHEUS_PUSH_INTERVAL")
+
     model_config = {
         "env_file": ".env.map",
         "env_file_encoding": "utf-8"
@@ -62,11 +67,15 @@ def load_settings() -> Settings:
         'OLLAMA_BASE_URL': os.getenv('OLLAMA_BASE_URL'),
         'POSTGRES_DSN': os.getenv('POSTGRES_DSN'),
         'MAX_EVENTS_PER_SECOND': os.getenv('MAX_EVENTS_PER_SECOND', '2000'),
+        'PROMETHEUS_PUSHGATEWAY_URL': os.getenv('PROMETHEUS_PUSHGATEWAY_URL'),
+        'PROMETHEUS_JOB_NAME': os.getenv('PROMETHEUS_JOB_NAME', 'langhook-map'),
+        'PROMETHEUS_PUSH_INTERVAL': os.getenv('PROMETHEUS_PUSH_INTERVAL', '30'),
     })
 
     # Convert string values to appropriate types
     debug_val = env_vars['DEBUG'].lower() in ('true', '1', 'yes', 'on')
     max_events_per_second_val = int(env_vars['MAX_EVENTS_PER_SECOND'])
+    prometheus_push_interval_val = int(env_vars['PROMETHEUS_PUSH_INTERVAL'])
 
     return Settings(
         debug=debug_val,
@@ -79,6 +88,9 @@ def load_settings() -> Settings:
         ollama_base_url=env_vars.get('OLLAMA_BASE_URL'),
         postgres_dsn=env_vars.get('POSTGRES_DSN'),
         max_events_per_second=max_events_per_second_val,
+        prometheus_pushgateway_url=env_vars.get('PROMETHEUS_PUSHGATEWAY_URL'),
+        prometheus_job_name=env_vars['PROMETHEUS_JOB_NAME'],
+        prometheus_push_interval=prometheus_push_interval_val,
     )
 
 

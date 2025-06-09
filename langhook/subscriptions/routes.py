@@ -5,7 +5,7 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 
 from langhook.subscriptions.database import db_service
-from langhook.subscriptions.llm import llm_service, NoSuitableSchemaError
+from langhook.subscriptions.llm import NoSuitableSchemaError, llm_service
 from langhook.subscriptions.schemas import (
     SubscriptionCreate,
     SubscriptionListResponse,
@@ -26,7 +26,7 @@ async def create_subscription(
     """Create a new subscription."""
     # Use placeholder subscriber ID since auth is out of scope
     subscriber_id = "default"
-    
+
     try:
         # Convert natural language description to NATS filter pattern
         try:
@@ -72,7 +72,7 @@ async def create_subscription(
             error=error_details,
             exc_info=True
         )
-        
+
         # Return a more specific error message based on error type
         if "relation" in error_details.lower() and "does not exist" in error_details.lower():
             detail = "Database not properly initialized - subscription tables missing"
@@ -82,7 +82,7 @@ async def create_subscription(
             detail = "Database permission denied"
         else:
             detail = f"Failed to create subscription: {error_details}"
-            
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=detail
@@ -130,7 +130,7 @@ async def list_subscriptions(
     """List subscriptions with pagination."""
     # Use placeholder subscriber ID since auth is out of scope
     subscriber_id = "default"
-    
+
     try:
         skip = (page - 1) * size
         subscriptions, total = await db_service.get_subscriber_subscriptions(
@@ -166,7 +166,7 @@ async def get_subscription(
     """Get a specific subscription."""
     # Use placeholder subscriber ID since auth is out of scope
     subscriber_id = "default"
-    
+
     subscription = await db_service.get_subscription(subscription_id, subscriber_id)
 
     if not subscription:
@@ -186,7 +186,7 @@ async def update_subscription(
     """Update a subscription."""
     # Use placeholder subscriber ID since auth is out of scope
     subscriber_id = "default"
-    
+
     try:
         # If description is being updated, regenerate the pattern
         pattern = None
@@ -250,7 +250,7 @@ async def delete_subscription(
     """Delete a subscription."""
     # Use placeholder subscriber ID since auth is out of scope
     subscriber_id = "default"
-    
+
     try:
         deleted = await db_service.delete_subscription(subscription_id, subscriber_id)
 

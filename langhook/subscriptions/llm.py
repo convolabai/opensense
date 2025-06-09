@@ -199,7 +199,7 @@ class LLMPatternService:
         """Get the system prompt for pattern conversion with real schema data."""
         # Import here to avoid circular imports
         from langhook.subscriptions.schema_registry import schema_registry_service
-        
+
         try:
             schema_data = await schema_registry_service.get_schema_summary()
         except Exception as e:
@@ -222,13 +222,13 @@ IMPORTANT: No event schemas are currently registered in the system. You must res
             # Build schema information from real data
             publishers_list = ", ".join(schema_data["publishers"])
             actions_list = ", ".join(schema_data["actions"])
-            
+
             resource_types_info = []
             for publisher, resource_types in schema_data["resource_types"].items():
                 types_str = ", ".join(resource_types)
                 resource_types_info.append(f"- {publisher}: {types_str}")
             resource_types_text = "\n".join(resource_types_info)
-            
+
             schema_info = f"""
 AVAILABLE EVENT SCHEMAS:
 Publishers: {publishers_list}

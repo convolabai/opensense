@@ -125,15 +125,15 @@ class MappingEngine:
             # Convert present tense actions to past tense for canonical format
             action_mapping = {
                 'create': 'created',
-                'update': 'updated', 
+                'update': 'updated',
                 'delete': 'deleted',
                 'read': 'read'
             }
-            
+
             # Support both present and past tense input
             if result['action'] in action_mapping:
                 result['action'] = action_mapping[result['action']]
-            
+
             # Validate action is past tense CRUD enum
             valid_actions = ['created', 'read', 'updated', 'deleted']
             if result['action'] not in valid_actions:
