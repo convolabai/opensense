@@ -96,3 +96,33 @@ class EventLogListResponse(BaseModel):
     total: int
     page: int
     size: int
+
+
+class SubscriptionEventLogResponse(BaseModel):
+    """Schema for subscription event log response."""
+    id: int
+    subscription_id: int
+    event_id: str
+    source: str
+    subject: str
+    publisher: str
+    resource_type: str
+    resource_id: str
+    action: str
+    canonical_data: dict[str, Any]
+    raw_payload: dict[str, Any] | None = None
+    timestamp: datetime
+    webhook_sent: bool
+    webhook_response_status: int | None = None
+    logged_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SubscriptionEventLogListResponse(BaseModel):
+    """Schema for listing subscription event logs."""
+    event_logs: list[SubscriptionEventLogResponse]
+    total: int
+    page: int
+    size: int

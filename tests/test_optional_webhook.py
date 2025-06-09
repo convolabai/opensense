@@ -25,16 +25,24 @@ def client():
         with patch("langhook.subscriptions.routes.db_service") as mock_db_service:
             mock_db_service.create_tables = Mock()
 
-            # Override lifespan for testing by creating a simple mock lifespan
-            from contextlib import asynccontextmanager
+            # Mock the consumer service
+            with patch("langhook.subscriptions.routes.get_consumer_service") as mock_get_consumer_service:
+                mock_consumer_service = Mock()
+                mock_consumer_service.add_subscription = AsyncMock()
+                mock_consumer_service.remove_subscription = AsyncMock()
+                mock_consumer_service.update_subscription = AsyncMock()
+                mock_get_consumer_service.return_value = mock_consumer_service
 
-            @asynccontextmanager
-            async def mock_lifespan(app):
-                yield
+                # Override lifespan for testing by creating a simple mock lifespan
+                from contextlib import asynccontextmanager
 
-            app.router.lifespan_context = mock_lifespan
-            with TestClient(app) as client:
-                yield client, mock_db_service
+                @asynccontextmanager
+                async def mock_lifespan(app):
+                    yield
+
+                app.router.lifespan_context = mock_lifespan
+                with TestClient(app) as client:
+                    yield client, mock_db_service
 
 
 def test_subscription_creation_without_webhook(client):
@@ -162,9 +170,9 @@ def test_subscription_events_endpoint_exists(client):
     mock_subscription.pattern = "langhook.events.github.pull_request.*.opened"
     mock_db_service.get_subscription = AsyncMock(return_value=mock_subscription)
     
-    # Mock the get_subscription_events method
-    mock_event_logs = []
-    mock_db_service.get_subscription_events = AsyncMock(return_value=(mock_event_logs, 0))
+    # Mock the get_subscription_events method (now returns SubscriptionEventLog objects)
+    mock_subscription_events = []
+    mock_db_service.get_subscription_events = AsyncMock(return_value=(mock_subscription_events, 0))
 
     response = test_client.get("/subscriptions/123/events")
 

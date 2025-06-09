@@ -7,7 +7,7 @@ from sqlalchemy import and_, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from langhook.subscriptions.config import subscription_settings
-from langhook.subscriptions.models import Base, Subscription, EventLog
+from langhook.subscriptions.models import Base, Subscription, EventLog, SubscriptionEventLog
 from langhook.subscriptions.schemas import SubscriptionCreate, SubscriptionUpdate
 
 logger = structlog.get_logger("langhook")
@@ -37,6 +37,8 @@ class DatabaseService:
         self.create_schema_registry_table()
         # Explicitly ensure event logs table exists
         self.create_event_logs_table()
+        # Explicitly ensure subscription event logs table exists
+        self.create_subscription_event_logs_table()
         logger.info("Subscription database tables created")
 
     def create_schema_registry_table(self) -> None:
@@ -105,6 +107,57 @@ class DatabaseService:
         except Exception as e:
             logger.error(
                 "Failed to create event logs table",
+                error=str(e),
+                exc_info=True
+            )
+
+    def create_subscription_event_logs_table(self) -> None:
+        """Create the subscription event logs table if it doesn't exist."""
+        try:
+            with self.get_session() as session:
+                # Create table with explicit SQL to ensure it exists
+                create_table_sql = text("""
+                    CREATE TABLE IF NOT EXISTS subscription_event_logs (
+                        id SERIAL PRIMARY KEY,
+                        subscription_id INTEGER NOT NULL,
+                        event_id VARCHAR(255) NOT NULL,
+                        source VARCHAR(255) NOT NULL,
+                        subject VARCHAR(255) NOT NULL,
+                        publisher VARCHAR(255) NOT NULL,
+                        resource_type VARCHAR(255) NOT NULL,
+                        resource_id VARCHAR(255) NOT NULL,
+                        action VARCHAR(255) NOT NULL,
+                        canonical_data JSONB NOT NULL,
+                        raw_payload JSONB,
+                        timestamp TIMESTAMPTZ NOT NULL,
+                        webhook_sent BOOLEAN NOT NULL DEFAULT FALSE,
+                        webhook_response_status INTEGER,
+                        logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                session.execute(create_table_sql)
+                
+                # Create indexes for better query performance
+                index_sqls = [
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_subscription_id ON subscription_event_logs(subscription_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_event_id ON subscription_event_logs(event_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_source ON subscription_event_logs(source)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_publisher ON subscription_event_logs(publisher)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_resource_type ON subscription_event_logs(resource_type)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_resource_id ON subscription_event_logs(resource_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_action ON subscription_event_logs(action)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_timestamp ON subscription_event_logs(timestamp)",
+                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_logged_at ON subscription_event_logs(logged_at)",
+                ]
+                
+                for index_sql in index_sqls:
+                    session.execute(text(index_sql))
+                
+                session.commit()
+                logger.info("Subscription event logs table ensured")
+        except Exception as e:
+            logger.error(
+                "Failed to create subscription event logs table",
                 error=str(e),
                 exc_info=True
             )
@@ -261,9 +314,10 @@ class DatabaseService:
                 Subscription.active
             ).all()
 
-            # Parse channel_config JSON for each subscription
+            # Parse channel_config JSON for each subscription if it exists
             for subscription in subscriptions:
-                subscription.channel_config = json.loads(subscription.channel_config)
+                if subscription.channel_config:
+                    subscription.channel_config = json.loads(subscription.channel_config)
 
             return subscriptions
 
@@ -283,49 +337,20 @@ class DatabaseService:
 
     async def get_subscription_events(
         self,
-        subscription_pattern: str,
+        subscription_id: int,
         skip: int = 0,
         limit: int = 100
-    ) -> tuple[list[EventLog], int]:
-        """Get event logs for a specific subscription pattern with pagination."""
+    ) -> tuple[list[SubscriptionEventLog], int]:
+        """Get subscription event logs with pagination."""
         with self.get_session() as session:
-            # Convert NATS pattern to SQL pattern for filtering
-            # NATS patterns use * for single level wildcard and > for multi-level wildcard
-            # We need to match events where their subject matches the subscription pattern
-            
-            # For now, we'll get all events and filter in Python since the pattern matching
-            # is complex (NATS-style patterns). In production, this should be optimized.
-            query = session.query(EventLog).order_by(EventLog.logged_at.desc())
-            all_events = query.all()
-            
-            # Filter events that match the subscription pattern
-            matching_events = []
-            for event in all_events:
-                if self._matches_pattern(event.subject, subscription_pattern):
-                    matching_events.append(event)
-            
-            total = len(matching_events)
-            paginated_events = matching_events[skip:skip + limit]
-            
-            return paginated_events, total
-    
-    def _matches_pattern(self, subject: str, pattern: str) -> bool:
-        """Check if a subject matches a NATS pattern."""
-        import re
-        
-        # Convert NATS pattern to regex
-        # * matches a single token (no dots)
-        # > matches one or more tokens (including dots)
-        regex_pattern = pattern.replace('.', r'\.')  # Escape dots
-        regex_pattern = regex_pattern.replace('*', r'[^.]+')  # * -> one or more non-dot chars
-        regex_pattern = regex_pattern.replace('>', r'.*')  # > -> any chars including dots
-        regex_pattern = f'^{regex_pattern}$'
-        
-        try:
-            return bool(re.match(regex_pattern, subject))
-        except re.error:
-            # If pattern is invalid, return False
-            return False
+            query = session.query(SubscriptionEventLog).filter(
+                SubscriptionEventLog.subscription_id == subscription_id
+            ).order_by(SubscriptionEventLog.logged_at.desc())
+
+            total = query.count()
+            subscription_events = query.offset(skip).limit(limit).all()
+
+            return subscription_events, total
 
 
 # Global database service instance

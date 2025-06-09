@@ -51,3 +51,25 @@ class EventLog(Base):
     raw_payload = Column(JSON, nullable=True)  # Original raw payload
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)  # Event timestamp
     logged_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)  # Log timestamp
+
+
+class SubscriptionEventLog(Base):
+    """Database model for logging events that match specific subscriptions."""
+
+    __tablename__ = "subscription_event_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    subscription_id = Column(Integer, nullable=False, index=True)  # Reference to subscription
+    event_id = Column(String(255), nullable=False, index=True)  # CloudEvent ID
+    source = Column(String(255), nullable=False, index=True)  # Event source
+    subject = Column(String(255), nullable=False, index=True)  # NATS subject
+    publisher = Column(String(255), nullable=False, index=True)  # Canonical publisher
+    resource_type = Column(String(255), nullable=False, index=True)  # Canonical resource type
+    resource_id = Column(String(255), nullable=False, index=True)  # Canonical resource ID
+    action = Column(String(255), nullable=False, index=True)  # Canonical action
+    canonical_data = Column(JSON, nullable=False)  # Full canonical event data
+    raw_payload = Column(JSON, nullable=True)  # Original raw payload
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)  # Event timestamp
+    webhook_sent = Column(Boolean, default=False, nullable=False)  # Whether webhook was sent
+    webhook_response_status = Column(Integer, nullable=True)  # HTTP status if webhook sent
+    logged_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)  # Log timestamp

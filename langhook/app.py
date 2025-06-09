@@ -81,6 +81,8 @@ async def lifespan(app):
 
     # Start event logging service in background (if enabled)
     event_logging_task = None
+    subscription_consumer_task = None
+    
     try:
         await event_logging_service.start()
         if event_logging_service._running:
@@ -88,6 +90,16 @@ async def lifespan(app):
             logger.info("Event logging service started")
     except Exception as e:
         logger.warning("Failed to start event logging service", error=str(e))
+
+    # Start subscription consumer service in background
+    try:
+        from langhook.subscriptions.consumer_service import subscription_consumer_service
+        await subscription_consumer_service.start()
+        if subscription_consumer_service._running:
+            subscription_consumer_task = asyncio.create_task(subscription_consumer_service.run())
+            logger.info("Subscription consumer service started")
+    except Exception as e:
+        logger.warning("Failed to start subscription consumer service", error=str(e))
 
     # Initialize subscription database tables with retry logic
     max_retries = 10
@@ -128,6 +140,14 @@ async def lifespan(app):
             await asyncio.wait_for(event_logging_task, timeout=5.0)
         except (TimeoutError, asyncio.CancelledError):
             logger.info("Event logging service stopped")
+
+    # Cancel subscription consumer service if running
+    if subscription_consumer_task:
+        subscription_consumer_task.cancel()
+        try:
+            await asyncio.wait_for(subscription_consumer_task, timeout=5.0)
+        except (TimeoutError, asyncio.CancelledError):
+            logger.info("Subscription consumer service stopped")
 
     # Stop NATS producer
     await nats_producer.stop()
