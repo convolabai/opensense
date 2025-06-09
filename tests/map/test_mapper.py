@@ -2,11 +2,13 @@
 
 import tempfile
 from pathlib import Path
+import pytest
 
 from langhook.map.mapper import MappingEngine
 
 
-def test_mapping_engine_loads_jsonata_files():
+@pytest.mark.asyncio
+async def test_mapping_engine_loads_jsonata_files():
     """Test that the mapping engine loads JSONata files correctly."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a test mapping file
@@ -31,7 +33,7 @@ def test_mapping_engine_loads_jsonata_files():
 
             # Test applying the mapping
             test_payload = {"action": "created", "id": 123}
-            result = engine.apply_mapping("test", test_payload)
+            result = await engine.apply_mapping("test", test_payload)
 
             assert result is not None
             assert result["publisher"] == "test"
@@ -43,7 +45,8 @@ def test_mapping_engine_loads_jsonata_files():
             settings.mappings_dir = original_mappings_dir
 
 
-def test_mapping_engine_handles_missing_fields():
+@pytest.mark.asyncio
+async def test_mapping_engine_handles_missing_fields():
     """Test that the mapping engine handles missing required fields."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a mapping file that's missing required fields
@@ -63,7 +66,7 @@ def test_mapping_engine_handles_missing_fields():
 
             # Test applying the incomplete mapping
             test_payload = {"action": "created", "id": 123}
-            result = engine.apply_mapping("incomplete", test_payload)
+            result = await engine.apply_mapping("incomplete", test_payload)
 
             # Should return None due to missing required fields
             assert result is None
@@ -72,7 +75,8 @@ def test_mapping_engine_handles_missing_fields():
             settings.mappings_dir = original_mappings_dir
 
 
-def test_github_mapping():
+@pytest.mark.asyncio
+async def test_github_mapping():
     """Test the GitHub mapping with sample data."""
     engine = MappingEngine()
 
@@ -94,7 +98,7 @@ def test_github_mapping():
     engine._load_mappings()
 
     if engine.has_mapping("github"):
-        result = engine.apply_mapping("github", github_payload)
+        result = await engine.apply_mapping("github", github_payload)
 
         assert result is not None
         assert result["publisher"] == "github"
@@ -106,7 +110,12 @@ def test_github_mapping():
 
 
 if __name__ == "__main__":
-    test_mapping_engine_loads_jsonata_files()
-    test_mapping_engine_handles_missing_fields()
-    test_github_mapping()
-    print("All mapping tests passed!")
+    import asyncio
+    
+    async def run_tests():
+        await test_mapping_engine_loads_jsonata_files()
+        await test_mapping_engine_handles_missing_fields()
+        await test_github_mapping()
+        print("All mapping tests passed!")
+    
+    asyncio.run(run_tests())

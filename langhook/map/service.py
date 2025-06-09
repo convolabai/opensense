@@ -107,8 +107,8 @@ class MappingService:
         )
 
         try:
-            # Try to apply existing mapping first (if any still exist)
-            canonical_data = mapping_engine.apply_mapping(source, payload)
+            # Try to apply existing mapping first (fingerprint or file-based)
+            canonical_data = await mapping_engine.apply_mapping(source, payload)
 
             if canonical_data is None:
                 # No mapping available, use LLM for direct transformation
@@ -132,6 +132,18 @@ class MappingService:
                         )
                         metrics.record_event_failed(source or "unknown", "llm_transformation_failed")
                         return
+                    
+                    # Store the generated mapping for future use
+                    try:
+                        await mapping_engine.store_mapping_from_canonical(source, payload, canonical_data)
+                    except Exception as e:
+                        # Log the error but don't fail the event processing
+                        logger.warning(
+                            "Failed to store generated mapping",
+                            event_id=event_id,
+                            source=source,
+                            error=str(e)
+                        )
                 else:
                     await self._send_mapping_failure(raw_event, "No mapping available and LLM service unavailable")
                     metrics.record_event_failed(source or "unknown", "no_mapping_no_llm")
