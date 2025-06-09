@@ -92,13 +92,11 @@ class SubscriptionConsumer(BaseNATSConsumer):
             # Evaluate LLM gate if enabled
             gate_passed = True
             gate_reason = "Gate not enabled"
-            gate_confidence = 1.0
             
             if self.subscription.gate and self.subscription.gate.get("enabled", False):
-                gate_passed, gate_reason, gate_confidence = await llm_gate_service.evaluate_event(
+                gate_passed, gate_reason = await llm_gate_service.evaluate_event(
                     event_data=canonical_data,
                     gate_config=self.subscription.gate,
-                    subscription_description=self.subscription.description,
                     subscription_id=self.subscription.id
                 )
                 
@@ -107,8 +105,7 @@ class SubscriptionConsumer(BaseNATSConsumer):
                         "Event blocked by LLM gate",
                         subscription_id=self.subscription.id,
                         event_id=event_id,
-                        reason=gate_reason,
-                        confidence=gate_confidence
+                        reason=gate_reason
                     )
                     # Still log the event but don't send webhook
                     # Create subscription event log entry (webhook_sent will be False)
@@ -163,8 +160,7 @@ class SubscriptionConsumer(BaseNATSConsumer):
                 webhook_sent=webhook_sent,
                 webhook_status=webhook_status,
                 gate_passed=gate_passed,
-                gate_reason=gate_reason,
-                gate_confidence=gate_confidence
+                gate_reason=gate_reason
             )
 
         except SQLAlchemyError as e:

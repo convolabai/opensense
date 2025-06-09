@@ -21,18 +21,7 @@ class WebhookChannelConfig(ChannelConfig):
 class GateConfig(BaseModel):
     """LLM gate configuration for subscription filtering."""
     enabled: bool = Field(default=False, description="Whether the LLM gate is enabled")
-    model: str = Field(default="gpt-4o-mini", description="LLM model to use for evaluation")
-    prompt: str = Field(default="", description="Prompt template for gate evaluation")
-    threshold: float = Field(default=0.8, ge=0.0, le=1.0, description="Confidence threshold for gate evaluation")
-    audit: bool = Field(default=True, description="Whether to audit gate decisions")
-    failover_policy: str = Field(default="fail_open", description="Policy when LLM is unavailable: fail_open or fail_closed")
-
-    @field_validator('failover_policy')
-    @classmethod
-    def validate_failover_policy(cls, v):
-        if v not in ['fail_open', 'fail_closed']:
-            raise ValueError('failover_policy must be: fail_open or fail_closed')
-        return v
+    prompt: str = Field(default="", description="Prompt for gate evaluation")
 
 
 class SubscriptionCreate(BaseModel):

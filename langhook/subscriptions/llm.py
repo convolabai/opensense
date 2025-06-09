@@ -195,6 +195,92 @@ class LLMPatternService:
             )
             return self._fallback_pattern_conversion(description)
 
+    async def generate_gate_prompt(self, description: str) -> str:
+        """
+        Generate a gate evaluation prompt based on the user's subscription description.
+        
+        Args:
+            description: Natural language description of what user wants to be notified about
+            
+        Returns:
+            A prompt that can be used to evaluate whether events match the user's intent
+        """
+        if not self.llm_available:
+            return self._fallback_gate_prompt(description)
+            
+        try:
+            system_prompt = """You are a gate prompt generator for an event filtering system.
+
+Your task is to create a prompt that will be used by an LLM to evaluate whether incoming events match the user's subscription intent.
+
+The gate prompt should:
+1. Be specific to the user's request and criteria
+2. Instruct the evaluator to return a JSON object with only {"decision": true or false}
+3. Be generic enough to handle different types of events
+4. Focus on the user's specific intent, not just general "importance"
+
+Examples:
+- User wants "GitHub PR comments from Alice" → Gate should check if event is a GitHub comment AND from user Alice
+- User wants "Stripe payments over $1000" → Gate should check if event is a Stripe payment AND amount > $1000  
+- User wants "Slack messages mentioning 'urgent'" → Gate should check if event is a Slack message AND contains "urgent"
+
+Return only the gate prompt, nothing else."""
+
+            user_prompt = f"""Generate a gate evaluation prompt for this subscription:
+
+User request: "{description}"
+
+Generate a prompt that will evaluate whether events truly match what this user wants to be notified about."""
+
+            # Query the LLM
+            if hasattr(self.llm, 'agenerate'):
+                from langchain.schema import HumanMessage, SystemMessage
+                messages = [
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=user_prompt)
+                ]
+                response = await self.llm.agenerate([messages])
+                response_text = response.generations[0][0].text.strip()
+            else:
+                full_prompt = f"{system_prompt}\n\nUser: {user_prompt}\n\nAssistant:"
+                response_text = await self.llm.ainvoke(full_prompt)
+                if hasattr(response_text, 'content'):
+                    response_text = response_text.content.strip()
+                else:
+                    response_text = str(response_text).strip()
+
+            logger.info(
+                "LLM gate prompt generation completed",
+                description=description,
+                prompt_length=len(response_text)
+            )
+            
+            return response_text
+            
+        except Exception as e:
+            logger.error(
+                "Failed to generate gate prompt using LLM",
+                description=description,
+                error=str(e),
+                exc_info=True
+            )
+            return self._fallback_gate_prompt(description)
+
+    def _fallback_gate_prompt(self, description: str) -> str:
+        """Generate a fallback gate prompt when LLM is not available."""
+        return f"""You are evaluating whether an event matches this subscription intent: "{description}"
+
+Return ONLY a JSON object with this format:
+{{
+    "decision": true or false
+}}
+
+Event to evaluate:
+{{event_data}}
+
+Determine if this event genuinely matches what the user wants to be notified about based on their description.
+Be selective - only pass events that clearly match the user's specific intent."""
+
     async def _get_system_prompt_with_schemas(self) -> str:
         """Get the system prompt for pattern conversion with real schema data."""
         # Import here to avoid circular imports

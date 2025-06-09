@@ -28,10 +28,6 @@ class SubscriptionSettings(BaseModel):
     nats_stream_events: str
     nats_consumer_group: str
 
-    # LLM Gate settings
-    gate_daily_cost_limit_usd: float = 10.0
-    gate_cost_alert_threshold: float = 0.8  # Alert at 80% of limit
-
 
 def load_subscription_settings() -> SubscriptionSettings:
     """Load subscription settings from core configuration."""
@@ -52,8 +48,6 @@ def load_subscription_settings() -> SubscriptionSettings:
         nats_url=app_config.nats_url,
         nats_stream_events=app_config.nats_stream_events,
         nats_consumer_group=app_config.subscriptions.nats_consumer_group,
-        gate_daily_cost_limit_usd=app_config.subscriptions.gate_daily_cost_limit_usd,
-        gate_cost_alert_threshold=app_config.subscriptions.gate_cost_alert_threshold,
     )
 
 

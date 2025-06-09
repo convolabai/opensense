@@ -45,9 +45,7 @@ Your task is to evaluate whether the following event genuinely matches the user'
 
 Return ONLY a JSON object with this exact format:
 {{
-    "decision": true or false,
-    "confidence": 0.0 to 1.0,
-    "reasoning": "brief explanation"
+    "decision": true or false
 }}
 
 Event to evaluate:
@@ -68,9 +66,7 @@ Your job is to be VERY selective and only allow events that are genuinely import
 
 Return ONLY a JSON object:
 {{
-    "decision": true or false,
-    "confidence": 0.0 to 1.0,
-    "reasoning": "brief explanation"
+    "decision": true or false
 }}
 
 Event to evaluate:
@@ -92,9 +88,7 @@ Evaluate if this event provides genuine business value or actionable information
 
 Return ONLY a JSON object:
 {{
-    "decision": true or false,
-    "confidence": 0.0 to 1.0,
-    "reasoning": "brief explanation"
+    "decision": true or false
 }}
 
 Event to evaluate:
@@ -116,9 +110,7 @@ Focus on security implications and potential threats.
 
 Return ONLY a JSON object:
 {{
-    "decision": true or false,
-    "confidence": 0.0 to 1.0,
-    "reasoning": "brief explanation"
+    "decision": true or false
 }}
 
 Event to evaluate:
