@@ -298,7 +298,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Summary
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Timestamp
                   </th>
                 </tr>
@@ -330,7 +330,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
                         {event.summary || `${event.publisher}/${event.resource.type}`}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(event.timestamp).toLocaleString()}
                     </td>
                   </tr>
