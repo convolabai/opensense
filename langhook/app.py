@@ -243,7 +243,7 @@ async def list_event_logs(
         from langhook.subscriptions.schemas import EventLogResponse, EventLogListResponse
         
         skip = (page - 1) * size
-        event_logs, total = await db_service.get_event_logs(
+        event_logs, total = db_service.get_event_logs(
             skip=skip,
             limit=size
         )

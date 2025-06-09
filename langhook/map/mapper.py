@@ -5,7 +5,7 @@ from typing import Any
 import jsonata
 import structlog
 
-from langhook.map.fingerprint import generate_fingerprint, extract_type_skeleton
+from langhook.map.fingerprint import extract_type_skeleton, generate_fingerprint
 from langhook.subscriptions.database import db_service
 
 logger = structlog.get_logger("langhook")
@@ -42,7 +42,7 @@ class MappingEngine:
 
         # First, try to get mapping from database using fingerprint
         try:
-            ingestion_mapping = await db_service.get_ingestion_mapping(fingerprint)
+            ingestion_mapping = db_service.get_ingestion_mapping(fingerprint)
             if ingestion_mapping:
                 logger.debug(
                     "Found fingerprint-based mapping",
@@ -203,7 +203,7 @@ class MappingEngine:
                 event_name = "unknown unknown"
 
             # Store in database
-            await db_service.create_ingestion_mapping(
+            db_service.create_ingestion_mapping(
                 fingerprint=fingerprint,
                 publisher=source,
                 event_name=event_name,

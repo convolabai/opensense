@@ -8,7 +8,13 @@ from sqlalchemy import and_, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from langhook.subscriptions.config import subscription_settings
-from langhook.subscriptions.models import Base, Subscription, EventLog, SubscriptionEventLog, IngestMapping
+from langhook.subscriptions.models import (
+    Base,
+    EventLog,
+    IngestMapping,
+    Subscription,
+    SubscriptionEventLog,
+)
 from langhook.subscriptions.schemas import SubscriptionCreate, SubscriptionUpdate
 
 logger = structlog.get_logger("langhook")
@@ -95,7 +101,7 @@ class DatabaseService:
                     )
                 """)
                 session.execute(create_table_sql)
-                
+
                 # Create indexes for better query performance
                 index_sqls = [
                     "CREATE INDEX IF NOT EXISTS idx_event_logs_event_id ON event_logs(event_id)",
@@ -107,10 +113,10 @@ class DatabaseService:
                     "CREATE INDEX IF NOT EXISTS idx_event_logs_timestamp ON event_logs(timestamp)",
                     "CREATE INDEX IF NOT EXISTS idx_event_logs_logged_at ON event_logs(logged_at)",
                 ]
-                
+
                 for index_sql in index_sqls:
                     session.execute(text(index_sql))
-                
+
                 session.commit()
                 logger.info("Event logs table ensured")
         except Exception as e:
@@ -145,7 +151,7 @@ class DatabaseService:
                     )
                 """)
                 session.execute(create_table_sql)
-                
+
                 # Create indexes for better query performance
                 index_sqls = [
                     "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_subscription_id ON subscription_event_logs(subscription_id)",
@@ -158,10 +164,10 @@ class DatabaseService:
                     "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_timestamp ON subscription_event_logs(timestamp)",
                     "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_logged_at ON subscription_event_logs(logged_at)",
                 ]
-                
+
                 for index_sql in index_sqls:
                     session.execute(text(index_sql))
-                
+
                 session.commit()
                 logger.info("Subscription event logs table ensured")
         except Exception as e:
@@ -177,16 +183,16 @@ class DatabaseService:
             with self.get_session() as session:
                 # Check if column exists
                 check_column_sql = text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
+                    SELECT column_name
+                    FROM information_schema.columns
                     WHERE table_name='subscriptions' AND column_name='gate'
                 """)
                 result = session.execute(check_column_sql).fetchone()
-                
+
                 if not result:
                     # Add column if it doesn't exist
                     add_column_sql = text("""
-                        ALTER TABLE subscriptions 
+                        ALTER TABLE subscriptions
                         ADD COLUMN gate JSONB
                     """)
                     session.execute(add_column_sql)
@@ -207,41 +213,41 @@ class DatabaseService:
             with self.get_session() as session:
                 # Check if gate_passed column exists
                 check_gate_passed_sql = text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
+                    SELECT column_name
+                    FROM information_schema.columns
                     WHERE table_name='subscription_event_logs' AND column_name='gate_passed'
                 """)
                 result = session.execute(check_gate_passed_sql).fetchone()
-                
+
                 if not result:
                     # Add gate_passed column if it doesn't exist
                     add_gate_passed_sql = text("""
-                        ALTER TABLE subscription_event_logs 
+                        ALTER TABLE subscription_event_logs
                         ADD COLUMN gate_passed BOOLEAN
                     """)
                     session.execute(add_gate_passed_sql)
                     logger.info("Added gate_passed column to subscription_event_logs table")
-                
+
                 # Check if gate_reason column exists
                 check_gate_reason_sql = text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
+                    SELECT column_name
+                    FROM information_schema.columns
                     WHERE table_name='subscription_event_logs' AND column_name='gate_reason'
                 """)
                 result = session.execute(check_gate_reason_sql).fetchone()
-                
+
                 if not result:
                     # Add gate_reason column if it doesn't exist
                     add_gate_reason_sql = text("""
-                        ALTER TABLE subscription_event_logs 
+                        ALTER TABLE subscription_event_logs
                         ADD COLUMN gate_reason TEXT
                     """)
                     session.execute(add_gate_reason_sql)
                     logger.info("Added gate_reason column to subscription_event_logs table")
-                
+
                 session.commit()
-                
-        except Exception as e:
+
+        except Exception:
             logger.error(
                 "Failed to add gate columns to subscription_event_logs table")
     def create_ingest_mappings_table(self) -> None:
@@ -261,17 +267,17 @@ class DatabaseService:
                     )
                 """)
                 session.execute(create_table_sql)
-                
+
                 # Create indexes for better query performance
                 index_sqls = [
                     "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_publisher ON ingest_mappings(publisher)",
                     "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_event_name ON ingest_mappings(event_name)",
                     "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_created_at ON ingest_mappings(created_at)",
                 ]
-                
+
                 for index_sql in index_sqls:
                     session.execute(text(index_sql))
-                
+
                 session.commit()
                 logger.info("Ingest mappings table ensured")
         except Exception as e:
@@ -291,7 +297,7 @@ class DatabaseService:
             subscription.channel_config = json.loads(subscription.channel_config)
         # gate field is already stored as JSON, no need to parse
 
-    async def create_subscription(
+    def create_subscription(
         self,
         subscriber_id: str,
         pattern: str,
@@ -325,7 +331,7 @@ class DatabaseService:
 
             return subscription
 
-    async def get_subscription(self, subscription_id: int, subscriber_id: str) -> Subscription | None:
+    def get_subscription(self, subscription_id: int, subscriber_id: str) -> Subscription | None:
         """Get a subscription by ID for a specific subscriber."""
         with self.get_session() as session:
             subscription = session.query(Subscription).filter(
@@ -341,7 +347,7 @@ class DatabaseService:
 
             return subscription
 
-    async def get_subscriber_subscriptions(
+    def get_subscriber_subscriptions(
         self,
         subscriber_id: str,
         skip: int = 0,
@@ -360,7 +366,7 @@ class DatabaseService:
 
             return subscriptions, total
 
-    async def update_subscription(
+    def update_subscription(
         self,
         subscription_id: int,
         subscriber_id: str,
@@ -407,7 +413,7 @@ class DatabaseService:
 
             return subscription
 
-    async def delete_subscription(self, subscription_id: int, subscriber_id: str) -> bool:
+    def delete_subscription(self, subscription_id: int, subscriber_id: str) -> bool:
         """Delete a subscription."""
         with self.get_session() as session:
             subscription = session.query(Subscription).filter(
@@ -431,7 +437,7 @@ class DatabaseService:
 
             return True
 
-    async def get_all_active_subscriptions(self) -> list[Subscription]:
+    def get_all_active_subscriptions(self) -> list[Subscription]:
         """Get all active subscriptions for consumer management."""
         with self.get_session() as session:
             subscriptions = session.query(Subscription).filter(
@@ -444,7 +450,7 @@ class DatabaseService:
 
             return subscriptions
 
-    async def get_event_logs(
+    def get_event_logs(
         self,
         skip: int = 0,
         limit: int = 100
@@ -458,7 +464,7 @@ class DatabaseService:
 
             return event_logs, total
 
-    async def get_subscription_events(
+    def get_subscription_events(
         self,
         subscription_id: int,
         skip: int = 0,
@@ -476,7 +482,7 @@ class DatabaseService:
             return subscription_events, total
 
 
-    async def get_ingestion_mapping(self, fingerprint: str) -> IngestMapping | None:
+    def get_ingestion_mapping(self, fingerprint: str) -> IngestMapping | None:
         """Get an ingestion mapping by fingerprint."""
         with self.get_session() as session:
             mapping = session.query(IngestMapping).filter(
@@ -484,7 +490,7 @@ class DatabaseService:
             ).first()
             return mapping
 
-    async def create_ingestion_mapping(
+    def create_ingestion_mapping(
         self,
         fingerprint: str,
         publisher: str,
@@ -515,7 +521,7 @@ class DatabaseService:
 
             return mapping
 
-    async def get_all_ingestion_mappings(
+    def get_all_ingestion_mappings(
         self,
         skip: int = 0,
         limit: int = 100

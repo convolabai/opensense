@@ -382,7 +382,7 @@ class SubscriptionConsumerService:
     async def _load_active_subscriptions(self) -> None:
         """Load all active subscriptions and create consumers."""
         try:
-            subscriptions = await db_service.get_all_active_subscriptions()
+            subscriptions = db_service.get_all_active_subscriptions()
             
             logger.info(
                 "Loading active subscriptions",
