@@ -82,8 +82,8 @@ class LLMSuggestionService:
             return None
 
     async def generate_jsonata_mapping_with_event_field(
-        self, 
-        source: str, 
+        self,
+        source: str,
         raw_payload: dict[str, Any]
     ) -> tuple[str, str | None] | None:
         """
@@ -102,8 +102,9 @@ class LLMSuggestionService:
 
         try:
             # Import here to avoid errors if langchain is not installed
-            from langchain.schema import HumanMessage, SystemMessage
             import json
+
+            from langchain.schema import HumanMessage, SystemMessage
 
             # Create the prompt
             system_prompt = self._create_jsonata_system_prompt()
@@ -129,11 +130,11 @@ class LLMSuggestionService:
                 if isinstance(response_data, dict):
                     jsonata_expr = response_data.get("jsonata")
                     event_field_expr = response_data.get("event_field")
-                    
+
                     if jsonata_expr:
                         # Convert the jsonata dict back to string for validation
                         jsonata_str = json.dumps(jsonata_expr)
-                        
+
                         # Validate the JSONata expression by testing it
                         if not self._validate_jsonata_expression(jsonata_str, raw_payload, source):
                             return None

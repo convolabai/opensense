@@ -5,7 +5,7 @@ from typing import Any
 import jsonata
 import structlog
 
-from langhook.map.fingerprint import generate_fingerprint, extract_type_skeleton
+from langhook.map.fingerprint import extract_type_skeleton, generate_fingerprint
 from langhook.subscriptions.database import db_service
 
 logger = structlog.get_logger("langhook")
@@ -43,22 +43,22 @@ class MappingEngine:
         # First, try to find mappings with matching structure
         try:
             matching_mappings = await db_service.get_ingestion_mappings_by_structure(structure_fingerprint)
-            
+
             if matching_mappings:
                 logger.debug(
                     "Found mappings with matching structure",
                     source=source,
                     count=len(matching_mappings)
                 )
-                
+
                 # Try to find a mapping where the event field matches
                 from langhook.map.fingerprint import generate_enhanced_fingerprint
-                
+
                 for mapping in matching_mappings:
                     if mapping.event_field_expr:
                         # Generate enhanced fingerprint using this mapping's event field expression
                         enhanced_fingerprint = generate_enhanced_fingerprint(
-                            raw_payload, 
+                            raw_payload,
                             mapping.event_field_expr
                         )
                         if enhanced_fingerprint == mapping.fingerprint:
@@ -78,7 +78,7 @@ class MappingEngine:
                                 fingerprint=structure_fingerprint
                             )
                             return await self._apply_jsonata_mapping(mapping.mapping_expr, raw_payload, source)
-                
+
                 logger.debug(
                     "No exact fingerprint match found among structure matches",
                     source=source
@@ -89,7 +89,7 @@ class MappingEngine:
                     source=source,
                     structure_fingerprint=structure_fingerprint
                 )
-                
+
         except Exception as e:
             logger.warning(
                 "Failed to lookup fingerprint mapping",
@@ -97,7 +97,7 @@ class MappingEngine:
                 fingerprint=structure_fingerprint,
                 error=str(e)
             )
-        
+
         # No fingerprint match found, return None to trigger LLM mapping generation
         logger.debug(
             "No fingerprint mapping found",
@@ -229,8 +229,11 @@ class MappingEngine:
             event_field_expr: Optional JSONata expression to extract event/action field
         """
         try:
-            from langhook.map.fingerprint import generate_enhanced_fingerprint, extract_type_skeleton
-            
+            from langhook.map.fingerprint import (
+                extract_type_skeleton,
+                generate_enhanced_fingerprint,
+            )
+
             # Generate enhanced fingerprint using event field expression
             fingerprint = generate_enhanced_fingerprint(raw_payload, event_field_expr)
             structure = extract_type_skeleton(raw_payload)
