@@ -20,6 +20,7 @@ class Subscription(Base):
     channel_type = Column(String(50), nullable=True)  # 'webhook' or None for polling-only
     channel_config = Column(Text, nullable=True)  # JSON config for channel or None
     active = Column(Boolean, default=True, nullable=False)
+    gate = Column(JSON, nullable=True)  # LLM gate configuration
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -72,6 +73,8 @@ class SubscriptionEventLog(Base):
     timestamp = Column(DateTime(timezone=True), nullable=False, index=True)  # Event timestamp
     webhook_sent = Column(Boolean, default=False, nullable=False)  # Whether webhook was sent
     webhook_response_status = Column(Integer, nullable=True)  # HTTP status if webhook sent
+    gate_passed = Column(Boolean, nullable=True)  # Whether LLM gate passed (null if gate not enabled)
+    gate_reason = Column(Text, nullable=True)  # Reason from LLM gate evaluation
     logged_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)  # Log timestamp
 
 

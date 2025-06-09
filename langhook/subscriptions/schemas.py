@@ -18,11 +18,18 @@ class WebhookChannelConfig(ChannelConfig):
     method: str = "POST"
 
 
+class GateConfig(BaseModel):
+    """LLM gate configuration for subscription filtering."""
+    enabled: bool = Field(default=False, description="Whether the LLM gate is enabled")
+    prompt: str = Field(default="", description="Prompt for gate evaluation")
+
+
 class SubscriptionCreate(BaseModel):
     """Schema for creating a new subscription."""
     description: str = Field(..., description="Natural language description of what to watch for")
     channel_type: str | None = Field(None, description="Type of notification channel")
     channel_config: dict[str, Any] | None = Field(None, description="Configuration for the notification channel")
+    gate: GateConfig | None = Field(None, description="LLM gate configuration")
 
     @field_validator('channel_type')
     @classmethod
@@ -38,6 +45,7 @@ class SubscriptionUpdate(BaseModel):
     channel_type: str | None = None
     channel_config: dict[str, Any] | None = None
     active: bool | None = None
+    gate: GateConfig | None = None
 
     @field_validator('channel_type')
     @classmethod
@@ -56,6 +64,7 @@ class SubscriptionResponse(BaseModel):
     channel_type: str | None
     channel_config: dict[str, Any] | None
     active: bool
+    gate: dict[str, Any] | None
     created_at: datetime
     updated_at: datetime | None = None
 
@@ -114,6 +123,8 @@ class SubscriptionEventLogResponse(BaseModel):
     timestamp: datetime
     webhook_sent: bool
     webhook_response_status: int | None = None
+    gate_passed: bool | None = None
+    gate_reason: str | None = None
     logged_at: datetime
 
     class Config:
