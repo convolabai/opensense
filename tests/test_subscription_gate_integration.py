@@ -235,7 +235,7 @@ class TestSubscriptionConsumerWithGate:
              patch('httpx.AsyncClient') as mock_http:
             
             # Mock gate blocks
-            mock_gate.evaluate_event = AsyncMock(return_value=(False, "Not important enough"))
+            mock_gate.evaluate_event = AsyncMock(return_value=(False, "Not relevant enough"))
             
             # Mock database save
             mock_db.get_session = Mock()

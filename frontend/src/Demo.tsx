@@ -63,7 +63,7 @@ const demoSubscriptions = [
   },
   {
     id: 'stripe_high_value_refund',
-    sentence: 'Alert me when there is a Stripe with > $500 value',
+    sentence: 'Alert me when there is a Stripe refund with > $500 value',
     source: 'Stripe',
     pattern: 'langhook.events.stripe.refund.*.created',
     llmGatePrompt: 'Approve if this Stripe refund is more than $500 in value for a real customer transaction, not test data',
@@ -85,7 +85,7 @@ const demoSubscriptions = [
         id: 2,
         description: 'Refund of $800 issued for test customer',
         outcome: 'llm_rejected',
-        reason: 'Test transactions are not important',
+        reason: 'Test transactions are not relevant',
         rawPayloadKey: 'stripe_refund_high_value_test',
         canonicalEvent: {
           publisher: 'stripe',
@@ -676,7 +676,7 @@ const Demo: React.FC = () => {
                             <Bot size={16} className="text-yellow-600" />
                             <span className="font-medium text-yellow-800">AI Filtered</span>
                           </div>
-                          <div className="text-xs text-yellow-700">Event matched pattern but was deemed not important by LLM</div>
+                          <div className="text-xs text-yellow-700">Event matched pattern but was deemed not relevant by LLM</div>
                         </div>
                       )}
                       {selectedEvent.outcome === 'no_match' && (

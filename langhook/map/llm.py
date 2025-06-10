@@ -297,7 +297,7 @@ Example 2 - GitHub PR Review Approved
 Example 3 - Stripe Payment Succeeded
 
 {
-  "jsonata": "{ \"publisher\": \"stripe\", \"resource\": { \"type\": \"payment\", \"id\": data.object.id }, \"action\": \"updated\", \"timestamp\": $formatInteger(created * 1000, '[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z') }",
+  "jsonata": "{ \"publisher\": \"stripe\", \"resource\": { \"type\": \"payment\", \"id\": data.object.id }, \"action\": \"updated\", \"timestamp\": $formatInteger(created * 1000, \"[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z\") }",
   "event_field": "type"
 }
 
@@ -340,8 +340,11 @@ Example 5 - Salesforce Contact Updated
         try:
             import jsonata
 
+            # Sanitize JSONata expression for compatibility (same as in transform_to_canonical)
+            sanitized_expr = jsonata_expr.replace("\\'", '"')
+            
             # Test the JSONata expression
-            result = jsonata.transform(jsonata_expr, raw_payload)
+            result = jsonata.transform(sanitized_expr, raw_payload)
 
             if not isinstance(result, dict):
                 logger.error(
@@ -426,7 +429,8 @@ Example 5 - Salesforce Contact Updated
                 "Failed to validate JSONata expression",
                 source=source,
                 expression=jsonata_expr[:200],
-                error=str(e)
+                error=str(e),
+                exc_info=True
             )
             return False
     def _validate_canonical_format(self, canonical_data: dict[str, Any], source: str) -> bool:
