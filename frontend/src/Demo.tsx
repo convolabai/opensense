@@ -18,7 +18,7 @@ const demoSubscriptions = [
     sentence: 'Notify me when PR 1374 is approved',
     source: 'GitHub',
     pattern: 'langhook.events.github.pull_request.1374.updated',
-    llmGatePrompt: 'Evaluate if this GitHub pull request event represents an approval for PR #1374. Only approve if the action specifically indicates approval by a reviewer.',
+    llmGatePrompt: 'Approve if this GitHub pull request event represents an approval for PR #1374 specifically',
     mockEvents: [
       {
         id: 1,
@@ -66,7 +66,7 @@ const demoSubscriptions = [
     sentence: 'Alert me when there is a Stripe with > $500 value',
     source: 'Stripe',
     pattern: 'langhook.events.stripe.refund.*.created',
-    llmGatePrompt: 'Determine if this Stripe refund event represents a high-value refund (>$500) for a real customer transaction, not a test or low-value refund.',
+    llmGatePrompt: 'Approve if this Stripe refund is more than $500 in value for a real customer transaction, not test data',
     mockEvents: [
       {
         id: 1,
@@ -526,7 +526,7 @@ const Demo: React.FC = () => {
                       </div>
                       <div className="border-t pt-2">
                         <div className="text-xs font-medium text-gray-700 mb-1">Raw Payload:</div>
-                        <pre className="text-xs break-words whitespace-pre-wrap text-gray-600">{JSON.stringify(selectedEventForIngest?.rawPayloadKey ? samplePayloads[selectedEventForIngest.rawPayloadKey]?.payload : selectedEventForIngest?.canonicalEvent, null, 1)}</pre>
+                        <pre className="text-xs break-words whitespace-pre-wrap text-gray-600 max-h-20 overflow-y-auto">{JSON.stringify(selectedEventForIngest?.rawPayloadKey ? samplePayloads[selectedEventForIngest.rawPayloadKey]?.payload : selectedEventForIngest?.canonicalEvent, null, 1)}</pre>
                       </div>
                     </div>
                   ) : (
