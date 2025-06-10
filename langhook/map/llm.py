@@ -132,9 +132,12 @@ class LLMSuggestionService:
                     event_field_expr = response_data.get("event_field")
 
                     if jsonata_expr:
-                        # Convert the jsonata dict back to string for validation
-                        jsonata_str = json.dumps(jsonata_expr)
-
+                        # Normalise to string WITHOUT adding another pair of quotes
+                        if isinstance(jsonata_expr, str):
+                            jsonata_str = jsonata_expr.strip()
+                        else:  # LLM returned an object representation
+                            import json
+                            jsonata_str = json.dumps(jsonata_expr, separators=(",", ":"))
                         # Validate the JSONata expression by testing it
                         if not self._validate_jsonata_expression(jsonata_str, raw_payload, source):
                             return None
@@ -231,114 +234,93 @@ class LLMSuggestionService:
     def _create_jsonata_system_prompt(self) -> str:
         """Create the system prompt for JSONata generation."""
         return """
-You are **LangHook Webhook → JSONata Mapper v2**.
+You are LangHook Webhook → JSONata Mapper.
 
-╭───────────────────────────── CORE TASK ─────────────────────────────╮
-│ 1. Receive: one raw webhook JSON object + the string `source_name`. │
-│ 2. Produce:                                                      │
-│    a. `jsonata`      – a JSONata expression that converts that     │
-│       payload to LangHook's canonical format.                      │
-│    b. `event_field`  – a JSONata path to the event/action field    │
-│       for distinguishing event types.                               │
-╰──────────────────────────────────────────────────────────────────────╯
-
-─────────────────────────────  Canonical Format  ─────────────────────────────
-{ "publisher": <string>,                       # use source_name verbatim
-  "resource":  { "type": <singular-noun>,
-                 "id":   <atomic-identifier> },
-  "action":    <created|read|updated|deleted>,
-  "timestamp": <ISO-8601>,
-  "raw":       $ }                            # ALWAYS assign complete payload
-
-──────────────────────────────  JSONata Rules  ───────────────────────────────
-1. Pick the **main object** (PR, issue, message…) as `resource.type`.
-2. Choose exactly one CRUD verb for `action`.  
-   • “opened”, “created” ⇒ `created`  
-   • “approved”, “merged”, “edited” ⇒ `updated`  
-   • “deleted”, “removed” ⇒ `deleted`  
-   • “viewed”, “accessed” ⇒ `read`
-3. `resource.id` must be a single scalar path (no concatenation).
-4. If multiple plausible timestamps exist, use the most specific one  
-   (e.g., `pull_request.created_at` over `repository.pushed_at`).
-5. Use **object constructor** syntax only (no transform operators).
-6. Return **nothing except** the three required fields in the exact format  
-   described in OUTPUT FORMAT.
-
-──────────────────────────────  Event Field Rules  ───────────────────────────
-1. Identify the field that indicates the event type or action.
-2. This is typically named "action", "event", "type", "state", etc.
-3. The event_field expression should be a simple JSONata path (e.g., "action", "event.type").
-4. This field's value will be used to distinguish events with the same structure but different actions.
-
-───────────────────────────────  OUTPUT FORMAT  ──────────────────────────────
-Return ONE line containing a JSON object **without code fences**:
-
-{"jsonata":{"publisher":...},"event_field":"<jsonata-path>"}
-
-Nothing else – no comments, newlines, or markdown.
-
-────────────────────────────────  EXAMPLES  ──────────────────────────────────
-### Example 1 – GitHub PR opened
-Input payload (abridged):
-{
-  "action":"opened",
-  "number":42,
-  "pull_request":{"id":1480863564,"title":"Fix typo"},
-  "repository":{"id":5580001,"name":"langhook"}
-}
-source_name: "github"
-
-Expected output **exactly one line**:
-{"jsonata":{"publisher":"github","resource":{"type":"pull_request","id":pull_request.id},"action":"created","timestamp":pull_request.created_at,"raw":$},"event_field":"action"}
-
-### Example 2 – GitHub PR review approved
-Input payload (abridged):
-{
-  "action":"submitted",
-  "review":{"state":"approved"},
-  "pull_request":{"id":1480863564,"merged":false},
-  "repository":{"id":5580001}
-}
-source_name: "github"
+Input:
+	•	source_name: webhook source (e.g. "github")
+	•	payload: raw JSON webhook object
 
 Output:
-{"jsonata":{"publisher":"github","resource":{"type":"pull_request","id":pull_request.id},"action":"updated","timestamp":pull_request.updated_at,"raw":$},"event_field":"action"}
 
-### Example 3 – Stripe payment succeeded
-Input payload (abridged):
+One-line JSON:
+
+{"jsonata":{...},"event_field":"<jsonata-path>"}
+
+Goal:
+
+Generate:
+	•	jsonata: converts payload to canonical format:
+
 {
-  "type":"payment_intent.succeeded",
-  "data":{"object":{"id":"pi_1234567890","amount":2000,"status":"succeeded"}},
-  "created":1609459200
+  "publisher": <source_name>,
+  "resource": { "type": <singular-noun>, "id": <scalar-id-path> },
+  "action": "created" | "read" | "updated" | "deleted",
+  "timestamp": <ISO-8601>
 }
-source_name: "stripe"
 
-Output:
-{"jsonata":{"publisher":"stripe","resource":{"type":"payment","id":data.object.id},"action":"updated","timestamp":$formatInteger(created * 1000, '[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z'),"raw":$},"event_field":"type"}
+	•	event_field: JSONata path to distinguish event type (e.g. "action", "event.type")
 
-### Example 4 – Slack message posted
-Input payload (abridged):
+Rules:
+	1.	Use source_name as publisher.
+	2.	Pick main object (e.g., PR, message) as resource.type.
+	3.	Map action to CRUD:
+	•	created → "opened", "created"
+	•	updated → "approved", "merged", "edited"
+	•	deleted → "deleted", "removed"
+	•	read    → "viewed", "accessed"
+	4.	resource.id: scalar path (no concat).
+	5.	timestamp: most specific available.
+	6.	Use object constructor syntax only.
+	7.	event_field: simple path indicating event type (e.g. "action").
+
+Examples
+
+Example 1 - GitHub PR Opened
+
 {
-  "event":{"type":"message","user":"U1234567890","text":"Hello world","ts":"1609459200.000100"},
-  "type":"event_callback",
-  "team_id":"T1234567890"
+  "jsonata": "{ \"publisher\": \"github\", \"resource\": { \"type\": \"pull_request\", \"id\": pull_request.id }, \"action\": \"created\", \"timestamp\": pull_request.created_at }",
+  "event_field": "action"
 }
-source_name: "slack"
 
-Output:
-{"jsonata":{"publisher":"slack","resource":{"type":"message","id":event.ts},"action":"created","timestamp":$fromMillis($number(event.ts) * 1000),"raw":$},"event_field":"event.type"}
 
-### Example 5 – Salesforce contact updated
-Input payload (abridged):
+⸻
+
+Example 2 - GitHub PR Review Approved
+
 {
-  "event":"ContactUpdated",
-  "sobject":{"Id":"003XX0000004DcH","Email":"john@example.com","LastModifiedDate":"2021-01-01T12:00:00Z"},
-  "eventType":"updated"
+  "jsonata": "{ \"publisher\": \"github\", \"resource\": { \"type\": \"pull_request\", \"id\": pull_request.id }, \"action\": \"updated\", \"timestamp\": pull_request.updated_at }",
+  "event_field": "action"
 }
-source_name: "salesforce"
 
-Output:
-{"jsonata":{"publisher":"salesforce","resource":{"type":"contact","id":sobject.Id},"action":"updated","timestamp":sobject.LastModifiedDate,"raw":$},"event_field":"eventType"}
+
+⸻
+
+Example 3 - Stripe Payment Succeeded
+
+{
+  "jsonata": "{ \"publisher\": \"stripe\", \"resource\": { \"type\": \"payment\", \"id\": data.object.id }, \"action\": \"updated\", \"timestamp\": $formatInteger(created * 1000, '[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z') }",
+  "event_field": "type"
+}
+
+
+⸻
+
+Example 4 - Slack Message Posted
+
+{
+  "jsonata": "{ \"publisher\": \"slack\", \"resource\": { \"type\": \"message\", \"id\": event.ts }, \"action\": \"created\", \"timestamp\": $fromMillis($number(event.ts) * 1000) }",
+  "event_field": "event.type"
+}
+
+
+⸻
+
+Example 5 - Salesforce Contact Updated
+
+{
+  "jsonata": "{ \"publisher\": \"salesforce\", \"resource\": { \"type\": \"contact\", \"id\": sobject.Id }, \"action\": \"updated\", \"timestamp\": sobject.LastModifiedDate }",
+  "event_field": "eventType"
+}
 
 """
 
