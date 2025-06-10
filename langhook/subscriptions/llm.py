@@ -279,13 +279,16 @@ GATE PROMPT GENERATION:
 Additionally, you must generate a gate_prompt that will be used to evaluate whether incoming events match the user's specific intent. This prompt should:
 1. Be specific to the user's exact criteria and requirements
 2. Only evaluate what the user explicitly requested (no bias toward "importance" or "urgency")
-3. Instruct the evaluator to return JSON: {"decision": true or false}
-4. Focus on the user's specific conditions, filters, or criteria
+3. Focus on the user's specific conditions, filters, or criteria
+4. NOT include JSON format instructions (the system will handle response formatting)
 
 Examples of good gate prompts:
-- For "GitHub comments from Alice": "Evaluate if this event is a GitHub comment AND the author is Alice. Return {"decision": true or false}"
-- For "Stripe payments over $1000": "Evaluate if this event is a Stripe payment AND the amount is greater than $1000. Return {"decision": true or false}"
-- For "Slack messages containing 'urgent'": "Evaluate if this event is a Slack message AND contains the word 'urgent'. Return {"decision": true or false}"
+- For "GitHub comments from Alice": "Evaluate if this event is a GitHub comment AND the author is Alice"
+- For "Stripe payments over $1000": "Evaluate if this event is a Stripe payment AND the amount is greater than $1000"
+- For "Slack messages containing 'urgent'": "Evaluate if this event is a Slack message AND contains the word 'urgent'"
+- For "Stripe refunds over $500": "Approve if this Stripe refund is more than $500 in value"
+- For "Production deployments that failed": "Approve if this deployment event indicates a failure in the production environment"
+- For "High priority security alerts": "Approve if this security event has high priority or critical severity"
 
 RESPONSE FORMAT:
 You must respond with a JSON object containing both the pattern and gate_prompt:
