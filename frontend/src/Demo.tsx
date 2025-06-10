@@ -287,43 +287,43 @@ const Demo: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Header */}
-      <div className="text-center">
+      <div className="text-center mb-8">
         <div className="flex items-center justify-center gap-3 mb-4">
           <PlayCircle size={32} className="text-blue-600" />
-          <h1 className="text-3xl font-bold text-gray-900">LangHook Demo Playground</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">LangHook Demo Playground</h1>
         </div>
-        <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+        <p className="text-base md:text-lg text-gray-600 max-w-3xl mx-auto">
           Understand how LangHook transforms sentences into subscriptions, filters events, and applies intelligent LLM gating.
         </p>
       </div>
 
       {/* Step 1: Choose Subscription */}
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6">
+        <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
           <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium">1</span>
           Choose a Subscription Sentence
         </h2>
-        <p className="text-gray-600 mb-6">Select a natural-language subscription to monitor an event type.</p>
+        <p className="text-sm md:text-base text-gray-600 mb-6">Select a natural-language subscription to monitor an event type.</p>
         
-        <div className="grid gap-4">
+        <div className="grid gap-3 md:gap-4">
           {demoSubscriptions.map((subscription) => (
             <button
               key={subscription.id}
               onClick={() => setSelectedSubscription(subscription)}
-              className={`text-left p-4 rounded-lg border-2 transition-all ${
+              className={`text-left p-3 md:p-4 rounded-lg border-2 transition-all ${
                 selectedSubscription.id === subscription.id
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300 bg-white'
               }`}
             >
               <div className="flex items-center gap-3">
-                <Check size={20} className="text-green-600" />
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900">{subscription.sentence}</div>
-                  <div className="text-sm text-gray-500">{subscription.source}</div>
+                <Check size={18} className="text-green-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-gray-900 text-sm md:text-base">{subscription.sentence}</div>
+                  <div className="text-xs md:text-sm text-gray-500">{subscription.source}</div>
                 </div>
                 {selectedSubscription.id === subscription.id && (
-                  <ArrowRight size={20} className="text-blue-600" />
+                  <ArrowRight size={18} className="text-blue-600 flex-shrink-0" />
                 )}
               </div>
             </button>
@@ -338,33 +338,33 @@ const Demo: React.FC = () => {
       </div>
 
       {/* Step 2: Send Sample Events */}
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6">
+        <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
           <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium">2</span>
           Send a Sample Event
         </h2>
-        <p className="text-gray-600 mb-6">
+        <p className="text-sm md:text-base text-gray-600 mb-6">
           Each subscription includes 3 mock events to demonstrate different outcomes:
         </p>
         
-        <div className="grid gap-4">
+        <div className="grid gap-3 md:gap-4">
           {selectedSubscription.mockEvents.map((event) => (
             <div
               key={event.id}
-              className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+              className="border border-gray-200 rounded-lg p-3 md:p-4 hover:shadow-sm transition-shadow"
             >
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900 mb-2">📦 {event.description}</div>
-                  <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-sm font-medium ${getOutcomeColor(event.outcome)}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-gray-900 mb-2 text-sm md:text-base">📦 {event.description}</div>
+                  <div className={`inline-flex items-center gap-2 px-2 md:px-3 py-1 rounded-full border text-xs md:text-sm font-medium ${getOutcomeColor(event.outcome)}`}>
                     {getOutcomeIcon(event.outcome)}
                     {getOutcomeLabel(event.outcome)}
                   </div>
-                  <div className="text-sm text-gray-600 mt-2">{event.reason}</div>
+                  <div className="text-xs md:text-sm text-gray-600 mt-2">{event.reason}</div>
                 </div>
                 <button
                   onClick={() => handleEventProcess(event)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs md:text-sm font-medium flex-shrink-0"
                   disabled={showProcessing}
                 >
                   {showProcessing && selectedEvent?.id === event.id ? 'Processing...' : 'Process Event'}
