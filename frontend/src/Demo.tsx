@@ -50,7 +50,7 @@ const demoSubscriptions = [
   },
   {
     id: 'stripe_high_value_refund',
-    sentence: 'Alert me when a high-value Stripe refund is issued',
+    sentence: 'Alert me when a $500 value Stripe refund is issued',
     source: 'Stripe',
     pattern: 'langhook.events.stripe.refund.*.created',
     llmGatePrompt: 'Determine if this Stripe refund event represents a high-value refund (>$500) for a real customer transaction, not a test or low-value refund.',
@@ -233,11 +233,13 @@ const demoSubscriptions = [
 const Demo: React.FC = () => {
   const [selectedSubscription, setSelectedSubscription] = useState(demoSubscriptions[0]);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [selectedEventForIngest, setSelectedEventForIngest] = useState<any>(null);
   const [showProcessing, setShowProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [hasAddedSubscription, setHasAddedSubscription] = useState(false);
   const [isAddingSubscription, setIsAddingSubscription] = useState(false);
   const [processingComplete, setProcessingComplete] = useState(false);
+  const [isIngesting, setIsIngesting] = useState(false);
 
   const handleAddSubscription = async () => {
     setIsAddingSubscription(true);
@@ -252,18 +254,23 @@ const Demo: React.FC = () => {
   const handleStartOver = () => {
     setSelectedSubscription(demoSubscriptions[0]);
     setSelectedEvent(null);
+    setSelectedEventForIngest(null);
     setShowProcessing(false);
     setCurrentStep(0);
     setHasAddedSubscription(false);
     setIsAddingSubscription(false);
     setProcessingComplete(false);
+    setIsIngesting(false);
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleEventProcess = async (event: any) => {
-    setSelectedEvent(event);
+  const handleIngestEvent = async () => {
+    if (!selectedEventForIngest) return;
+    
+    setIsIngesting(true);
+    setSelectedEvent(selectedEventForIngest);
     setShowProcessing(true);
     setCurrentStep(0);
     setProcessingComplete(false);
@@ -291,6 +298,7 @@ const Demo: React.FC = () => {
     
     // Keep final result visible and show completion
     setProcessingComplete(true);
+    setIsIngesting(false);
   };
 
   const getOutcomeIcon = (outcome: string) => {
@@ -358,15 +366,15 @@ const Demo: React.FC = () => {
             </button>
           </div>
 
-          {/* Show generated pattern and LLM Gate prompt */}
+          {/* Show combined generated pattern and LLM Gate prompt */}
           {hasAddedSubscription && (
-            <div className="mt-4 space-y-4">
+            <div className="mt-4">
               <div className="p-4 bg-gray-50 rounded-lg border">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Generated Subject Filter:</h3>
-                <code className="text-sm font-mono text-blue-600">{selectedSubscription.pattern}</code>
-              </div>
-              <div className="p-4 bg-purple-50 rounded-lg border">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">LLM Gate Prompt:</h3>
+                <code className="text-sm font-mono text-blue-600 mb-4 block">{selectedSubscription.pattern}</code>
+                
+                <h3 className="text-sm font-medium text-gray-700 mb-1">LLM Gate Prompt:</h3>
+                <p className="text-xs text-gray-500 mb-2">Evaluate all matching events using this prompt</p>
                 <p className="text-sm text-gray-600">{selectedSubscription.llmGatePrompt}</p>
               </div>
             </div>
@@ -381,29 +389,68 @@ const Demo: React.FC = () => {
               Ingest new event
             </h2>
             <p className="text-sm md:text-base text-gray-600 mb-6">
-              Source systems send webhook events to LangHook. Try ingesting sample events to see how they're processed:
+              Source systems send webhook events to LangHook. Select an event to see its raw JSON, then ingest it:
             </p>
             
-            <div className="grid gap-3 md:gap-4">
+            <div className="grid gap-3 md:gap-4 mb-6">
               {selectedSubscription.mockEvents.map((event) => (
                 <div
                   key={event.id}
-                  className="border border-gray-200 rounded-lg p-3 md:p-4 hover:shadow-sm transition-shadow"
+                  className={`border rounded-lg p-3 md:p-4 transition-all cursor-pointer ${
+                    selectedEventForIngest?.id === event.id 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                  }`}
+                  onClick={() => setSelectedEventForIngest(event)}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 mb-2 text-sm md:text-base">📦 {event.description}</div>
+                      <div className="font-medium text-gray-900 mb-2 text-sm md:text-base flex items-center gap-2">
+                        <span className={`w-4 h-4 rounded-full border-2 ${
+                          selectedEventForIngest?.id === event.id 
+                            ? 'border-blue-500 bg-blue-500' 
+                            : 'border-gray-300'
+                        }`}>
+                          {selectedEventForIngest?.id === event.id && (
+                            <Check size={12} className="text-white" />
+                          )}
+                        </span>
+                        📦 {event.description}
+                      </div>
+                      
+                      {selectedEventForIngest?.id === event.id && (
+                        <div className="mt-3">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Raw JSON Event:</h4>
+                          <div className="bg-gray-800 text-gray-200 p-3 rounded-md font-mono text-xs overflow-x-auto max-h-40">
+                            <pre>{JSON.stringify(event.canonicalEvent, null, 2)}</pre>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <button
-                      onClick={() => handleEventProcess(event)}
-                      className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs md:text-sm font-medium flex-shrink-0"
-                      disabled={showProcessing}
-                    >
-                      {showProcessing && selectedEvent?.id === event.id ? 'Processing...' : 'Ingest Event'}
-                    </button>
                   </div>
                 </div>
               ))}
+            </div>
+            
+            {/* Single Ingest Event button at bottom */}
+            <div className="text-center">
+              <button
+                onClick={handleIngestEvent}
+                disabled={!selectedEventForIngest || isIngesting}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isIngesting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/50 border-t-transparent rounded-full animate-spin" />
+                    Processing Event...
+                  </span>
+                ) : (
+                  'Ingest Event'
+                )}
+              </button>
+              {!selectedEventForIngest && (
+                <p className="text-sm text-gray-500 mt-2">Select an event above to ingest</p>
+              )}
             </div>
           </div>
         )}
