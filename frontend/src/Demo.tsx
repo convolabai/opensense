@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { Check, X, ArrowRight, Zap, Bot, Smartphone, BellRing } from 'lucide-react';
 import { samplePayloads } from './sampleWebhookPayloads';
 
+// Mapping from display source names to API endpoint source names
+const sourceMapping: { [key: string]: string } = {
+  'GitHub': 'github',
+  'Stripe': 'stripe', 
+  'Jira': 'jira',
+  'Slack': 'slack',
+  'Email': 'email'
+};
+
 // Demo-specific subscription sentences and their mock events
 const demoSubscriptions = [
   {
@@ -442,6 +451,10 @@ const Demo: React.FC = () => {
                       
                       {selectedEventForIngest?.id === event.id && (
                         <div className="mt-3">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Ingestion Endpoint:</h4>
+                          <div className="bg-blue-50 border border-blue-200 p-3 rounded-md mb-4">
+                            <code className="text-sm font-mono text-blue-700">POST /ingest/{sourceMapping[selectedSubscription.source] || selectedSubscription.source.toLowerCase()}</code>
+                          </div>
                           <h4 className="text-sm font-medium text-gray-700 mb-2">Raw JSON Event:</h4>
                           <div className="bg-gray-800 text-gray-200 p-3 rounded-md font-mono text-xs overflow-x-auto max-h-40">
                             <pre>{JSON.stringify(event.rawPayloadKey ? samplePayloads[event.rawPayloadKey]?.payload : event.canonicalEvent, null, 2)}</pre>
@@ -506,9 +519,15 @@ const Demo: React.FC = () => {
               {(currentStep >= 1 || loadingSteps.has(1)) && (
                 <div className="text-xs bg-white rounded border p-2 min-h-[4rem]">
                   {loadingSteps.has(1) ? (
-                    <div className="flex items-center justify-center gap-2 h-full">
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-gray-600">Processing...</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center gap-2 py-2">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-gray-600">Processing...</span>
+                      </div>
+                      <div className="border-t pt-2">
+                        <div className="text-xs font-medium text-gray-700 mb-1">Raw Payload:</div>
+                        <pre className="text-xs break-words whitespace-pre-wrap text-gray-600">{JSON.stringify(selectedEventForIngest?.rawPayloadKey ? samplePayloads[selectedEventForIngest.rawPayloadKey]?.payload : selectedEventForIngest?.canonicalEvent, null, 1)}</pre>
+                      </div>
                     </div>
                   ) : (
                     <pre className="text-xs break-words whitespace-pre-wrap">{JSON.stringify(selectedEvent.canonicalEvent, null, 1)}</pre>
