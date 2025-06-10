@@ -8,7 +8,13 @@ from sqlalchemy import and_, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from langhook.subscriptions.config import subscription_settings
-from langhook.subscriptions.models import Base, Subscription, EventLog, SubscriptionEventLog, IngestMapping
+from langhook.subscriptions.models import (
+    Base,
+    EventLog,
+    IngestMapping,
+    Subscription,
+    SubscriptionEventLog,
+)
 from langhook.subscriptions.schemas import SubscriptionCreate, SubscriptionUpdate
 
 logger = structlog.get_logger("langhook")
@@ -95,7 +101,7 @@ class DatabaseService:
                     )
                 """)
                 session.execute(create_table_sql)
-                
+
                 # Create indexes for better query performance
                 index_sqls = [
                     "CREATE INDEX IF NOT EXISTS idx_event_logs_event_id ON event_logs(event_id)",
@@ -107,10 +113,10 @@ class DatabaseService:
                     "CREATE INDEX IF NOT EXISTS idx_event_logs_timestamp ON event_logs(timestamp)",
                     "CREATE INDEX IF NOT EXISTS idx_event_logs_logged_at ON event_logs(logged_at)",
                 ]
-                
+
                 for index_sql in index_sqls:
                     session.execute(text(index_sql))
-                
+
                 session.commit()
                 logger.info("Event logs table ensured")
         except Exception as e:
@@ -145,7 +151,7 @@ class DatabaseService:
                     )
                 """)
                 session.execute(create_table_sql)
-                
+
                 # Create indexes for better query performance
                 index_sqls = [
                     "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_subscription_id ON subscription_event_logs(subscription_id)",
@@ -158,10 +164,10 @@ class DatabaseService:
                     "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_timestamp ON subscription_event_logs(timestamp)",
                     "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_logged_at ON subscription_event_logs(logged_at)",
                 ]
-                
+
                 for index_sql in index_sqls:
                     session.execute(text(index_sql))
-                
+
                 session.commit()
                 logger.info("Subscription event logs table ensured")
         except Exception as e:
@@ -182,7 +188,7 @@ class DatabaseService:
                     WHERE table_name='subscriptions' AND column_name='gate'
                 """)
                 result = session.execute(check_column_sql).fetchone()
-                
+
                 if not result:
                     # Add column if it doesn't exist
                     add_column_sql = text("""
@@ -212,7 +218,7 @@ class DatabaseService:
                     WHERE table_name='subscription_event_logs' AND column_name='gate_passed'
                 """)
                 result = session.execute(check_gate_passed_sql).fetchone()
-                
+
                 if not result:
                     # Add gate_passed column if it doesn't exist
                     add_gate_passed_sql = text("""
@@ -221,7 +227,7 @@ class DatabaseService:
                     """)
                     session.execute(add_gate_passed_sql)
                     logger.info("Added gate_passed column to subscription_event_logs table")
-                
+
                 # Check if gate_reason column exists
                 check_gate_reason_sql = text("""
                     SELECT column_name 
@@ -229,7 +235,7 @@ class DatabaseService:
                     WHERE table_name='subscription_event_logs' AND column_name='gate_reason'
                 """)
                 result = session.execute(check_gate_reason_sql).fetchone()
-                
+
                 if not result:
                     # Add gate_reason column if it doesn't exist
                     add_gate_reason_sql = text("""
@@ -238,10 +244,10 @@ class DatabaseService:
                     """)
                     session.execute(add_gate_reason_sql)
                     logger.info("Added gate_reason column to subscription_event_logs table")
-                
+
                 session.commit()
-                
-        except Exception as e:
+
+        except Exception:
             logger.error(
                 "Failed to add gate columns to subscription_event_logs table")
     def create_ingest_mappings_table(self) -> None:
@@ -255,28 +261,59 @@ class DatabaseService:
                         publisher VARCHAR(255) NOT NULL,
                         event_name VARCHAR(255) NOT NULL,
                         mapping_expr TEXT NOT NULL,
+                        event_field_expr TEXT,
                         structure JSONB NOT NULL,
                         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                         updated_at TIMESTAMPTZ
                     )
                 """)
                 session.execute(create_table_sql)
-                
+
+                # Add event_field_expr column if it doesn't exist (for existing installations)
+                self.add_event_field_expr_column_to_ingest_mappings(session)
+
                 # Create indexes for better query performance
                 index_sqls = [
                     "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_publisher ON ingest_mappings(publisher)",
                     "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_event_name ON ingest_mappings(event_name)",
                     "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_created_at ON ingest_mappings(created_at)",
                 ]
-                
+
                 for index_sql in index_sqls:
                     session.execute(text(index_sql))
-                
+
                 session.commit()
                 logger.info("Ingest mappings table ensured")
         except Exception as e:
             logger.error(
                 "Failed to create ingest mappings table",
+                error=str(e),
+                exc_info=True
+            )
+
+    def add_event_field_expr_column_to_ingest_mappings(self, session: Session) -> None:
+        """Add event_field_expr column to ingest_mappings table if it doesn't exist."""
+        try:
+            # Check if event_field_expr column exists
+            check_column_sql = text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='ingest_mappings' AND column_name='event_field_expr'
+            """)
+            result = session.execute(check_column_sql).fetchone()
+
+            if not result:
+                # Add event_field_expr column if it doesn't exist
+                add_column_sql = text("""
+                    ALTER TABLE ingest_mappings 
+                    ADD COLUMN event_field_expr TEXT
+                """)
+                session.execute(add_column_sql)
+                logger.info("Added event_field_expr column to ingest_mappings table")
+
+        except Exception as e:
+            logger.error(
+                "Failed to add event_field_expr column to ingest_mappings table",
                 error=str(e),
                 exc_info=True
             )
@@ -476,6 +513,40 @@ class DatabaseService:
             return subscription_events, total
 
 
+    async def get_ingestion_mappings_by_structure(
+        self,
+        structure_fingerprint: str
+    ) -> list[IngestMapping]:
+        """
+        Get all ingestion mappings that have the same base structure fingerprint.
+
+        This is used for finding mappings that match the payload structure but may
+        have different event field values.
+        """
+        with self.get_session() as session:
+            # Create a custom query to find mappings with the same structure
+            # We'll store the structure fingerprint separately for this lookup
+            mappings = session.query(IngestMapping).all()
+
+            # Filter mappings that have the same structure
+            import hashlib
+
+            from langhook.map.fingerprint import (
+                create_canonical_string,
+            )
+
+            matching_mappings = []
+            for mapping in mappings:
+                # Check if the structure matches by recreating the structure fingerprint
+                if mapping.structure:
+                    mapping_structure_fingerprint = hashlib.sha256(
+                        create_canonical_string(mapping.structure).encode('utf-8')
+                    ).hexdigest()
+                    if mapping_structure_fingerprint == structure_fingerprint:
+                        matching_mappings.append(mapping)
+
+            return matching_mappings
+
     async def get_ingestion_mapping(self, fingerprint: str) -> IngestMapping | None:
         """Get an ingestion mapping by fingerprint."""
         with self.get_session() as session:
@@ -490,7 +561,8 @@ class DatabaseService:
         publisher: str,
         event_name: str,
         mapping_expr: str,
-        structure: dict[str, Any]
+        structure: dict[str, Any],
+        event_field_expr: str | None = None
     ) -> IngestMapping:
         """Create a new ingestion mapping."""
         with self.get_session() as session:
@@ -499,6 +571,7 @@ class DatabaseService:
                 publisher=publisher,
                 event_name=event_name,
                 mapping_expr=mapping_expr,
+                event_field_expr=event_field_expr,
                 structure=structure
             )
 
@@ -510,7 +583,8 @@ class DatabaseService:
                 "Ingest mapping created",
                 fingerprint=fingerprint,
                 publisher=publisher,
-                event_name=event_name
+                event_name=event_name,
+                has_event_field_expr=event_field_expr is not None
             )
 
             return mapping

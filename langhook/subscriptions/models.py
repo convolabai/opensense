@@ -1,7 +1,7 @@
 """Database models for subscription management."""
 
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, JSON
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 
@@ -87,6 +87,7 @@ class IngestMapping(Base):
     publisher = Column(String(255), nullable=False, index=True)  # Publisher (source)
     event_name = Column(String(255), nullable=False, index=True)  # Event name description
     mapping_expr = Column(Text, nullable=False)  # JSONata mapping expression
+    event_field_expr = Column(Text, nullable=True)  # JSONata expression to extract event/action field
     structure = Column(JSON, nullable=False)  # Unhashed type skeleton structure
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
