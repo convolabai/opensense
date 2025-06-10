@@ -50,7 +50,7 @@ const demoSubscriptions = [
   },
   {
     id: 'stripe_high_value_refund',
-    sentence: 'Alert me when a $500 value Stripe refund is issued',
+    sentence: 'Alert me when there is a Stripe with > $500 value',
     source: 'Stripe',
     pattern: 'langhook.events.stripe.refund.*.created',
     llmGatePrompt: 'Determine if this Stripe refund event represents a high-value refund (>$500) for a real customer transaction, not a test or low-value refund.',
