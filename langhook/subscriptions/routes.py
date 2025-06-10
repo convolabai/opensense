@@ -160,6 +160,40 @@ async def list_ingest_mappings(
         ) from e
 
 
+@router.delete("/ingest-mappings/{fingerprint}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_ingest_mapping(
+    fingerprint: str
+) -> None:
+    """Delete an ingest mapping by fingerprint."""
+    try:
+        deleted = await db_service.delete_ingestion_mapping(fingerprint)
+        
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ingest mapping not found"
+            )
+        
+        logger.info(
+            "Ingest mapping deleted via API",
+            fingerprint=fingerprint
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Failed to delete ingest mapping",
+            fingerprint=fingerprint,
+            error=str(e),
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete ingest mapping"
+        ) from e
+
+
 @router.get("/{subscription_id}/events", response_model=SubscriptionEventLogListResponse)
 async def list_subscription_events(
     subscription_id: int,

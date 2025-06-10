@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Eye, Calendar, Hash, Tag, Code } from 'lucide-react';
+import { RefreshCw, Eye, Calendar, Hash, Tag, Code, Trash2 } from 'lucide-react';
 
 interface IngestMappingData {
   fingerprint: string;
   publisher: string;
   event_name: string;
   mapping_expr: string;
+  event_field_expr?: string;
   structure: any;
   created_at: string;
   updated_at?: string;
@@ -26,6 +27,9 @@ const IngestMapping: React.FC = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalMappings, setTotalMappings] = useState(0);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
   const pageSize = 20;
 
   const loadMappings = async (page: number = 1) => {
@@ -72,6 +76,31 @@ const IngestMapping: React.FC = () => {
     return JSON.stringify(structure, null, 2);
   };
 
+  const deleteMapping = async (fingerprint: string) => {
+    setDeleteLoading(fingerprint);
+    setDeleteError(null);
+    setDeleteSuccess(null);
+
+    try {
+      const response = await fetch(`/subscriptions/ingest-mappings/${encodeURIComponent(fingerprint)}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to delete ingest mapping' }));
+        throw new Error(errorData.detail || 'Failed to delete ingest mapping');
+      }
+
+      setDeleteSuccess(`Ingest mapping ${fingerprint.slice(0, 8)}... deleted successfully`);
+      await loadMappings(currentPage); // Refresh the mappings list
+
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete ingest mapping');
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -97,6 +126,21 @@ const IngestMapping: React.FC = () => {
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
           <p className="font-medium">Error loading ingest mappings</p>
           <p className="text-sm mt-1">{error}</p>
+        </div>
+      )}
+
+      {/* Delete Error */}
+      {deleteError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+          <p className="font-medium">Error deleting ingest mapping</p>
+          <p className="text-sm mt-1">{deleteError}</p>
+        </div>
+      )}
+
+      {/* Delete Success */}
+      {deleteSuccess && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md">
+          <p className="font-medium">{deleteSuccess}</p>
         </div>
       )}
 
@@ -176,13 +220,28 @@ const IngestMapping: React.FC = () => {
                     </div>
                   </div>
                   
-                  <button
-                    onClick={() => handleViewDetails(mapping)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                  >
-                    <Eye className="h-4 w-4" />
-                    Details
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleViewDetails(mapping)}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Details
+                    </button>
+                    <button
+                      onClick={() => deleteMapping(mapping.fingerprint)}
+                      disabled={deleteLoading === mapping.fingerprint}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={`Delete mapping ${mapping.fingerprint.slice(0, 8)}...`}
+                    >
+                      {deleteLoading === mapping.fingerprint ? (
+                        <div className="w-4 h-4 border-2 border-red-600/50 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -256,6 +315,18 @@ const IngestMapping: React.FC = () => {
                     </pre>
                   </div>
                 </div>
+
+                {/* Event Field Expression */}
+                {selectedMapping.event_field_expr && (
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-800 mb-3">Event Field JSONata Expression</h4>
+                    <div className="bg-gray-900 text-yellow-400 border rounded-lg p-4">
+                      <pre className="text-sm font-mono whitespace-pre-wrap overflow-x-auto">
+                        {selectedMapping.event_field_expr}
+                      </pre>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
