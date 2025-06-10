@@ -1,16 +1,17 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import Demo from './Demo';
-
-// Mock scrollIntoView since it's not available in test environment
-Element.prototype.scrollIntoView = jest.fn();
-Object.defineProperty(window, 'scrollTo', {
-  value: jest.fn(),
-  writable: true
-});
+import Demo from '../Demo';
 
 describe('Demo Component', () => {
+  beforeEach(() => {
+    // Mock scrollIntoView since it's not available in test environment
+    Element.prototype.scrollIntoView = jest.fn();
+    Object.defineProperty(window, 'scrollTo', {
+      value: jest.fn(),
+      writable: true
+    });
+  });
   test('renders demo page with subscription options', () => {
     render(<Demo />);
     
