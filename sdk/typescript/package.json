@@ -1,5 +1,5 @@
 {
-  "name": "langhook-sdk",
+  "name": "langhook",
   "version": "0.1.0",
   "description": "TypeScript SDK for LangHook",
   "main": "dist/index.js",
@@ -12,10 +12,21 @@
   "keywords": [
     "langhook",
     "webhook",
-    "events"
+    "events",
+    "sdk",
+    "typescript",
+    "javascript"
   ],
   "author": "LangHook Team",
   "license": "MIT",
+  "homepage": "https://github.com/touchaponk/langhook",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/touchaponk/langhook.git"
+  },
+  "bugs": {
+    "url": "https://github.com/touchaponk/langhook/issues"
+  },
   "dependencies": {
     "axios": "^1.0.0"
   },
