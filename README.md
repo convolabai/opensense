@@ -368,6 +368,48 @@ Tests run automatically on every PR via GitHub Actions:
 - [Examples](./examples/) - Sample payloads and mappings
 - [Schemas](./schemas/) - JSON schemas for validation
 
+## 📦 Package Installation
+
+LangHook is available as multiple packages for different use cases:
+
+### Python SDK Only
+For using LangHook as a client library:
+```bash
+pip install langhook
+```
+
+### Python SDK + Server
+For running the full LangHook server with all dependencies:
+```bash
+pip install langhook[server]
+```
+
+### TypeScript/JavaScript SDK
+For TypeScript and JavaScript projects:
+```bash
+npm install langhook
+```
+
+### Example Usage
+
+**Python SDK:**
+```python
+from langhook import LangHookClient, LangHookClientConfig
+
+config = LangHookClientConfig(endpoint="http://localhost:8000")
+client = LangHookClient(config)
+```
+
+**TypeScript SDK:**
+```typescript
+import { LangHookClient, LangHookClientConfig } from 'langhook';
+
+const config: LangHookClientConfig = {
+  endpoint: 'http://localhost:8000'
+};
+const client = new LangHookClient(config);
+```
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md) for details.

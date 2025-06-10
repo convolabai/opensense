@@ -1,0 +1,18 @@
+# Source files
+src/
+tsconfig.json
+
+# Tests
+jest.config.json
+*.test.ts
+
+# Development files
+demo.ts
+example.ts
+
+# Build artifacts (we want to include dist/ but not source)
+node_modules/
+.gitignore
+
+# Documentation that's not the main README
+docs/
