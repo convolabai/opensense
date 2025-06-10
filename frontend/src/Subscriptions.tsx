@@ -1,5 +1,5 @@
 import React, { useState } from 'react'; // useEffect might not be needed if no initial data fetch is done here
-import { Plus, Eye, RefreshCw, Bell, Trash2, List } from 'lucide-react';
+import { Plus, Eye, RefreshCw, Bell, Trash2, List, ChevronDown, ChevronRight } from 'lucide-react';
 
 // Interfaces (copied from App.tsx, ensure they are consistent)
 interface GateConfig {
@@ -70,6 +70,9 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
   const [gateEnabled, setGateEnabled] = useState<boolean>(false);
   const [gatePrompt, setGatePrompt] = useState<string>('');
   
+  // Expanded rows state
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  
   // Subscription events state
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [subscriptionEvents, setSubscriptionEvents] = useState<EventLog[]>([]);
@@ -80,6 +83,16 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
   const [totalEvents, setTotalEvents] = useState(0);
   
   const eventsPageSize = 20;
+
+  const toggleRowExpansion = (subscriptionId: number) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(subscriptionId)) {
+      newExpandedRows.delete(subscriptionId);
+    } else {
+      newExpandedRows.add(subscriptionId);
+    }
+    setExpandedRows(newExpandedRows);
+  };
 
   const createSubscription = async () => {
     if (!subscriptionDescription.trim()) {
@@ -501,20 +514,11 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Description
                   </th>
-                  <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Subject Filter
-                  </th>
-                  <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     LLM Gate
                   </th>
-                  <th className="hidden xl:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Notification
-                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="hidden 2xl:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
+                    Notification Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -522,90 +526,118 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {subscriptions.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="max-w-xs truncate" title={sub.description}>
-                        {sub.description}
-                      </div>
-                    </td>
-                    <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">
-                      <code className="bg-gray-100 px-2 py-1 rounded text-xs">
-                        {sub.pattern}
-                      </code>
-                    </td>
-                    <td className="hidden lg:table-cell px-6 py-4 text-sm text-gray-500">
-                      {sub.gate?.enabled ? (
-                        <div className="space-y-1">
-                          <span className="text-green-600 flex items-center gap-1">
-                            <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                            Enabled
-                          </span>
-                          <div className="text-xs text-gray-600 max-w-xs truncate" title={sub.gate.prompt}>
-                            {sub.gate.prompt}
+                {subscriptions.map((sub) => {
+                  const isExpanded = expandedRows.has(sub.id);
+                  return (
+                    <React.Fragment key={sub.id}>
+                      <tr className="hover:bg-gray-50">
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => toggleRowExpansion(sub.id)}
+                              className="flex items-center justify-center w-6 h-6 text-gray-400 hover:text-gray-600 transition-colors"
+                              title={isExpanded ? "Collapse details" : "Expand details"}
+                            >
+                              {isExpanded ? (
+                                <ChevronDown size={16} />
+                              ) : (
+                                <ChevronRight size={16} />
+                              )}
+                            </button>
+                            <div className="max-w-xs truncate" title={sub.description}>
+                              {sub.description}
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 flex items-center gap-1">
-                          <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
-                          Disabled
-                        </span>
-                      )}
-                    </td>
-                    <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {sub.channel_type === 'webhook' && sub.channel_config?.url ? (
-                        <span className="text-blue-600 flex items-center gap-1">
-                          <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-                          Webhook
-                        </span>
-                      ) : (
-                        <span className="text-purple-600 flex items-center gap-1">
-                          <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
-                          Polling
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {sub.active ? (
-                        <span className="text-green-600 flex items-center gap-1">
-                          <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                          Active
-                        </span>
-                      ) : (
-                        <span className="text-red-600 flex items-center gap-1">
-                          <span className="w-2 h-2 bg-red-400 rounded-full"></span>
-                          Inactive
-                        </span>
-                      )}
-                    </td>
-                    <td className="hidden 2xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(sub.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center gap-2">
-                        <button
-                          className="text-blue-600 hover:text-blue-800 transition-colors"
-                          onClick={() => viewSubscriptionEvents(sub)}
-                          title="View events"
-                        >
-                          <List size={16} />
-                        </button>
-                        <button
-                          className="text-red-600 hover:text-red-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => deleteSubscription(sub.id)}
-                          disabled={deletingSubscriptionId === sub.id}
-                          title="Delete subscription"
-                        >
-                          {deletingSubscriptionId === sub.id ? (
-                            <div className="w-4 h-4 border-2 border-red-600/50 border-t-transparent rounded-full animate-spin" />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {sub.gate?.enabled ? (
+                            <span className="text-green-600 flex items-center gap-1">
+                              <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                              Enabled
+                            </span>
                           ) : (
-                            <Trash2 size={16} />
+                            <span className="text-gray-400 flex items-center gap-1">
+                              <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
+                              Disabled
+                            </span>
                           )}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {sub.channel_type === 'webhook' && sub.channel_config?.url ? (
+                            <span className="text-blue-600 flex items-center gap-1">
+                              <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                              Webhook
+                            </span>
+                          ) : (
+                            <span className="text-purple-600 flex items-center gap-1">
+                              <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
+                              Polling
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                              onClick={() => viewSubscriptionEvents(sub)}
+                              title="View events"
+                            >
+                              <List size={16} />
+                            </button>
+                            <button
+                              className="text-red-600 hover:text-red-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              onClick={() => deleteSubscription(sub.id)}
+                              disabled={deletingSubscriptionId === sub.id}
+                              title="Delete subscription"
+                            >
+                              {deletingSubscriptionId === sub.id ? (
+                                <div className="w-4 h-4 border-2 border-red-600/50 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Trash2 size={16} />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-4 bg-gray-50">
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <h4 className="text-sm font-medium text-gray-700 mb-2">Topic Filter</h4>
+                                  <code className="bg-white border border-gray-200 px-3 py-2 rounded text-xs font-mono block">
+                                    {sub.pattern}
+                                  </code>
+                                </div>
+                                {sub.gate?.enabled && (
+                                  <div>
+                                    <h4 className="text-sm font-medium text-gray-700 mb-2">LLM Gate Prompt</h4>
+                                    <div className="bg-white border border-gray-200 px-3 py-2 rounded text-xs">
+                                      {sub.gate.prompt || <span className="text-gray-500 italic">Auto-generated based on description</span>}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex justify-between items-center text-xs text-gray-500 pt-2 border-t border-gray-200">
+                                <div>
+                                  Status: {sub.active ? (
+                                    <span className="text-green-600 font-medium">Active</span>
+                                  ) : (
+                                    <span className="text-red-600 font-medium">Inactive</span>
+                                  )}
+                                </div>
+                                <div>
+                                  Created: {new Date(sub.created_at).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
