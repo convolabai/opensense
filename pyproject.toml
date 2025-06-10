@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "langhook"
 version = "0.3.0"
-description = "LangHook - Make any event from anywhere instantly understandable and actionable by anyone"
+description = "LangHook Python SDK and Server - Make any event from anywhere instantly understandable and actionable by anyone"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
@@ -22,13 +22,20 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    # Base SDK dependencies
+    "httpx>=0.24.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+server = [
+    # Server framework dependencies
     "fastapi>=0.111.0",
     "uvicorn[standard]>=0.29.0",
-    "pydantic>=2.0.0",
     "structlog>=23.0.0",
     "nats-py>=2.9.0",
     "redis[hiredis]>=5.0.0",
-    # Epic 2 dependencies
+    # Mapping and transformation dependencies
     "jsonata>=0.2.0",
     "cloudevents>=1.11.0",
     "jsonschema>=4.0.0",
@@ -37,13 +44,10 @@ dependencies = [
     "prometheus-client>=0.16.0",
     "openai>=1.0.0",
     "python-dotenv>=1.1.0",
-    # Subscription API dependencies
+    # Database dependencies
     "sqlalchemy>=2.0.0",
     "psycopg2-binary>=2.9.0",
-    "httpx>=0.24.0",
 ]
-
-[project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
