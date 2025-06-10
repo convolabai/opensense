@@ -70,6 +70,7 @@ The API server will be available at `http://localhost:8000` with:
 ### Intelligent Event Transformation
 - **JSONata mapping engine** converts raw payloads to canonical format
 - **LLM-powered fallback** generates mappings for unknown events
+- **Enhanced fingerprinting** distinguishes events with same structure but different actions (e.g., "opened" vs "closed" PRs)
 - **Ingest mapping cache** stores fingerprint-based mappings for fast transformation
 - **CloudEvents 1.0 compliance** for interoperability
 - **Schema validation** ensures data quality
@@ -303,6 +304,23 @@ graph TD
 2. **svc-map**: Event transformation engine with LLM fallback and automatic schema collection
 3. **Schema Registry**: Dynamic database tracking all event types, exposed via `/schema` API
 4. **Rule Engine**: Natural language subscription matching (coming soon)
+
+### Enhanced Fingerprinting
+
+LangHook uses **enhanced fingerprinting** to intelligently cache event mappings:
+
+- **Structure Fingerprinting**: Creates a fingerprint based on payload structure (field names and types)
+- **Event Field Enhancement**: Incorporates event-specific fields (like "action") into the fingerprint
+- **Smart Differentiation**: Events with the same structure but different actions get unique fingerprints
+
+**Example**: GitHub PR webhooks for "opened" vs "closed" actions have identical structure but different event semantics. Enhanced fingerprinting ensures they get distinct mappings:
+
+```
+Basic fingerprint (same):     abc123...
+Enhanced fingerprint (diff):  abc123...||event:opened vs abc123...||event:closed
+```
+
+This prevents mapping collisions and ensures accurate event transformation for similar payload structures.
 
 ## 🧪 Testing
 

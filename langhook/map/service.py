@@ -122,16 +122,18 @@ class MappingService:
                     self.llm_invocations += 1
                     metrics.record_llm_invocation(source or "unknown")
 
-                    # Generate JSONata expression using LLM
-                    jsonata_expr = await llm_service.generate_jsonata_mapping(source, payload)
+                    # Generate JSONata expression with event field using LLM
+                    mapping_result = await llm_service.generate_jsonata_mapping_with_event_field(source, payload)
 
-                    if jsonata_expr is None:
+                    if mapping_result is None:
                         await self._send_mapping_failure(
                             raw_event,
-                            "LLM failed to generate valid JSONata expression"
+                            "LLM failed to generate valid JSONata expression with event field"
                         )
                         metrics.record_event_failed(source or "unknown", "llm_jsonata_generation_failed")
                         return
+
+                    jsonata_expr, event_field_expr = mapping_result
 
                     # Apply the generated JSONata expression
                     canonical_data = await mapping_engine._apply_jsonata_mapping(jsonata_expr, payload, source)
@@ -144,15 +146,16 @@ class MappingService:
                         metrics.record_event_failed(source or "unknown", "jsonata_expression_invalid")
                         return
 
-                    # Store the generated JSONata expression for future use
+                    # Store the generated JSONata expression with event field for future use
                     try:
-                        await mapping_engine.store_jsonata_mapping(source, payload, jsonata_expr)
+                        await mapping_engine.store_jsonata_mapping_with_event_field(source, payload, jsonata_expr, event_field_expr)
                     except Exception as e:
                         # Log the error but don't fail the event processing
                         logger.warning(
-                            "Failed to store generated JSONata mapping",
+                            "Failed to store generated JSONata mapping with event field",
                             event_id=event_id,
                             source=source,
+                            has_event_field_expr=event_field_expr is not None,
                             error=str(e)
                         )
                 else:
