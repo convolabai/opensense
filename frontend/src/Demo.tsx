@@ -8,6 +8,7 @@ const demoSubscriptions = [
     sentence: 'Notify me when PR 1374 is approved',
     source: 'GitHub',
     pattern: 'langhook.events.github.pull_request.1374.updated',
+    llmGatePrompt: 'Evaluate if this GitHub pull request event represents an approval for PR #1374. Only approve if the action specifically indicates approval by a reviewer.',
     mockEvents: [
       {
         id: 1,
@@ -52,6 +53,7 @@ const demoSubscriptions = [
     sentence: 'Alert me when a high-value Stripe refund is issued',
     source: 'Stripe',
     pattern: 'langhook.events.stripe.refund.*.created',
+    llmGatePrompt: 'Determine if this Stripe refund event represents a high-value refund (>$500) for a real customer transaction, not a test or low-value refund.',
     mockEvents: [
       {
         id: 1,
@@ -96,6 +98,7 @@ const demoSubscriptions = [
     sentence: 'Tell me when a Jira ticket is moved to Done',
     source: 'Jira',
     pattern: 'langhook.events.jira.issue.*.updated',
+    llmGatePrompt: 'Assess if this Jira issue update represents a ticket being properly moved to "Done" status by an authorized team member.',
     mockEvents: [
       {
         id: 1,
@@ -140,6 +143,7 @@ const demoSubscriptions = [
     sentence: 'Ping me when someone uploads a file to Slack',
     source: 'Slack',
     pattern: 'langhook.events.slack.file.*.created',
+    llmGatePrompt: 'Evaluate if this Slack file upload event contains an important business document rather than casual or irrelevant files.',
     mockEvents: [
       {
         id: 1,
@@ -184,6 +188,7 @@ const demoSubscriptions = [
     sentence: 'Let me know if an important email arrives',
     source: 'Email',
     pattern: 'langhook.events.email.message.*.received',
+    llmGatePrompt: 'Determine if this email event represents an important message that requires immediate attention, rather than routine or marketing emails.',
     mockEvents: [
       {
         id: 1,
@@ -231,11 +236,45 @@ const Demo: React.FC = () => {
   const [showProcessing, setShowProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [hasAddedSubscription, setHasAddedSubscription] = useState(false);
+  const [isAddingSubscription, setIsAddingSubscription] = useState(false);
+  const [processingComplete, setProcessingComplete] = useState(false);
+
+  const handleAddSubscription = async () => {
+    setIsAddingSubscription(true);
+    
+    // Show loading for 1 second
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    setIsAddingSubscription(false);
+    setHasAddedSubscription(true);
+  };
+
+  const handleStartOver = () => {
+    setSelectedSubscription(demoSubscriptions[0]);
+    setSelectedEvent(null);
+    setShowProcessing(false);
+    setCurrentStep(0);
+    setHasAddedSubscription(false);
+    setIsAddingSubscription(false);
+    setProcessingComplete(false);
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleEventProcess = async (event: any) => {
     setSelectedEvent(event);
     setShowProcessing(true);
     setCurrentStep(0);
+    setProcessingComplete(false);
+    
+    // Scroll to the processing section
+    setTimeout(() => {
+      const processingSection = document.querySelector('[data-processing-section]');
+      if (processingSection) {
+        processingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
     
     // Simulate processing steps with delays, starting from ingestion
     const steps = [
@@ -250,11 +289,8 @@ const Demo: React.FC = () => {
       setCurrentStep(i + 1);
     }
     
-    // Keep final result visible
-    setTimeout(() => {
-      setShowProcessing(false);
-      setCurrentStep(0);
-    }, 3000);
+    // Keep final result visible and show completion
+    setProcessingComplete(true);
   };
 
   const getOutcomeIcon = (outcome: string) => {
@@ -280,15 +316,16 @@ const Demo: React.FC = () => {
           <p className="text-sm md:text-base text-gray-600 mb-6">Enter a natural language query to create an event subscription.</p>
           
           <div className="grid gap-3 md:gap-4">
-            {demoSubscriptions.map((subscription) => (
+            {(!hasAddedSubscription && !isAddingSubscription ? demoSubscriptions : [selectedSubscription]).map((subscription) => (
               <button
                 key={subscription.id}
-                onClick={() => setSelectedSubscription(subscription)}
+                onClick={() => !isAddingSubscription && !hasAddedSubscription && setSelectedSubscription(subscription)}
+                disabled={isAddingSubscription || hasAddedSubscription}
                 className={`text-left p-3 md:p-4 rounded-lg border-2 transition-all ${
                   selectedSubscription.id === subscription.id
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 hover:border-gray-300 bg-white'
-                }`}
+                } ${isAddingSubscription || hasAddedSubscription ? 'opacity-75 cursor-not-allowed' : ''}`}
               >
                 <div className="flex items-center gap-3">
                   <Check size={18} className="text-green-600 flex-shrink-0" />
@@ -307,19 +344,31 @@ const Demo: React.FC = () => {
           {/* Add subscription button */}
           <div className="mt-6">
             <button
-              onClick={() => setHasAddedSubscription(true)}
-              className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              disabled={hasAddedSubscription}
+              onClick={handleAddSubscription}
+              className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-75 disabled:cursor-not-allowed"
+              disabled={hasAddedSubscription || isAddingSubscription}
             >
-              {hasAddedSubscription ? '✓ Subscription Added' : 'Add Subscription'}
+              {hasAddedSubscription ? '✓ Subscription Added' : 
+               isAddingSubscription ? (
+                 <span className="flex items-center justify-center gap-2">
+                   <div className="w-4 h-4 border-2 border-white/50 border-t-transparent rounded-full animate-spin" />
+                   Adding Subscription...
+                 </span>
+               ) : 'Add Subscription'}
             </button>
           </div>
 
-          {/* Show generated pattern */}
+          {/* Show generated pattern and LLM Gate prompt */}
           {hasAddedSubscription && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Generated Subject Filter:</h3>
-              <code className="text-sm font-mono text-blue-600">{selectedSubscription.pattern}</code>
+            <div className="mt-4 space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg border">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Generated Subject Filter:</h3>
+                <code className="text-sm font-mono text-blue-600">{selectedSubscription.pattern}</code>
+              </div>
+              <div className="p-4 bg-purple-50 rounded-lg border">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">LLM Gate Prompt:</h3>
+                <p className="text-sm text-gray-600">{selectedSubscription.llmGatePrompt}</p>
+              </div>
             </div>
           )}
         </div>
@@ -362,7 +411,7 @@ const Demo: React.FC = () => {
 
       {/* Step 3: Processing Timeline - Full width, horizontal layout */}
       {showProcessing && selectedEvent && (
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6" data-processing-section>
           <h2 className="text-xl font-semibold mb-6 text-gray-800 flex items-center gap-2">
             <Zap size={24} className="text-blue-600" />
             What Happens Inside LangHook
@@ -485,27 +534,24 @@ const Demo: React.FC = () => {
               {currentStep >= 4 && <Check size={16} className="text-blue-600 mt-2" />}
             </div>
           </div>
+          
+          {/* Start Over button when processing is complete */}
+          {processingComplete && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={handleStartOver}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                🔄 Start Over
+              </button>
+              <p className="text-sm text-gray-600 mt-2">
+                Try again or choose different events to ingest
+              </p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Bonus Interactions */}
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">🎛️ Bonus Interactions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="p-4 text-left border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all">
-            <div className="font-medium text-gray-900 mb-2">🔁 Replay Events</div>
-            <div className="text-sm text-gray-600">Try the same subscription with different events</div>
-          </button>
-          <button className="p-4 text-left border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all">
-            <div className="font-medium text-gray-900 mb-2">🧪 Compare Logic</div>
-            <div className="text-sm text-gray-600">See why different events have different outcomes</div>
-          </button>
-          <button className="p-4 text-left border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all">
-            <div className="font-medium text-gray-900 mb-2">📜 Dev Breakdown</div>
-            <div className="text-sm text-gray-600">Technical explanation of each processing stage</div>
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
