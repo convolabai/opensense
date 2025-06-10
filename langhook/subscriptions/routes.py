@@ -7,15 +7,14 @@ from fastapi import APIRouter, HTTPException, Query, status
 from langhook.subscriptions.database import db_service
 from langhook.subscriptions.llm import NoSuitableSchemaError, llm_service
 from langhook.subscriptions.schemas import (
+    IngestMappingListResponse,
+    IngestMappingResponse,
     SubscriptionCreate,
+    SubscriptionEventLogListResponse,
+    SubscriptionEventLogResponse,
     SubscriptionListResponse,
     SubscriptionResponse,
     SubscriptionUpdate,
-    EventLogListResponse,
-    SubscriptionEventLogListResponse,
-    SubscriptionEventLogResponse,
-    IngestMappingListResponse,
-    IngestMappingResponse,
 )
 
 logger = structlog.get_logger("langhook")
@@ -40,15 +39,15 @@ async def create_subscription(
     try:
         # Check if gate is enabled to determine if we need gate prompt generation
         gate_enabled = subscription_data.gate and subscription_data.gate.enabled
-        
+
         # Convert natural language description to NATS filter pattern and generate gate prompt if needed
         try:
             result = await llm_service.convert_to_pattern_and_gate(
-                subscription_data.description, 
+                subscription_data.description,
                 gate_enabled=gate_enabled and not subscription_data.gate.prompt
             )
             pattern = result["pattern"]
-            
+
             # Set auto-generated gate prompt if gate is enabled and no custom prompt provided
             if gate_enabled and not subscription_data.gate.prompt and "gate_prompt" in result:
                 subscription_data.gate.prompt = result["gate_prompt"]
@@ -129,6 +128,38 @@ async def create_subscription(
         ) from e
 
 
+@router.get("/ingest-mappings", response_model=IngestMappingListResponse)
+async def list_ingest_mappings(
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(50, ge=1, le=100, description="Items per page")
+) -> IngestMappingListResponse:
+    """List ingest mappings with pagination."""
+    try:
+        skip = (page - 1) * size
+        mappings, total = await db_service.get_all_ingestion_mappings(
+            skip=skip,
+            limit=size
+        )
+
+        return IngestMappingListResponse(
+            mappings=[IngestMappingResponse.from_orm(mapping) for mapping in mappings],
+            total=total,
+            page=page,
+            size=size
+        )
+
+    except Exception as e:
+        logger.error(
+            "Failed to list ingest mappings",
+            error=str(e),
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list ingest mappings"
+        ) from e
+
+
 @router.get("/{subscription_id}/events", response_model=SubscriptionEventLogListResponse)
 async def list_subscription_events(
     subscription_id: int,
@@ -138,7 +169,7 @@ async def list_subscription_events(
     """List events for a specific subscription with pagination."""
     # Use placeholder subscriber ID since auth is out of scope
     subscriber_id = "default"
-    
+
     try:
         # First verify subscription exists and belongs to subscriber
         subscription = await db_service.get_subscription(subscription_id, subscriber_id)
@@ -147,7 +178,7 @@ async def list_subscription_events(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Subscription not found"
             )
-        
+
         skip = (page - 1) * size
         subscription_events, total = await db_service.get_subscription_events(
             subscription_id=subscription_id,
@@ -255,20 +286,20 @@ async def update_subscription(
                 current_subscription = await db_service.get_subscription(subscription_id, subscriber_id)
                 if current_subscription and current_subscription.gate:
                     gate_enabled = current_subscription.gate.get("enabled", False)
-            
+
             try:
                 # Check if we need to auto-generate gate prompt
                 need_gate_prompt = gate_enabled and (
-                    not update_data.gate or 
+                    not update_data.gate or
                     not update_data.gate.prompt
                 )
-                
+
                 result = await llm_service.convert_to_pattern_and_gate(
                     update_data.description,
                     gate_enabled=need_gate_prompt
                 )
                 pattern = result["pattern"]
-                
+
                 # Set auto-generated gate prompt if needed
                 if need_gate_prompt and "gate_prompt" in result:
                     if update_data.gate is None:
@@ -276,7 +307,7 @@ async def update_subscription(
                         update_data.gate = GateConfig(enabled=True, prompt=result["gate_prompt"])
                     else:
                         update_data.gate.prompt = result["gate_prompt"]
-                    
+
                     logger.info(
                         "Auto-generated gate prompt for subscription update",
                         subscription_id=subscription_id,
@@ -394,36 +425,4 @@ async def delete_subscription(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete subscription"
-        ) from e
-
-
-@router.get("/ingest-mappings", response_model=IngestMappingListResponse)
-async def list_ingest_mappings(
-    page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(50, ge=1, le=100, description="Items per page")
-) -> IngestMappingListResponse:
-    """List ingest mappings with pagination."""
-    try:
-        skip = (page - 1) * size
-        mappings, total = await db_service.get_all_ingestion_mappings(
-            skip=skip,
-            limit=size
-        )
-
-        return IngestMappingListResponse(
-            mappings=[IngestMappingResponse.from_orm(mapping) for mapping in mappings],
-            total=total,
-            page=page,
-            size=size
-        )
-
-    except Exception as e:
-        logger.error(
-            "Failed to list ingest mappings",
-            error=str(e),
-            exc_info=True
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list ingest mappings"
         ) from e
