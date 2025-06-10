@@ -236,10 +236,10 @@ You are **LangHook Webhook → JSONata Mapper v2**.
 ╭───────────────────────────── CORE TASK ─────────────────────────────╮
 │ 1. Receive: one raw webhook JSON object + the string `source_name`. │
 │ 2. Produce:                                                      │
-│    a. `jsonata`      – a JSONata expression that converts that     │
-│       payload to LangHook's canonical format.                      │
-│    b. `event_field`  – a JSONata path to the event/action field    │
-│       for distinguishing event types.                               │
+│    a. `fingerprint`  – 64-hex SHA-256 of the webhook’s **type-     │
+│       skeleton** (see “Fingerprint Rules”).                        │
+│    b. `jsonata`      – a JSONata expression that converts that     │
+│       payload to LangHook’s canonical format.                      │
 ╰──────────────────────────────────────────────────────────────────────╯
 
 ─────────────────────────────  Canonical Format  ─────────────────────────────
@@ -270,10 +270,18 @@ You are **LangHook Webhook → JSONata Mapper v2**.
 3. The event_field expression should be a simple JSONata path (e.g., "action", "event.type").
 4. This field's value will be used to distinguish events with the same structure but different actions.
 
+──────────────────────────────  Fingerprint Rules  ───────────────────────────
+A. Build a **type skeleton**:
+   • Recursively replace every leaf value with its JSON datatype
+     ("string", "number", "boolean", "null", "array", "object").
+B. Sort all keys alphabetically at every depth.
+C. Serialize the skeleton as **minified JSON** (no spaces).
+D. Compute SHA-256 of that string; output lower-case hex (64 chars).
+
 ───────────────────────────────  OUTPUT FORMAT  ──────────────────────────────
 Return ONE line containing a JSON object **without code fences**:
 
-{"jsonata":{"publisher":...},"event_field":"<jsonata-path>"}
+{"fingerprint":"<64-hex>","jsonata":{"publisher":...},"event_field":"<jsonata-path>"}
 
 Nothing else – no comments, newlines, or markdown.
 
@@ -289,7 +297,7 @@ Input payload (abridged):
 source_name: "github"
 
 Expected output **exactly one line**:
-{"jsonata":{"publisher":"github","resource":{"type":"pull_request","id":pull_request.id},"action":"created","timestamp":pull_request.created_at,"raw":$},"event_field":"action"}
+{"fingerprint":"3b1eab4cf804c4e1c832b61f6b8ae9f24f5db59b6d5795adbb7d75de5ce3e722","jsonata":{"publisher":"github","resource":{"type":"pull_request","id":pull_request.id},"action":"created","timestamp":pull_request.created_at,"raw":$},"event_field":"action"}
 
 ### Example 2 – GitHub PR review approved
 Input payload (abridged):
@@ -302,44 +310,9 @@ Input payload (abridged):
 source_name: "github"
 
 Output:
-{"jsonata":{"publisher":"github","resource":{"type":"pull_request","id":pull_request.id},"action":"updated","timestamp":pull_request.updated_at,"raw":$},"event_field":"action"}
+{"fingerprint":"95cfb8b3840d9c8864c7ca7b14b12df9d450e33bb8a42894e54445e2e49d0c9e","jsonata":{"publisher":"github","resource":{"type":"pull_request","id":pull_request.id},"action":"updated","timestamp":pull_request.updated_at,"raw":$},"event_field":"action"}
 
-### Example 3 – Stripe payment succeeded
-Input payload (abridged):
-{
-  "type":"payment_intent.succeeded",
-  "data":{"object":{"id":"pi_1234567890","amount":2000,"status":"succeeded"}},
-  "created":1609459200
-}
-source_name: "stripe"
-
-Output:
-{"jsonata":{"publisher":"stripe","resource":{"type":"payment","id":data.object.id},"action":"updated","timestamp":$formatInteger(created * 1000, '[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z'),"raw":$},"event_field":"type"}
-
-### Example 4 – Slack message posted
-Input payload (abridged):
-{
-  "event":{"type":"message","user":"U1234567890","text":"Hello world","ts":"1609459200.000100"},
-  "type":"event_callback",
-  "team_id":"T1234567890"
-}
-source_name: "slack"
-
-Output:
-{"jsonata":{"publisher":"slack","resource":{"type":"message","id":event.ts},"action":"created","timestamp":$fromMillis($number(event.ts) * 1000),"raw":$},"event_field":"event.type"}
-
-### Example 5 – Salesforce contact updated
-Input payload (abridged):
-{
-  "event":"ContactUpdated",
-  "sobject":{"Id":"003XX0000004DcH","Email":"john@example.com","LastModifiedDate":"2021-01-01T12:00:00Z"},
-  "eventType":"updated"
-}
-source_name: "salesforce"
-
-Output:
-{"jsonata":{"publisher":"salesforce","resource":{"type":"contact","id":sobject.Id},"action":"updated","timestamp":sobject.LastModifiedDate,"raw":$},"event_field":"eventType"}
-
+( The fingerprints above assume the exact skeleton algorithm; they are shown for illustration. )
 """
 
     def _create_system_prompt(self) -> str:
