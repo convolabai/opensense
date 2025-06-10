@@ -35,6 +35,7 @@ from langhook.subscriptions.routes import router as subscriptions_router
 from langhook.subscriptions.schema_routes import router as schema_router
 from langhook.subscriptions.schema_registry import schema_registry_service
 from langhook.subscriptions.event_logging import event_logging_service
+from langhook.subscriptions.dlq_logging import dlq_logging_service
 
 logger = structlog.get_logger("langhook")
 
@@ -82,6 +83,7 @@ async def lifespan(app):
 
     # Start event logging service in background (if enabled)
     event_logging_task = None
+    dlq_logging_task = None
     subscription_consumer_task = None
     
     try:
@@ -91,6 +93,15 @@ async def lifespan(app):
             logger.info("Event logging service started")
     except Exception as e:
         logger.warning("Failed to start event logging service", error=str(e))
+
+    # Start DLQ logging service in background (if enabled)
+    try:
+        await dlq_logging_service.start()
+        if dlq_logging_service._running:
+            dlq_logging_task = asyncio.create_task(dlq_logging_service.run())
+            logger.info("DLQ logging service started")
+    except Exception as e:
+        logger.warning("Failed to start DLQ logging service", error=str(e))
 
     # Start subscription consumer service in background
     try:
@@ -141,6 +152,14 @@ async def lifespan(app):
             await asyncio.wait_for(event_logging_task, timeout=5.0)
         except (TimeoutError, asyncio.CancelledError):
             logger.info("Event logging service stopped")
+
+    # Cancel DLQ logging service if running
+    if dlq_logging_task:
+        dlq_logging_task.cancel()
+        try:
+            await asyncio.wait_for(dlq_logging_task, timeout=5.0)
+        except (TimeoutError, asyncio.CancelledError):
+            logger.info("DLQ logging service stopped")
 
     # Cancel subscription consumer service if running
     if subscription_consumer_task:
