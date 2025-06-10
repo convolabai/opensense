@@ -73,7 +73,16 @@ async def test_get_schema_summary_success(schema_service):
                 "github": ["pull_request", "repository"],
                 "stripe": ["refund"]
             },
-            "actions": ["created", "updated"]
+            "actions": ["created", "updated"],
+            "publisher_resource_actions": {
+                "github": {
+                    "pull_request": ["created", "updated"],
+                    "repository": ["created"]
+                },
+                "stripe": {
+                    "refund": ["created"]
+                }
+            }
         }
 
         assert result == expected
@@ -92,7 +101,8 @@ async def test_get_schema_summary_empty_db(schema_service):
         expected = {
             "publishers": [],
             "resource_types": {},
-            "actions": []
+            "actions": [],
+            "publisher_resource_actions": {}
         }
 
         assert result == expected
@@ -112,7 +122,8 @@ async def test_get_schema_summary_sql_error(schema_service):
         expected = {
             "publishers": [],
             "resource_types": {},
-            "actions": []
+            "actions": [],
+            "publisher_resource_actions": {}
         }
 
         assert result == expected

@@ -77,7 +77,8 @@ class SchemaRegistryService:
         Get a structured summary of all registered schemas.
 
         Returns:
-            Dictionary with publishers, resource_types grouped by publisher, and actions
+            Dictionary with publishers, resource_types grouped by publisher, actions,
+            and granular publisher_resource_actions showing exact combinations
         """
         try:
             with db_service.get_session() as session:
@@ -99,10 +100,25 @@ class SchemaRegistryService:
                     publisher_resource_types.sort()
                     resource_types[publisher] = publisher_resource_types
 
+                # Build granular publisher+resource_type -> actions mapping
+                publisher_resource_actions: dict[str, dict[str, list[str]]] = {}
+                for publisher in publishers:
+                    publisher_resource_actions[publisher] = {}
+                    publisher_entries = [e for e in all_entries if e.publisher == publisher]
+                    
+                    # Group by resource type within this publisher
+                    resource_types_for_publisher = list({e.resource_type for e in publisher_entries})
+                    for resource_type in resource_types_for_publisher:
+                        resource_entries = [e for e in publisher_entries if e.resource_type == resource_type]
+                        resource_actions = list({e.action for e in resource_entries})
+                        resource_actions.sort()
+                        publisher_resource_actions[publisher][resource_type] = resource_actions
+
                 return {
                     "publishers": publishers,
                     "resource_types": resource_types,
-                    "actions": actions
+                    "actions": actions,
+                    "publisher_resource_actions": publisher_resource_actions
                 }
 
         except SQLAlchemyError as e:
@@ -114,7 +130,8 @@ class SchemaRegistryService:
             return {
                 "publishers": [],
                 "resource_types": {},
-                "actions": []
+                "actions": [],
+                "publisher_resource_actions": {}
             }
         except Exception as e:
             logger.error(
@@ -125,7 +142,8 @@ class SchemaRegistryService:
             return {
                 "publishers": [],
                 "resource_types": {},
-                "actions": []
+                "actions": [],
+                "publisher_resource_actions": {}
             }
 
     async def delete_publisher(self, publisher: str) -> bool:
