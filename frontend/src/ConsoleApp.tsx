@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Menu } from 'lucide-react';
 import Dashboard from './Dashboard';
 import Events from './Events';
 import Subscriptions from './Subscriptions';
@@ -29,6 +30,7 @@ interface Subscription {
 function ConsoleApp() {
   const [activeTab, setActiveTab] = useState<TabName>('Dashboard');
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     loadSubscriptions();
@@ -50,18 +52,40 @@ function ConsoleApp() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        <div className="container mx-auto">
-          {/* Header section - moved inside main content area */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900 tracking-tight">
-              LangHook Console
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              Transform webhooks into canonical events with AI-powered mapping
-            </p>
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+      />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Mobile header with hamburger menu */}
+        <div className="md:hidden bg-white border-b border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md"
+              aria-label="Open menu"
+            >
+              <Menu size={20} />
+            </button>
+            <h1 className="text-lg font-semibold text-gray-800">LangHook Console</h1>
+            <div className="w-10"></div> {/* Spacer for center alignment */}
           </div>
+        </div>
+
+        {/* Main content area */}
+        <div className="flex-1 p-6 md:p-8 overflow-y-auto">
+          <div className="container mx-auto">
+            {/* Header section - moved inside main content area */}
+            <div className="text-center mb-8 hidden md:block">
+              <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900 tracking-tight">
+                LangHook Console
+              </h1>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                Transform webhooks into canonical events with AI-powered mapping
+              </p>
+            </div>
 
           {activeTab === 'Dashboard' && (
             <>
@@ -103,7 +127,8 @@ function ConsoleApp() {
           {activeTab === 'Schema' && <Schema />}
           {activeTab === 'Ingest Mapping' && <IngestMapping />}
         </div>
-      </main>
+      </div>
+    </main>
     </div>
   );
 }

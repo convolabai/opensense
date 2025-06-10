@@ -451,17 +451,17 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
             {gateEnabled && (
               <div>
                 <label htmlFor="gatePrompt" className="block text-sm font-medium text-gray-500 mb-2">
-                  Gate Prompt (Optional - leave empty for auto-generated):
+                  Gate Prompt (Optional - leave empty to use description):
                 </label>
                 <textarea
                   id="gatePrompt"
                   className="w-full min-h-[80px] bg-gray-50 border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
                   value={gatePrompt}
                   onChange={(e) => setGatePrompt(e.target.value)}
-                  placeholder="e.g., 'Only allow critical issues' or leave empty for auto-generation"
+                  placeholder="e.g., 'Only allow critical issues' or leave empty to use the description field"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  If left empty, a prompt will be automatically generated based on your description.
+                  If left empty, the subscription description will be used as the gate prompt.
                 </p>
               </div>
             )}
@@ -614,7 +614,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                                   <div>
                                     <h4 className="text-sm font-medium text-gray-700 mb-2">LLM Gate Prompt</h4>
                                     <div className="bg-white border border-gray-200 px-3 py-2 rounded text-xs">
-                                      {sub.gate.prompt || <span className="text-gray-500 italic">Auto-generated based on description</span>}
+                                      {sub.gate.prompt || <span className="text-gray-500 italic">Using subscription description</span>}
                                     </div>
                                   </div>
                                 )}
