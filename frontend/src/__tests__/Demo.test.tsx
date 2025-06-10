@@ -20,7 +20,7 @@ describe('Demo Component', () => {
     
     // Check subscription options are present
     expect(screen.getByText(/Notify me when PR 1374 is approved/)).toBeInTheDocument();
-    expect(screen.getByText(/Alert me when a high-value Stripe refund/)).toBeInTheDocument();
+    expect(screen.getByText(/Alert me when a \$500 value Stripe refund/)).toBeInTheDocument();
   });
 
   test('shows loading state when adding subscription', async () => {
@@ -68,7 +68,7 @@ describe('Demo Component', () => {
     
     // Check step 2 is now visible
     expect(screen.getByText('Ingest new event')).toBeInTheDocument();
-    expect(screen.getAllByText(/Ingest Event/)).toHaveLength(3); // Multiple event options
+    expect(screen.getByText('Ingest Event')).toBeInTheDocument(); // Single ingest button
   });
 
   test('does not show Bonus Interactions section', () => {
@@ -91,8 +91,12 @@ describe('Demo Component', () => {
       expect(screen.getByText('✓ Subscription Added')).toBeInTheDocument();
     }, { timeout: 2000 });
     
+    // Select an event first
+    const eventDiv = screen.getByText(/PR 1234 approved by Alice/).closest('div');
+    fireEvent.click(eventDiv);
+    
     // Click on ingest event
-    const ingestButton = screen.getAllByRole('button', { name: /Ingest Event/ })[0];
+    const ingestButton = screen.getByRole('button', { name: /Ingest Event/ });
     fireEvent.click(ingestButton);
     
     // Should show processing section
