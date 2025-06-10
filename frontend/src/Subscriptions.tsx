@@ -24,6 +24,7 @@ interface SubscriptionCreate {
   description: string;
   channel_type?: string;
   channel_config?: any;
+  gate?: GateConfig;
 }
 
 interface EventLog {
@@ -65,6 +66,10 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
   const [subscriptionSuccess, setSubscriptionSuccess] = useState<string>('');
   const [deletingSubscriptionId, setDeletingSubscriptionId] = useState<number | null>(null);
   
+  // LLM Gate state
+  const [gateEnabled, setGateEnabled] = useState<boolean>(false);
+  const [gatePrompt, setGatePrompt] = useState<string>('');
+  
   // Subscription events state
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [subscriptionEvents, setSubscriptionEvents] = useState<EventLog[]>([]);
@@ -92,6 +97,12 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
         ...(webhookUrl.trim() && {
           channel_type: 'webhook',
           channel_config: { url: webhookUrl.trim(), method: 'POST' }
+        }),
+        ...(gateEnabled && {
+          gate: {
+            enabled: true,
+            prompt: gatePrompt.trim() || ''
+          }
         })
       };
 
@@ -107,9 +118,11 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
       }
 
       const result = await response.json();
-      setSubscriptionSuccess(`Subscription created! NATS pattern: ${result.pattern}`);
+      setSubscriptionSuccess(`Subscription created! Subject filter: ${result.pattern}`);
       setSubscriptionDescription('');
       setWebhookUrl('');
+      setGateEnabled(false);
+      setGatePrompt('');
 
       await refreshSubscriptions(); // Call the refresh function passed as a prop
 
@@ -406,6 +419,42 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
           </div>
         </div>
 
+        {/* LLM Gate Configuration Section */}
+        <div className="mt-6">
+          <div className="border-t border-gray-200 pt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <label htmlFor="gateEnabled" className="text-sm font-medium text-gray-700">
+                Enable LLM Gate
+              </label>
+              <input
+                id="gateEnabled"
+                type="checkbox"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                checked={gateEnabled}
+                onChange={(e) => setGateEnabled(e.target.checked)}
+              />
+            </div>
+            
+            {gateEnabled && (
+              <div>
+                <label htmlFor="gatePrompt" className="block text-sm font-medium text-gray-500 mb-2">
+                  Gate Prompt (Optional - leave empty for auto-generated):
+                </label>
+                <textarea
+                  id="gatePrompt"
+                  className="w-full min-h-[80px] bg-gray-50 border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors"
+                  value={gatePrompt}
+                  onChange={(e) => setGatePrompt(e.target.value)}
+                  placeholder="e.g., 'Only allow critical issues' or leave empty for auto-generation"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  If left empty, a prompt will be automatically generated based on your description.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="mt-6">
           <button
             className="w-full sm:w-auto py-2 px-6 rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
@@ -453,7 +502,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                     Description
                   </th>
                   <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    NATS Pattern
+                    Subject Filter
                   </th>
                   <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     LLM Gate
