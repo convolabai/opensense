@@ -54,6 +54,8 @@ class DatabaseService:
         self.add_gate_columns_to_subscription_event_logs()
         # Explicitly ensure webhook mappings table exists
         self.create_ingest_mappings_table()
+        # Fix channel_type constraint to allow NULL values (for polling-only subscriptions)
+        self.fix_channel_type_constraint()
         logger.info("Subscription database tables created")
 
     def create_schema_registry_table(self) -> None:
@@ -250,6 +252,54 @@ class DatabaseService:
         except Exception:
             logger.error(
                 "Failed to add gate columns to subscription_event_logs table")
+
+    def fix_channel_type_constraint(self) -> None:
+        """Fix channel_type constraint to allow NULL values (for polling-only subscriptions)."""
+        try:
+            with self.get_session() as session:
+                # Check database dialect to use appropriate information schema
+                db_url = str(self.engine.url)
+                
+                if 'postgresql' in db_url:
+                    # PostgreSQL-specific check
+                    check_constraint_sql = text("""
+                        SELECT is_nullable 
+                        FROM information_schema.columns 
+                        WHERE table_name='subscriptions' AND column_name='channel_type'
+                    """)
+                    result = session.execute(check_constraint_sql).fetchone()
+
+                    if result and result[0] == 'NO':
+                        # Column exists and has NOT NULL constraint, need to fix it
+                        logger.info("Found NOT NULL constraint on channel_type, fixing to allow NULL values")
+                        
+                        # ALTER TABLE to drop NOT NULL constraint
+                        alter_sql = text("""
+                            ALTER TABLE subscriptions 
+                            ALTER COLUMN channel_type DROP NOT NULL
+                        """)
+                        session.execute(alter_sql)
+                        session.commit()
+                        logger.info("Successfully updated channel_type column to allow NULL values")
+                    
+                    elif result and result[0] == 'YES':
+                        logger.info("channel_type column already allows NULL values")
+                    else:
+                        logger.warning("Could not determine channel_type constraint status")
+                        
+                elif 'sqlite' in db_url:
+                    # SQLite doesn't have information_schema, and SQLAlchemy handles the constraint correctly
+                    logger.info("SQLite database detected, channel_type constraint should be correct from SQLAlchemy model")
+                    
+                else:
+                    logger.info(f"Unknown database type: {db_url}, skipping channel_type constraint check")
+
+        except Exception as e:
+            logger.error(
+                "Failed to fix channel_type constraint",
+                error=str(e),
+                exc_info=True
+            )
     def create_ingest_mappings_table(self) -> None:
         """Create the ingest mappings table if it doesn't exist."""
         try:
