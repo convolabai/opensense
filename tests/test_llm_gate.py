@@ -125,6 +125,39 @@ Hope this helps!'''
         assert parsed["decision"] is False
         assert "Failed to parse" in parsed["reasoning"]
 
+    def test_parse_llm_response_gate_enabled_missing_gate_prompt(self):
+        """Test that missing gate_prompt raises error when gate is enabled in LLM service."""
+        from langhook.subscriptions.llm import LLMPatternService
+        
+        service = LLMPatternService()
+        response = '{"pattern": "langhook.events.github.pull_request.*.created"}'
+        
+        with pytest.raises(ValueError, match="missing required gate_prompt"):
+            service._parse_llm_response(response, gate_enabled=True)
+
+    def test_parse_llm_response_gate_enabled_invalid_json_error(self):
+        """Test that invalid JSON raises error when gate is enabled in LLM service."""
+        from langhook.subscriptions.llm import LLMPatternService
+        
+        service = LLMPatternService()
+        response = "langhook.events.github.pull_request.*.created"  # Just pattern, no JSON
+        
+        with pytest.raises(ValueError, match="LLM failed to return properly formatted JSON"):
+            service._parse_llm_response(response, gate_enabled=True)
+
+    def test_parse_llm_response_gate_enabled_with_valid_json(self):
+        """Test parsing valid JSON response when gate is enabled in LLM service."""
+        from langhook.subscriptions.llm import LLMPatternService
+        
+        service = LLMPatternService()
+        response = '{"pattern": "langhook.events.github.pull_request.*.created", "gate_prompt": "Evaluate if this is a GitHub PR"}'
+        
+        result = service._parse_llm_response(response, gate_enabled=True)
+        
+        assert result is not None
+        assert result["pattern"] == "langhook.events.github.pull_request.*.created"
+        assert result["gate_prompt"] == "Evaluate if this is a GitHub PR"
+
 
 class TestGateConfigSchema:
     """Test gate configuration schema validation."""

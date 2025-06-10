@@ -181,26 +181,46 @@ class LLMPatternService:
                     "LLM pattern and gate conversion completed",
                     description=description,
                     pattern=result["pattern"],
-                    gate_enabled=gate_enabled
+                    gate_enabled=gate_enabled,
+                    has_gate_prompt=gate_enabled and "gate_prompt" in result
                 )
                 return result
             else:
-                logger.warning(
-                    "Failed to extract pattern from LLM response, using fallback",
-                    description=description,
-                    response=response_text
-                )
-                pattern = self._fallback_pattern_conversion(description)
-                result = {"pattern": pattern}
                 if gate_enabled:
-                    result["gate_prompt"] = self._fallback_gate_prompt(description)
-                return result
+                    # When gate is enabled, we require LLM to provide both pattern and gate_prompt
+                    # Don't fall back to hardcoded prompts
+                    logger.error(
+                        "LLM failed to provide required gate prompt",
+                        description=description,
+                        response=response_text
+                    )
+                    raise ValueError(
+                        f"LLM failed to generate required gate prompt for description: '{description}'. "
+                        f"Gate prompts require LLM to return JSON with both 'pattern' and 'gate_prompt' fields."
+                    )
+                else:
+                    logger.warning(
+                        "Failed to extract pattern from LLM response, using fallback",
+                        description=description,
+                        response=response_text
+                    )
+                    pattern = self._fallback_pattern_conversion(description)
+                    return {"pattern": pattern}
 
         except NoSuitableSchemaError:
             raise
-        except Exception as e:
+        except ValueError as e:
+            # If it's a gate prompt error when gate is enabled, re-raise it
+            if gate_enabled and ("gate_prompt" in str(e) or "JSON response" in str(e)):
+                logger.error(
+                    "Gate prompt generation failed",
+                    description=description,
+                    error=str(e)
+                )
+                raise
+            # For other ValueError cases, fall back
             logger.error(
-                "LLM pattern and gate conversion failed",
+                "LLM pattern conversion failed with ValueError, using fallback",
                 description=description,
                 error=str(e),
                 exc_info=True
@@ -208,8 +228,25 @@ class LLMPatternService:
             pattern = self._fallback_pattern_conversion(description)
             result = {"pattern": pattern}
             if gate_enabled:
-                result["gate_prompt"] = self._fallback_gate_prompt(description)
+                # If gate is enabled but we hit a different error, still fail
+                raise ValueError(f"Failed to generate gate prompt: {str(e)}") from e
             return result
+        except Exception as e:
+            logger.error(
+                "LLM pattern and gate conversion failed",
+                description=description,
+                error=str(e),
+                exc_info=True
+            )
+            if gate_enabled:
+                # When gate is enabled, don't fall back to hardcoded prompts - fail explicitly
+                raise ValueError(
+                    f"LLM service failed to generate gate prompt for description: '{description}'. "
+                    f"Error: {str(e)}"
+                ) from e
+            # Only provide fallback for non-gate scenarios
+            pattern = self._fallback_pattern_conversion(description)
+            return {"pattern": pattern}
 
     async def convert_to_pattern(self, description: str) -> str:
         """
@@ -311,7 +348,7 @@ Respond with only the pattern or respond with "ERROR: No suitable schema found" 
 
 Your task: convert a natural-language event description into a valid NATS subject pattern using this schema:
 
-Pattern: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>  
+Pattern: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>
 Wildcards: `*` = one token, `>` = one or more tokens at end
 
 Allowed:
@@ -320,16 +357,16 @@ Allowed:
 
 
 Rules:
-1. Think like a REST API: map natural verbs to `created`, `read`, or `updated`.  
-   - e.g., “opened” = created, “seen” = read, “merged” = updated  
-2. Only use exact values from allowed schema  
-3. Use `*` for missing IDs  
+1. Think like a REST API: map natural verbs to `created`, `read`, or `updated`.
+   - e.g., “opened” = created, “seen” = read, “merged” = updated
+2. Only use exact values from allowed schema
+3. Use `*` for missing IDs
 4. If no valid mapping, reply: `"ERROR: No suitable schema found"`
 
 Examples:
-🟢 "A GitHub PR is merged" → `langhook.events.github.pull_request.*.updated`  
-🟢 "Slack file is uploaded" → `langhook.events.slack.file.*.created`  
-🟢 "PR submitted on GitHub" → `langhook.events.github.pull_request.*.created`  
+🟢 "A GitHub PR is merged" → `langhook.events.github.pull_request.*.updated`
+🟢 "Slack file is uploaded" → `langhook.events.slack.file.*.created`
+🟢 "PR submitted on GitHub" → `langhook.events.github.pull_request.*.created`
 🔴 "A comment is liked" → `"ERROR: No suitable schema found"`{gate_instructions}"""
 
     def _create_user_prompt(self, description: str, gate_enabled: bool = False) -> str:
@@ -433,30 +470,33 @@ Pattern:"""
     def _parse_llm_response(self, response: str, gate_enabled: bool) -> dict | None:
         """Parse LLM response for pattern and optional gate prompt."""
         import json
-        
+
         if gate_enabled:
             # Try to parse JSON response
             try:
                 data = json.loads(response.strip())
                 if isinstance(data, dict) and "pattern" in data:
+                    # When gate is enabled, gate_prompt is required
+                    if "gate_prompt" not in data:
+                        raise ValueError("LLM response missing required gate_prompt when gate is enabled")
                     return data
             except json.JSONDecodeError:
                 pass
-            
-            # If JSON parsing fails, try to extract pattern and create fallback gate prompt
+
+            # For gate-enabled requests, we need proper JSON with both pattern and gate_prompt
+            # Don't fall back to hardcoded prompts - this defeats the purpose of LLM-generated gates
             pattern = self._extract_pattern_from_response(response)
             if pattern:
-                # Extract the original description from the pattern for fallback gate prompt
-                return {
-                    "pattern": pattern,
-                    "gate_prompt": "Evaluate if this event matches the subscription criteria. Return {\"decision\": true or false}"
-                }
+                raise ValueError(
+                    f"LLM failed to return properly formatted JSON response with gate_prompt. "
+                    f"Expected JSON with 'pattern' and 'gate_prompt' fields, but got: {response[:100]}..."
+                )
         else:
             # Only pattern extraction needed
             pattern = self._extract_pattern_from_response(response)
             if pattern:
                 return {"pattern": pattern}
-        
+
         return None
 
     def _fallback_gate_prompt(self, description: str) -> str:
