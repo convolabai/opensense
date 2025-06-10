@@ -200,6 +200,26 @@ if frontend_path.exists():
             return FileResponse(str(index_path))
         raise HTTPException(status_code=404, detail="File not found")
         
+    @app.get("/demo")
+    async def demo():
+        """Serve the React demo playground application."""
+        index_path = frontend_path / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
+        raise HTTPException(status_code=404, detail="Demo not available - frontend not built")
+
+    @app.get("/demo/{path:path}")
+    async def demo_assets(path: str):
+        """Serve demo assets."""
+        file_path = frontend_path / path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        # For React Router, serve index.html for any unmatched routes
+        index_path = frontend_path / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
+        raise HTTPException(status_code=404, detail="File not found")
+        
     @app.get("/")
     async def root():
         """Redirect root path to console."""

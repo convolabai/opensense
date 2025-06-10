@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-// Lucide icons for Sidebar will be managed within Sidebar.tsx
 import Dashboard from './Dashboard';
 import Events from './Events';
 import Subscriptions from './Subscriptions';
 import Schema from './Schema';
 import IngestMapping from './IngestMapping';
-import Sidebar from './Sidebar'; // Import the new Sidebar component
+import Sidebar from './Sidebar';
 
 type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema' | 'Ingest Mapping';
 
@@ -27,7 +26,7 @@ interface Subscription {
   updated_at?: string;
 }
 
-function App() {
+function ConsoleApp() {
   const [activeTab, setActiveTab] = useState<TabName>('Dashboard');
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
 
@@ -49,8 +48,6 @@ function App() {
     }
   };
 
-  // TabButton component is removed
-
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -59,17 +56,16 @@ function App() {
           {/* Header section - moved inside main content area */}
           <div className="text-center mb-8">
             <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900 tracking-tight">
-              LangHook Demo
+              LangHook Console
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
               Transform webhooks into canonical events with AI-powered mapping
             </p>
           </div>
 
-          {/* Tab Content */}
           {activeTab === 'Dashboard' && (
             <>
-              <Dashboard /> {/* Metrics are now exclusively in Dashboard.tsx */}
+              <Dashboard />
 
               {/* "How It Works" section - ensuring consistent card styling */}
               <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 sm:p-8 mt-8">
@@ -112,4 +108,4 @@ function App() {
   );
 }
 
-export default App;
+export default ConsoleApp;

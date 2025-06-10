@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ListChecks, MailQuestion, BookOpen, GitMerge } from 'lucide-react'; // Add GitMerge for Ingest Mapping
+import { LayoutDashboard, ListChecks, MailQuestion, BookOpen, GitMerge } from 'lucide-react';
 
 type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema' | 'Ingest Mapping';
 
