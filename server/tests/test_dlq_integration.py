@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from langhook.app import send_to_dlq
-from langhook.subscriptions.dlq_logging import dlq_logging_service
+from server.langhook.app import send_to_dlq
+from server.langhook.subscriptions.dlq_logging import dlq_logging_service
 
 
 @pytest.mark.asyncio

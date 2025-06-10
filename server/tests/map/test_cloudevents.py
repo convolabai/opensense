@@ -1,6 +1,6 @@
 """Test the CloudEvents wrapper functionality."""
 
-from langhook.map.cloudevents import CloudEventWrapper
+from server.langhook.map.cloudevents import CloudEventWrapper
 
 
 def test_canonical_event_creation():

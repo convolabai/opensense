@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from langhook.map.metrics import metrics
+from server.langhook.map.metrics import metrics
 
 
 class TestPrometheusMetrics:

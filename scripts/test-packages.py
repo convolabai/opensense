@@ -36,7 +36,7 @@ def test_server_installation():
     print("Testing server components...")
     
     # Test that server modules can be imported
-    result = run_command('python -c "from langhook.main import main; print(\'Server components available\')"')
+    result = run_command('python -c "from server.langhook.main import main; print(\'Server components available\')"')
     if result.returncode == 0:
         print("✓ Server components accessible")
     else:

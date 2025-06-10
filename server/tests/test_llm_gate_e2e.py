@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from fastapi.testclient import TestClient
 
-from langhook.subscriptions.schemas import SubscriptionCreate, GateConfig
+from server.langhook.subscriptions.schemas import SubscriptionCreate, GateConfig
 
 
 class TestLLMGateE2E:
@@ -84,7 +84,7 @@ class TestLLMGateE2E:
             mock_nats_connect.return_value = mock_nc
 
             # Create test client
-            from langhook.app import app
+            from server.langhook.app import app
             from contextlib import asynccontextmanager
 
             @asynccontextmanager
@@ -202,7 +202,7 @@ class TestLLMGateE2E:
 
     def test_subscription_response_includes_gate(self):
         """Test that subscription response includes gate configuration."""
-        from langhook.subscriptions.schemas import SubscriptionResponse
+        from server.langhook.subscriptions.schemas import SubscriptionResponse
         
         # Mock subscription data
         subscription_data = {

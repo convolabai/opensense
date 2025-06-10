@@ -1,6 +1,6 @@
 """Test fingerprint functionality."""
 
-from langhook.map.fingerprint import extract_type_skeleton, create_canonical_string, generate_fingerprint
+from server.langhook.map.fingerprint import extract_type_skeleton, create_canonical_string, generate_fingerprint
 
 
 def test_extract_type_skeleton_simple():
@@ -223,7 +223,7 @@ def test_github_issue_example_basic_fingerprints():
 
 def test_github_issue_example_enhanced_fingerprints():
     """Test the GitHub issue example - enhanced fingerprints should be different for different actions."""
-    from langhook.map.fingerprint import generate_enhanced_fingerprint
+    from server.langhook.map.fingerprint import generate_enhanced_fingerprint
     
     # GitHub PR opened
     payload_opened = {

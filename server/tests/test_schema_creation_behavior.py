@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-from langhook.subscriptions.schema_registry import schema_registry_service
-from langhook.map.service import MappingService
+from server.langhook.subscriptions.schema_registry import schema_registry_service
+from server.langhook.map.service import MappingService
 
 
 @pytest.mark.asyncio

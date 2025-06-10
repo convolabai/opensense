@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 from nats.js.api import DeliverPolicy
 
-from langhook.map.nats import MapNATSConsumer
+from server.langhook.map.nats import MapNATSConsumer
 
 
 def test_map_nats_consumer_delivery_policy():

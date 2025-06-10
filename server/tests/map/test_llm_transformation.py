@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from langhook.map.llm import LLMSuggestionService
+from server.langhook.map.llm import LLMSuggestionService
 
 
 @pytest.fixture

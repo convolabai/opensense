@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import httpx
 
-from sdk.python.client import (
+from langhook.client import (
     LangHookClient,
     LangHookClientConfig,
     AuthConfig,

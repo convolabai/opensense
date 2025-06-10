@@ -7,24 +7,24 @@ from unittest.mock import patch, MagicMock
 # Set environment variable before importing the module
 os.environ['EVENT_LOGGING_ENABLED'] = 'true'
 
-from langhook.subscriptions.config import subscription_settings
+from server.langhook.subscriptions.config import subscription_settings
 
 
 def test_event_logging_enabled_config():
     """Test that event logging can be enabled via environment variable."""
     # Reload settings with environment variable set
     with patch.dict(os.environ, {'EVENT_LOGGING_ENABLED': 'true'}):
-        from langhook.subscriptions.config import load_subscription_settings
+        from server.langhook.subscriptions.config import load_subscription_settings
         settings = load_subscription_settings()
         assert settings.event_logging_enabled is True
 
     with patch.dict(os.environ, {'EVENT_LOGGING_ENABLED': 'false'}):
-        from langhook.subscriptions.config import load_subscription_settings
+        from server.langhook.subscriptions.config import load_subscription_settings
         settings = load_subscription_settings()
         assert settings.event_logging_enabled is False
 
     with patch.dict(os.environ, {'EVENT_LOGGING_ENABLED': '1'}):
-        from langhook.subscriptions.config import load_subscription_settings
+        from server.langhook.subscriptions.config import load_subscription_settings
         settings = load_subscription_settings()
         assert settings.event_logging_enabled is True
 
@@ -40,7 +40,7 @@ async def test_enabled_service_starts_correctly(mock_db_service, mock_settings):
     mock_settings.nats_consumer_group = "test_group"
     mock_db_service.create_event_logs_table.return_value = None
     
-    from langhook.subscriptions.event_logging import EventLoggingService, EventLoggingConsumer
+    from server.langhook.subscriptions.event_logging import EventLoggingService, EventLoggingConsumer
     
     service = EventLoggingService()
     

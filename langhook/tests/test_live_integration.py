@@ -6,7 +6,7 @@ This test requires a running LangHook server at http://localhost:8000
 import asyncio
 import pytest
 import httpx
-from sdk.python import LangHookClient, LangHookClientConfig
+from langhook import LangHookClient, LangHookClientConfig
 
 
 @pytest.mark.asyncio 

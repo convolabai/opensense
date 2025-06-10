@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from langhook.map.service import MappingService
+from server.langhook.map.service import MappingService
 
 
 @pytest.mark.asyncio

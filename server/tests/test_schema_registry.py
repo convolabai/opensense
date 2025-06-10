@@ -5,8 +5,8 @@ from unittest.mock import Mock, patch
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from langhook.subscriptions.models import EventSchemaRegistry
-from langhook.subscriptions.schema_registry import SchemaRegistryService
+from server.langhook.subscriptions.models import EventSchemaRegistry
+from server.langhook.subscriptions.schema_registry import SchemaRegistryService
 
 
 @pytest.fixture

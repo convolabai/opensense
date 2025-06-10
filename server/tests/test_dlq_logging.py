@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from langhook.subscriptions.dlq_logging import DLQLoggingConsumer, DLQLoggingService
-from langhook.subscriptions.models import EventLog
+from server.langhook.subscriptions.dlq_logging import DLQLoggingConsumer, DLQLoggingService
+from server.langhook.subscriptions.models import EventLog
 
 
 @pytest.fixture

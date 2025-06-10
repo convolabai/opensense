@@ -9,9 +9,14 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo "Building LangHook packages..."
 
-# Build main package (SDK + server)
-echo "Building main package (langhook with SDK and server)..."
+# Build SDK package
+echo "Building SDK package (langhook)..."
 cd "$ROOT_DIR"
+python -m build --wheel
+
+# Build server package
+echo "Building server package (langhook[server])..."
+cd "$ROOT_DIR/server"
 python -m build --wheel
 
 # Build TypeScript SDK
@@ -22,5 +27,6 @@ npm run build
 echo "All packages built successfully!"
 echo ""
 echo "Packages ready for publishing:"
-echo "1. Python package: pip install langhook (SDK) or pip install langhook[server] (full server)"
-echo "2. TypeScript package: npm install langhook"
+echo "1. Python SDK package: pip install langhook"
+echo "2. Python server package: pip install langhook[server] (from root) or pip install server package directly"
+echo "3. TypeScript package: npm install langhook"

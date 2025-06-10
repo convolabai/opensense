@@ -33,19 +33,19 @@ RUN pip install uv
 WORKDIR /app
 
 # Copy dependency files
-COPY pyproject.toml LICENSE README.md ./
+COPY server/pyproject.toml LICENSE README.md ./
 
 # Copy source code
-COPY langhook/ ./langhook/
+COPY server/langhook/ ./server/langhook/
 
 # Install dependencies
-RUN uv pip install --system -e .
+RUN cd . && uv pip install --system -e ./server
 
 # Test stage - extends builder with dev dependencies
 FROM builder as test
 
 # Install dev dependencies for testing
-RUN uv pip install --system -e .[dev]
+RUN uv pip install --system -e ./server[dev]
 
 # Production stage
 FROM python:3.12-slim as production
@@ -66,13 +66,13 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
-COPY langhook/ ./langhook/
-COPY mappings/ ./mappings/
-COPY schemas/ ./schemas/
+COPY server/langhook/ ./server/langhook/
+COPY server/mappings/ ./server/mappings/
+COPY server/schemas/ ./server/schemas/
 COPY scripts/ ./scripts/
 
 # Copy built frontend from frontend-builder
-COPY --from=frontend-builder /app/frontend/build ./frontend/build
+COPY --from=frontend-builder /app/frontend/build ./server/frontend/build
 
 # Set ownership
 RUN chown -R langhook:langhook /app
@@ -92,4 +92,4 @@ ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
 # Run the consolidated application
-CMD ["python", "-m", "langhook.main"]
+CMD ["python", "-m", "server.langhook.main"]

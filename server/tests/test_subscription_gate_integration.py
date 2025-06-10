@@ -3,9 +3,9 @@
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
-from langhook.subscriptions.database import DatabaseService
-from langhook.subscriptions.schemas import SubscriptionCreate, SubscriptionUpdate, GateConfig
-from langhook.subscriptions.models import Subscription
+from server.langhook.subscriptions.database import DatabaseService
+from server.langhook.subscriptions.schemas import SubscriptionCreate, SubscriptionUpdate, GateConfig
+from server.langhook.subscriptions.models import Subscription
 
 
 class TestSubscriptionWithGate:
@@ -188,7 +188,7 @@ class TestSubscriptionConsumerWithGate:
         sample_event_data
     ):
         """Test that consumer processes event when gate passes."""
-        from langhook.subscriptions.consumer_service import SubscriptionConsumer
+        from server.langhook.subscriptions.consumer_service import SubscriptionConsumer
         
         with patch('langhook.subscriptions.consumer_service.llm_gate_service') as mock_gate, \
              patch('langhook.subscriptions.consumer_service.db_service') as mock_db, \
@@ -228,7 +228,7 @@ class TestSubscriptionConsumerWithGate:
         sample_event_data
     ):
         """Test that consumer blocks event when gate fails."""
-        from langhook.subscriptions.consumer_service import SubscriptionConsumer
+        from server.langhook.subscriptions.consumer_service import SubscriptionConsumer
         
         with patch('langhook.subscriptions.consumer_service.llm_gate_service') as mock_gate, \
              patch('langhook.subscriptions.consumer_service.db_service') as mock_db, \
@@ -258,7 +258,7 @@ class TestSubscriptionConsumerWithGate:
         sample_event_data
     ):
         """Test that consumer bypasses gate when not enabled."""
-        from langhook.subscriptions.consumer_service import SubscriptionConsumer
+        from server.langhook.subscriptions.consumer_service import SubscriptionConsumer
         
         with patch('langhook.subscriptions.consumer_service.llm_gate_service') as mock_gate, \
              patch('langhook.subscriptions.consumer_service.db_service') as mock_db, \

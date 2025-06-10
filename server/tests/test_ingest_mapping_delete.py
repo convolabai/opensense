@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-from langhook.subscriptions.database import db_service
-from langhook.subscriptions.models import IngestMapping
+from server.langhook.subscriptions.database import db_service
+from server.langhook.subscriptions.models import IngestMapping
 
 
 @pytest.fixture

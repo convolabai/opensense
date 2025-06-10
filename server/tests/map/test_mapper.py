@@ -2,7 +2,7 @@
 
 import pytest
 
-from langhook.map.mapper import MappingEngine
+from server.langhook.map.mapper import MappingEngine
 
 
 @pytest.mark.skip(reason="File-based mappings are deprecated in favor of database-based mappings with enhanced fingerprinting")

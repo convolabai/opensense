@@ -3,9 +3,9 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from langhook.map.fingerprint import generate_fingerprint
-from langhook.map.mapper import MappingEngine
-from langhook.map.service import MappingService
+from server.langhook.map.fingerprint import generate_fingerprint
+from server.langhook.map.mapper import MappingEngine
+from server.langhook.map.service import MappingService
 
 
 @pytest.mark.asyncio
@@ -18,8 +18,8 @@ async def test_end_to_end_fingerprinting_workflow():
     4. JSONata mapping is generated and stored
     5. Next identical payload structure uses stored mapping
     """
-    from langhook.subscriptions.database import db_service
-    from langhook.map.llm import llm_service
+    from server.langhook.subscriptions.database import db_service
+    from server.langhook.map.llm import llm_service
     
     # Mock the database and LLM services
     original_get_ingestion_mapping = db_service.get_ingestion_mapping
@@ -128,8 +128,8 @@ async def test_end_to_end_fingerprinting_workflow():
 @pytest.mark.asyncio
 async def test_fingerprinting_with_different_structures():
     """Test that different payload structures get different fingerprints and mappings."""
-    from langhook.subscriptions.database import db_service
-    from langhook.map.llm import llm_service
+    from server.langhook.subscriptions.database import db_service
+    from server.langhook.map.llm import llm_service
     
     # Mock services
     original_get_ingestion_mapping = db_service.get_ingestion_mapping

@@ -4,7 +4,7 @@ import asyncio
 import pytest
 from unittest.mock import patch
 
-from sdk.python import LangHookClient, LangHookClientConfig
+from langhook import LangHookClient, LangHookClientConfig
 
 
 @pytest.mark.asyncio 

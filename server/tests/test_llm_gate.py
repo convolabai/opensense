@@ -3,9 +3,9 @@
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
-from langhook.subscriptions.gate import LLMGateService
-from langhook.subscriptions.schemas import GateConfig
-from langhook.subscriptions.prompts import PromptLibrary
+from server.langhook.subscriptions.gate import LLMGateService
+from server.langhook.subscriptions.schemas import GateConfig
+from server.langhook.subscriptions.prompts import PromptLibrary
 
 
 class TestLLMGateService:
@@ -127,7 +127,7 @@ Hope this helps!'''
 
     def test_parse_llm_response_gate_enabled_missing_gate_prompt(self):
         """Test that missing gate_prompt raises error when gate is enabled in LLM service."""
-        from langhook.subscriptions.llm import LLMPatternService
+        from server.langhook.subscriptions.llm import LLMPatternService
         
         service = LLMPatternService()
         response = '{"pattern": "langhook.events.github.pull_request.*.created"}'
@@ -137,7 +137,7 @@ Hope this helps!'''
 
     def test_parse_llm_response_gate_enabled_invalid_json_error(self):
         """Test that invalid JSON raises error when gate is enabled in LLM service."""
-        from langhook.subscriptions.llm import LLMPatternService
+        from server.langhook.subscriptions.llm import LLMPatternService
         
         service = LLMPatternService()
         response = "langhook.events.github.pull_request.*.created"  # Just pattern, no JSON
@@ -147,7 +147,7 @@ Hope this helps!'''
 
     def test_parse_llm_response_gate_enabled_with_valid_json(self):
         """Test parsing valid JSON response when gate is enabled in LLM service."""
-        from langhook.subscriptions.llm import LLMPatternService
+        from server.langhook.subscriptions.llm import LLMPatternService
         
         service = LLMPatternService()
         response = '{"pattern": "langhook.events.github.pull_request.*.created", "gate_prompt": "Evaluate if this is a GitHub PR"}'

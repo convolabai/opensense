@@ -3,14 +3,14 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from langhook.map.fingerprint import generate_fingerprint
+from server.langhook.map.fingerprint import generate_fingerprint
 
 
 @pytest.mark.asyncio
 async def test_mapping_engine_fingerprint_lookup():
     """Test that mapping engine looks up fingerprints."""
-    from langhook.map.mapper import MappingEngine
-    from langhook.subscriptions.database import db_service
+    from server.langhook.map.mapper import MappingEngine
+    from server.langhook.subscriptions.database import db_service
     
     # Mock the database service
     original_get_ingestion_mappings_by_structure = db_service.get_ingestion_mappings_by_structure
@@ -40,8 +40,8 @@ async def test_mapping_engine_fingerprint_lookup():
 @pytest.mark.asyncio 
 async def test_store_jsonata_mapping():
     """Test storing a JSONata mapping expression."""
-    from langhook.map.mapper import MappingEngine
-    from langhook.subscriptions.database import db_service
+    from server.langhook.map.mapper import MappingEngine
+    from server.langhook.subscriptions.database import db_service
     
     # Mock the database service
     original_create_ingestion_mapping = db_service.create_ingestion_mapping

@@ -5,8 +5,8 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from langhook.subscriptions.event_logging import EventLoggingService, EventLoggingConsumer
-from langhook.subscriptions.models import EventLog
+from server.langhook.subscriptions.event_logging import EventLoggingService, EventLoggingConsumer
+from server.langhook.subscriptions.models import EventLog
 
 
 @pytest.fixture

@@ -3,9 +3,9 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from langhook.map.mapper import MappingEngine
-from langhook.map.fingerprint import generate_fingerprint, generate_enhanced_fingerprint
-from langhook.subscriptions import database as db_service
+from server.langhook.map.mapper import MappingEngine
+from server.langhook.map.fingerprint import generate_fingerprint, generate_enhanced_fingerprint
+from server.langhook.subscriptions import database as db_service
 
 
 @pytest.mark.asyncio
@@ -24,7 +24,7 @@ async def test_enhanced_fingerprinting_workflow():
         matching = []
         for mapping in stored_mappings.values():
             if mapping.structure:
-                from langhook.map.fingerprint import create_canonical_string
+                from server.langhook.map.fingerprint import create_canonical_string
                 import hashlib
                 mapping_structure_fingerprint = hashlib.sha256(
                     create_canonical_string(mapping.structure).encode('utf-8')

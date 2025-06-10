@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from langhook.app import app
-from langhook.subscriptions.llm import NoSuitableSchemaError
+from server.langhook.app import app
+from server.langhook.subscriptions.llm import NoSuitableSchemaError
 
 
 @pytest.fixture

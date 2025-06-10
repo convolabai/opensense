@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from langhook.subscriptions.llm import LLMPatternService
+from server.langhook.subscriptions.llm import LLMPatternService
 
 
 class MockLLMResponse:

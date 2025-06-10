@@ -3,7 +3,7 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from langhook.map.service import MappingService
+from server.langhook.map.service import MappingService
 
 
 async def test_llm_transformation_flow():

@@ -1,6 +1,6 @@
 """Test enhanced fingerprinting functionality."""
 
-from langhook.map.fingerprint import generate_fingerprint, generate_enhanced_fingerprint
+from server.langhook.map.fingerprint import generate_fingerprint, generate_enhanced_fingerprint
 
 
 def test_enhanced_fingerprint_without_event_field():
