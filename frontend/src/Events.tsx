@@ -151,11 +151,17 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
   const EventDetailModal = () => {
     if (!selectedEventLog) return null;
 
+    // Check if this is an error event
+    const isErrorEvent = selectedEventLog.canonical_data?.error === true;
+    const errorMessage = selectedEventLog.canonical_data?.error_message || 'Unknown error';
+
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
           <div className="flex justify-between items-center p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-800">Event Details</h2>
+            <h2 className="text-xl font-semibold text-gray-800">
+              {isErrorEvent ? 'Error Event Details' : 'Event Details'}
+            </h2>
             <button
               onClick={closeEventModal}
               className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -165,6 +171,25 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
           </div>
           
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+            {/* Error Banner for Error Events */}
+            {isErrorEvent && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">Processing Failed</h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      <p>{errorMessage}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Event Information</h3>
@@ -175,6 +200,9 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
                   <div><span className="font-medium">Resource Type:</span> {selectedEventLog.resource_type}</div>
                   <div><span className="font-medium">Resource ID:</span> {selectedEventLog.resource_id}</div>
                   <div><span className="font-medium">Action:</span> {selectedEventLog.action}</div>
+                  {isErrorEvent && (
+                    <div><span className="font-medium">Error Type:</span> {selectedEventLog.canonical_data?.error_type || 'Unknown'}</div>
+                  )}
                 </div>
               </div>
               
@@ -191,13 +219,17 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
             {/* Side-by-side Raw and Canonical Payloads */}
             <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-1/2">
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Raw Payload</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">
+                  {isErrorEvent ? 'Failed Payload' : 'Raw Payload'}
+                </h3>
                 <div className="bg-gray-800 text-gray-200 p-4 rounded-md font-mono text-sm overflow-x-auto max-h-60 md:max-h-[50vh]">
                   <pre>{JSON.stringify(selectedEventLog.raw_payload ?? {}, null, 2)}</pre>
                 </div>
               </div>
               <div className="w-full md:w-1/2">
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Canonical Data</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">
+                  {isErrorEvent ? 'Error Details' : 'Canonical Data'}
+                </h3>
                 <div className="bg-gray-800 text-gray-200 p-4 rounded-md font-mono text-sm overflow-x-auto max-h-60 md:max-h-[50vh]">
                   <pre>{JSON.stringify(selectedEventLog.canonical_data, null, 2)}</pre>
                 </div>
@@ -315,19 +347,45 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {eventLogs.map((eventLog) => (
-                    <tr key={eventLog.id} className="hover:bg-gray-50">
+                  {eventLogs.map((eventLog) => {
+                    const isErrorEvent = eventLog.canonical_data?.error === true;
+                    const errorMessage = eventLog.canonical_data?.error_message || 'Unknown error';
+                    
+                    return (
+                    <tr key={eventLog.id} className={`hover:bg-gray-50 ${isErrorEvent ? 'bg-red-50' : ''}`}>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        <div className="font-medium">{eventLog.event_id}</div>
+                        <div className="font-medium flex items-center gap-2">
+                          {eventLog.event_id}
+                          {isErrorEvent && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              ERROR
+                            </span>
+                          )}
+                        </div>
                         <div className="text-gray-500 text-xs">{eventLog.source}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{eventLog.publisher}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {isErrorEvent ? (
+                          <div>
+                            <div className="text-red-600 font-medium">Processing Failed</div>
+                            <div className="text-red-500 text-xs truncate max-w-32" title={errorMessage}>
+                              {errorMessage}
+                            </div>
+                          </div>
+                        ) : (
+                          eventLog.publisher
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
                         <div>{eventLog.resource_type}</div>
                         <div className="text-gray-500 text-xs">{eventLog.resource_id}</div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          isErrorEvent 
+                            ? 'bg-red-100 text-red-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
                           {eventLog.action}
                         </span>
                       </td>
@@ -344,7 +402,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  )})
                 </tbody>
               </table>
             </div>
