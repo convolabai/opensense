@@ -240,6 +240,7 @@ const Demo: React.FC = () => {
   const [isAddingSubscription, setIsAddingSubscription] = useState(false);
   const [processingComplete, setProcessingComplete] = useState(false);
   const [isIngesting, setIsIngesting] = useState(false);
+  const [loadingSteps, setLoadingSteps] = useState<Set<number>>(new Set());
 
   const handleAddSubscription = async () => {
     setIsAddingSubscription(true);
@@ -261,6 +262,7 @@ const Demo: React.FC = () => {
     setIsAddingSubscription(false);
     setProcessingComplete(false);
     setIsIngesting(false);
+    setLoadingSteps(new Set());
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -274,6 +276,7 @@ const Demo: React.FC = () => {
     setShowProcessing(true);
     setCurrentStep(0);
     setProcessingComplete(false);
+    setLoadingSteps(new Set([1])); // Set stage 1 to loading immediately
     
     // Scroll to the processing section
     setTimeout(() => {
@@ -294,11 +297,21 @@ const Demo: React.FC = () => {
     for (let i = 0; i < steps.length; i++) {
       await new Promise(resolve => setTimeout(resolve, steps[i].delay));
       setCurrentStep(i + 1);
+      // Clear loading state for this step and set loading for next step (if any)
+      setLoadingSteps(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(i + 1);
+        if (i + 1 < steps.length) {
+          newSet.add(i + 2);
+        }
+        return newSet;
+      });
     }
     
     // Keep final result visible and show completion
     setProcessingComplete(true);
     setIsIngesting(false);
+    setLoadingSteps(new Set()); // Clear all loading states
   };
 
   return (
@@ -474,9 +487,16 @@ const Demo: React.FC = () => {
               <div className="text-xs text-gray-600 mb-2">
                 Raw webhook → Canonical format
               </div>
-              {currentStep >= 1 && (
+              {(currentStep >= 1 || loadingSteps.has(1)) && (
                 <div className="text-xs bg-white rounded border p-2">
-                  <pre className="text-xs overflow-x-auto">{JSON.stringify(selectedEvent.canonicalEvent, null, 1)}</pre>
+                  {loadingSteps.has(1) ? (
+                    <div className="flex items-center justify-center gap-2 py-4">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-gray-600">Processing...</span>
+                    </div>
+                  ) : (
+                    <pre className="text-xs overflow-x-auto">{JSON.stringify(selectedEvent.canonicalEvent, null, 1)}</pre>
+                  )}
                 </div>
               )}
               {currentStep >= 1 && <Check size={16} className="text-green-600 mt-2" />}
@@ -497,19 +517,28 @@ const Demo: React.FC = () => {
               <div className="text-xs text-gray-600 mb-2">
                 Subject vs subscription filter
               </div>
-              {currentStep >= 2 && (
+              {(currentStep >= 2 || loadingSteps.has(2)) && (
                 <div className="text-xs space-y-2">
-                  <div className="bg-white rounded border p-2">
-                    <div className="font-medium text-gray-700 mb-1">Input Event:</div>
-                    <code className="text-xs text-blue-600">{selectedEvent.canonicalEvent.publisher}.{selectedEvent.canonicalEvent.resource.type}.{selectedEvent.canonicalEvent.resource.id}.{selectedEvent.canonicalEvent.action}</code>
-                  </div>
-                  <div className="bg-white rounded border p-2">
-                    <div className="font-medium text-gray-700 mb-1">Subscription Filter:</div>
-                    <code className="text-xs text-purple-600">{selectedSubscription.pattern}</code>
-                  </div>
-                  <div className={`px-2 py-1 rounded ${selectedEvent.outcome !== 'no_match' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {selectedEvent.outcome !== 'no_match' ? '✅ Match' : '❌ No match'}
-                  </div>
+                  {loadingSteps.has(2) ? (
+                    <div className="flex items-center justify-center gap-2 py-4">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-gray-600">Matching patterns...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="bg-white rounded border p-2">
+                        <div className="font-medium text-gray-700 mb-1">Input Event:</div>
+                        <code className="text-xs text-blue-600 block overflow-x-auto max-w-full">langhook.events.{selectedEvent.canonicalEvent.publisher}.{selectedEvent.canonicalEvent.resource.type}.{selectedEvent.canonicalEvent.resource.id}.{selectedEvent.canonicalEvent.action}</code>
+                      </div>
+                      <div className="bg-white rounded border p-2">
+                        <div className="font-medium text-gray-700 mb-1">Subscription Filter:</div>
+                        <code className="text-xs text-purple-600 block overflow-x-auto max-w-full">{selectedSubscription.pattern}</code>
+                      </div>
+                      <div className={`px-2 py-1 rounded ${selectedEvent.outcome !== 'no_match' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {selectedEvent.outcome !== 'no_match' ? '✅ Match' : '❌ No match'}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
               {currentStep >= 2 && <Check size={16} className="text-green-600 mt-2" />}
@@ -534,22 +563,31 @@ const Demo: React.FC = () => {
                 <div className="text-xs text-gray-600 mb-2">
                   AI relevance evaluation
                 </div>
-                {currentStep >= 3 && (
+                {(currentStep >= 3 || loadingSteps.has(3)) && (
                   <div className="text-xs space-y-2">
-                    <div className="bg-white rounded border p-2">
-                      <div className="font-medium text-gray-700 mb-1">LLM Gate Prompt:</div>
-                      <blockquote className="border-l-2 border-blue-400 pl-2 text-gray-600 italic text-xs">
-                        "{selectedSubscription.llmGatePrompt}"
-                      </blockquote>
-                    </div>
-                    <div className={`px-2 py-1 rounded text-xs ${
-                      selectedEvent.outcome === 'approved' 
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {selectedEvent.outcome === 'approved' ? '✅ Approved' : '🚫 Rejected'}
-                    </div>
-                    <div className="text-xs text-gray-600">{selectedEvent.reason}</div>
+                    {loadingSteps.has(3) ? (
+                      <div className="flex items-center justify-center gap-2 py-4">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-gray-600">AI evaluating...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="bg-white rounded border p-2">
+                          <div className="font-medium text-gray-700 mb-1">LLM Gate Prompt:</div>
+                          <blockquote className="border-l-2 border-blue-400 pl-2 text-gray-600 italic text-xs">
+                            "{selectedSubscription.llmGatePrompt}"
+                          </blockquote>
+                        </div>
+                        <div className={`px-2 py-1 rounded text-xs ${
+                          selectedEvent.outcome === 'approved' 
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {selectedEvent.outcome === 'approved' ? '✅ Approved' : '🚫 Rejected'}
+                        </div>
+                        <div className="text-xs text-gray-600">{selectedEvent.reason}</div>
+                      </>
+                    )}
                   </div>
                 )}
                 {currentStep >= 3 && <Check size={16} className="text-green-600 mt-2" />}
@@ -571,42 +609,51 @@ const Demo: React.FC = () => {
               <div className="text-xs text-gray-600 mb-2">
                 Notification decision
               </div>
-              {currentStep >= 4 && (
+              {(currentStep >= 4 || loadingSteps.has(4)) && (
                 <div className="text-xs space-y-2">
-                  {selectedEvent.outcome === 'approved' && (
-                    <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Smartphone size={16} className="text-green-600" />
-                        <span className="font-medium text-green-800">Notification Sent</span>
-                      </div>
-                      <div className="bg-white rounded border p-2 shadow-sm">
-                        <div className="flex items-start gap-2">
-                          <BellRing size={12} className="text-blue-500 mt-0.5" />
-                          <div>
-                            <div className="font-medium text-xs text-gray-900">LangHook Alert</div>
-                            <div className="text-xs text-gray-600">{selectedEvent.canonicalEvent.summary}</div>
+                  {loadingSteps.has(4) ? (
+                    <div className="flex items-center justify-center gap-2 py-4">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-gray-600">Finalizing...</span>
+                    </div>
+                  ) : (
+                    <>
+                      {selectedEvent.outcome === 'approved' && (
+                        <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Smartphone size={16} className="text-green-600" />
+                            <span className="font-medium text-green-800">Notification Sent</span>
+                          </div>
+                          <div className="bg-white rounded border p-2 shadow-sm">
+                            <div className="flex items-start gap-2">
+                              <BellRing size={12} className="text-blue-500 mt-0.5" />
+                              <div>
+                                <div className="font-medium text-xs text-gray-900">LangHook Alert</div>
+                                <div className="text-xs text-gray-600">{selectedEvent.canonicalEvent.summary}</div>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
-                  {selectedEvent.outcome === 'llm_rejected' && (
-                    <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Bot size={16} className="text-yellow-600" />
-                        <span className="font-medium text-yellow-800">AI Filtered</span>
-                      </div>
-                      <div className="text-xs text-yellow-700">Event matched pattern but was deemed not important by LLM</div>
-                    </div>
-                  )}
-                  {selectedEvent.outcome === 'no_match' && (
-                    <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                      <div className="flex items-center gap-2 mb-1">
-                        <X size={16} className="text-red-600" />
-                        <span className="font-medium text-red-800">Discarded</span>
-                      </div>
-                      <div className="text-xs text-red-700">Event did not match subscription pattern</div>
-                    </div>
+                      )}
+                      {selectedEvent.outcome === 'llm_rejected' && (
+                        <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Bot size={16} className="text-yellow-600" />
+                            <span className="font-medium text-yellow-800">AI Filtered</span>
+                          </div>
+                          <div className="text-xs text-yellow-700">Event matched pattern but was deemed not important by LLM</div>
+                        </div>
+                      )}
+                      {selectedEvent.outcome === 'no_match' && (
+                        <div className="bg-red-50 rounded-lg p-3 border border-red-200">
+                          <div className="flex items-center gap-2 mb-1">
+                            <X size={16} className="text-red-600" />
+                            <span className="font-medium text-red-800">Discarded</span>
+                          </div>
+                          <div className="text-xs text-red-700">Event did not match subscription pattern</div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
