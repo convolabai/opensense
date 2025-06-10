@@ -5,9 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "langhook"
 version = "0.3.0"
-description = "LangHook Python SDK - Client library for connecting to LangHook servers"
-readme = "README.md"
-license = {file = "LICENSE"}
+description = "LangHook Server - Make any event from anywhere instantly understandable and actionable by anyone"
+readme = "../README.md"
+license = {file = "../LICENSE"}
 authors = [
     {name = "LangHook Team", email = "team@langhook.dev"},
 ]
@@ -17,17 +17,14 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
-    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
 ]
 requires-python = ">=3.12"
 dependencies = [
     # Base SDK dependencies
     "httpx>=0.24.0",
     "pydantic>=2.0.0",
-]
-
-[project.optional-dependencies]
-server = [
     # Server framework dependencies
     "fastapi>=0.111.0",
     "uvicorn[standard]>=0.29.0",
@@ -47,6 +44,8 @@ server = [
     "sqlalchemy>=2.0.0",
     "psycopg2-binary>=2.9.0",
 ]
+
+[project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
@@ -99,7 +98,7 @@ strict_optional = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["langhook/tests"]
+testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
