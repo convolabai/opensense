@@ -62,6 +62,44 @@ class TestLLMSchemaIntegration:
             assert "ONLY use the publishers, resource types, and actions listed above" in prompt
 
     @pytest.mark.asyncio
+    async def test_system_prompt_with_granular_schema_structure(self, llm_service):
+        """Test that system prompt uses the new granular schema structure when available."""
+        mock_schema_data = {
+            "publishers": ["github", "stripe"],
+            "resource_types": {
+                "github": ["pull_request", "repository"],
+                "stripe": ["refund"]
+            },
+            "actions": ["created", "updated", "deleted"],
+            "publisher_resources": {
+                "github": {
+                    "pull_request": ["created", "updated"],
+                    "repository": ["created", "deleted"]
+                },
+                "stripe": {
+                    "refund": ["created"]
+                }
+            }
+        }
+
+        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+            mock_registry.get_schema_summary = AsyncMock(return_value=mock_schema_data)
+
+            prompt = await llm_service._get_system_prompt_with_schemas()
+
+            # Check that new granular structure is used
+            assert "Publishers and their resources with available actions:" in prompt
+            assert "- github:" in prompt
+            assert "  - pull_request: created, updated" in prompt
+            assert "  - repository: created, deleted" in prompt
+            assert "- stripe:" in prompt
+            assert "  - refund: created" in prompt
+            
+            # Should NOT contain the old flat structure when new structure is available
+            assert "Actions: created, updated, deleted" not in prompt
+            assert "Resource types by publisher:" not in prompt
+
+    @pytest.mark.asyncio
     async def test_system_prompt_with_empty_schemas(self, llm_service):
         """Test that system prompt handles empty schema registry."""
         mock_empty_data = {

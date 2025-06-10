@@ -289,17 +289,42 @@ class LLMPatternService:
             schema_info = """
 IMPORTANT: No event schemas are currently registered in the system. You must respond with "ERROR: No registered schemas available" for any subscription request."""
         else:
-            # Build schema information from real data
+            # Build schema information using the new granular structure
             publishers_list = ", ".join(schema_data["publishers"])
-            actions_list = ", ".join(schema_data["actions"])
 
-            resource_types_info = []
-            for publisher, resource_types in schema_data["resource_types"].items():
-                types_str = ", ".join(resource_types)
-                resource_types_info.append(f"- {publisher}: {types_str}")
-            resource_types_text = "\n".join(resource_types_info)
+            # Use the new publisher_resources structure if available, fallback to old structure for compatibility
+            if "publisher_resources" in schema_data and schema_data["publisher_resources"]:
+                # New structure: show resources before actions for each publisher
+                publisher_resources_info = []
+                for publisher, resources in schema_data["publisher_resources"].items():
+                    resource_lines = []
+                    for resource_type, actions in resources.items():
+                        actions_str = ", ".join(actions)
+                        resource_lines.append(f"  - {resource_type}: {actions_str}")
 
-            schema_info = f"""
+                    if resource_lines:
+                        publisher_section = f"- {publisher}:\n" + "\n".join(resource_lines)
+                        publisher_resources_info.append(publisher_section)
+
+                resources_and_actions_text = "\n".join(publisher_resources_info)
+
+                schema_info = f"""
+AVAILABLE EVENT SCHEMAS:
+Publishers and their resources with available actions:
+{resources_and_actions_text}
+
+IMPORTANT: You may ONLY use the exact publishers, resource types, and actions listed above. If the user's request cannot be mapped to these exact schemas, respond with "ERROR: No suitable schema found" instead of a pattern."""
+            else:
+                # Fallback to old structure for backward compatibility
+                actions_list = ", ".join(schema_data["actions"])
+
+                resource_types_info = []
+                for publisher, resource_types in schema_data["resource_types"].items():
+                    types_str = ", ".join(resource_types)
+                    resource_types_info.append(f"- {publisher}: {types_str}")
+                resource_types_text = "\n".join(resource_types_info)
+
+                schema_info = f"""
 AVAILABLE EVENT SCHEMAS:
 Publishers: {publishers_list}
 Actions: {actions_list}

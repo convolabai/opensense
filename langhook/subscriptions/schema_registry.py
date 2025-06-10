@@ -77,7 +77,7 @@ class SchemaRegistryService:
         Get a structured summary of all registered schemas.
 
         Returns:
-            Dictionary with publishers, resource_types grouped by publisher, and actions
+            Dictionary with publishers and their resource types with available actions
         """
         try:
             with db_service.get_session() as session:
@@ -88,11 +88,32 @@ class SchemaRegistryService:
                 publishers = list({entry.publisher for entry in all_entries})
                 publishers.sort()
 
+                # Build granular structure: publisher -> resource_type -> actions
+                publisher_resources: dict[str, dict[str, list[str]]] = {}
+
+                for publisher in publishers:
+                    publisher_resources[publisher] = {}
+                    publisher_entries = [e for e in all_entries if e.publisher == publisher]
+
+                    # Group by resource type within this publisher
+                    resource_types = list({e.resource_type for e in publisher_entries})
+                    resource_types.sort()
+
+                    for resource_type in resource_types:
+                        # Get actions for this specific publisher + resource_type combination
+                        resource_actions = [
+                            e.action for e in publisher_entries
+                            if e.resource_type == resource_type
+                        ]
+                        resource_actions.sort()
+                        publisher_resources[publisher][resource_type] = resource_actions
+
+                # Also maintain backward compatibility for existing code
                 resource_types: dict[str, list[str]] = {}
                 actions = list({entry.action for entry in all_entries})
                 actions.sort()
 
-                # Group resource types by publisher
+                # Group resource types by publisher (for backward compatibility)
                 for publisher in publishers:
                     publisher_entries = [e for e in all_entries if e.publisher == publisher]
                     publisher_resource_types = list({e.resource_type for e in publisher_entries})
@@ -101,8 +122,9 @@ class SchemaRegistryService:
 
                 return {
                     "publishers": publishers,
-                    "resource_types": resource_types,
-                    "actions": actions
+                    "resource_types": resource_types,  # For backward compatibility
+                    "actions": actions,  # For backward compatibility
+                    "publisher_resources": publisher_resources  # New granular structure
                 }
 
         except SQLAlchemyError as e:
@@ -114,7 +136,8 @@ class SchemaRegistryService:
             return {
                 "publishers": [],
                 "resource_types": {},
-                "actions": []
+                "actions": [],
+                "publisher_resources": {}
             }
         except Exception as e:
             logger.error(
@@ -125,7 +148,8 @@ class SchemaRegistryService:
             return {
                 "publishers": [],
                 "resource_types": {},
-                "actions": []
+                "actions": [],
+                "publisher_resources": {}
             }
 
     async def delete_publisher(self, publisher: str) -> bool:
