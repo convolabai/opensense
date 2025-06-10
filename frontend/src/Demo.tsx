@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlayCircle, Check, X, AlertCircle, ArrowRight, Zap, Filter, Bot } from 'lucide-react';
+import { Check, X, AlertCircle, ArrowRight, Zap, Bot } from 'lucide-react';
 
 // Demo-specific subscription sentences and their mock events
 const demoSubscriptions = [
@@ -230,15 +230,15 @@ const Demo: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [showProcessing, setShowProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [hasAddedSubscription, setHasAddedSubscription] = useState(false);
 
   const handleEventProcess = async (event: any) => {
     setSelectedEvent(event);
     setShowProcessing(true);
     setCurrentStep(0);
     
-    // Simulate processing steps with delays
+    // Simulate processing steps with delays, starting from ingestion
     const steps = [
-      { name: 'Natural Language → Subject Filter', delay: 1000 },
       { name: 'Ingested Payload → Canonical Format', delay: 1500 },
       { name: 'Pattern Matching', delay: 1000 },
       { name: 'LLM Gate Evaluation', delay: 2000 },
@@ -257,15 +257,6 @@ const Demo: React.FC = () => {
     }, 3000);
   };
 
-  const getOutcomeColor = (outcome: string) => {
-    switch (outcome) {
-      case 'no_match': return 'text-red-600 bg-red-50 border-red-200';
-      case 'llm_rejected': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'approved': return 'text-green-600 bg-green-50 border-green-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
-
   const getOutcomeIcon = (outcome: string) => {
     switch (outcome) {
       case 'no_match': return <X size={16} className="text-red-600" />;
@@ -275,107 +266,101 @@ const Demo: React.FC = () => {
     }
   };
 
-  const getOutcomeLabel = (outcome: string) => {
-    switch (outcome) {
-      case 'no_match': return 'No Match';
-      case 'llm_rejected': return 'Rejected by LLM Gate';
-      case 'approved': return 'Approved';
-      default: return 'Unknown';
-    }
-  };
-
   return (
     <div className="max-w-6xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <PlayCircle size={32} className="text-blue-600" />
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">LangHook Demo Playground</h1>
-        </div>
-        <p className="text-base md:text-lg text-gray-600 max-w-3xl mx-auto">
-          Understand how LangHook transforms sentences into subscriptions, filters events, and applies intelligent LLM gating.
-        </p>
-      </div>
 
-      {/* Step 1: Choose Subscription */}
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6">
-        <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
-          <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium">1</span>
-          Choose a Subscription Sentence
-        </h2>
-        <p className="text-sm md:text-base text-gray-600 mb-6">Select a natural-language subscription to monitor an event type.</p>
-        
-        <div className="grid gap-3 md:gap-4">
-          {demoSubscriptions.map((subscription) => (
-            <button
-              key={subscription.id}
-              onClick={() => setSelectedSubscription(subscription)}
-              className={`text-left p-3 md:p-4 rounded-lg border-2 transition-all ${
-                selectedSubscription.id === subscription.id
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300 bg-white'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Check size={18} className="text-green-600 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 text-sm md:text-base">{subscription.sentence}</div>
-                  <div className="text-xs md:text-sm text-gray-500">{subscription.source}</div>
-                </div>
-                {selectedSubscription.id === subscription.id && (
-                  <ArrowRight size={18} className="text-blue-600 flex-shrink-0" />
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Show generated pattern */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Generated Subject Filter:</h3>
-          <code className="text-sm font-mono text-blue-600">{selectedSubscription.pattern}</code>
-        </div>
-      </div>
-
-      {/* Step 2: Send Sample Events */}
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6">
-        <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
-          <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium">2</span>
-          Send a Sample Event
-        </h2>
-        <p className="text-sm md:text-base text-gray-600 mb-6">
-          Each subscription includes 3 mock events to demonstrate different outcomes:
-        </p>
-        
-        <div className="grid gap-3 md:gap-4">
-          {selectedSubscription.mockEvents.map((event) => (
-            <div
-              key={event.id}
-              className="border border-gray-200 rounded-lg p-3 md:p-4 hover:shadow-sm transition-shadow"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 mb-2 text-sm md:text-base">📦 {event.description}</div>
-                  <div className={`inline-flex items-center gap-2 px-2 md:px-3 py-1 rounded-full border text-xs md:text-sm font-medium ${getOutcomeColor(event.outcome)}`}>
-                    {getOutcomeIcon(event.outcome)}
-                    {getOutcomeLabel(event.outcome)}
+      {/* Steps 1 and 2 in same row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Step 1: Choose Subscription */}
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6">
+          <h2 className="text-lg md:text-xl font-semibold mb-2 text-gray-800 flex items-center gap-2">
+            <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium">1</span>
+            Subscribe using natural language
+          </h2>
+          <p className="text-sm md:text-base text-gray-600 mb-6">Enter a natural language query to create an event subscription.</p>
+          
+          <div className="grid gap-3 md:gap-4">
+            {demoSubscriptions.map((subscription) => (
+              <button
+                key={subscription.id}
+                onClick={() => setSelectedSubscription(subscription)}
+                className={`text-left p-3 md:p-4 rounded-lg border-2 transition-all ${
+                  selectedSubscription.id === subscription.id
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Check size={18} className="text-green-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 text-sm md:text-base">"{subscription.sentence}"</div>
+                    <div className="text-xs md:text-sm text-gray-500">{subscription.source}</div>
                   </div>
-                  <div className="text-xs md:text-sm text-gray-600 mt-2">{event.reason}</div>
+                  {selectedSubscription.id === subscription.id && (
+                    <ArrowRight size={18} className="text-blue-600 flex-shrink-0" />
+                  )}
                 </div>
-                <button
-                  onClick={() => handleEventProcess(event)}
-                  className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs md:text-sm font-medium flex-shrink-0"
-                  disabled={showProcessing}
-                >
-                  {showProcessing && selectedEvent?.id === event.id ? 'Processing...' : 'Process Event'}
-                </button>
-              </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Add subscription button */}
+          <div className="mt-6">
+            <button
+              onClick={() => setHasAddedSubscription(true)}
+              className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              disabled={hasAddedSubscription}
+            >
+              {hasAddedSubscription ? '✓ Subscription Added' : 'Add Subscription'}
+            </button>
+          </div>
+
+          {/* Show generated pattern */}
+          {hasAddedSubscription && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Generated Subject Filter:</h3>
+              <code className="text-sm font-mono text-blue-600">{selectedSubscription.pattern}</code>
             </div>
-          ))}
+          )}
         </div>
+
+        {/* Step 2: Ingest new event (only show after subscription added) */}
+        {hasAddedSubscription && (
+          <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-semibold mb-2 text-gray-800 flex items-center gap-2">
+              <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium">2</span>
+              Ingest new event
+            </h2>
+            <p className="text-sm md:text-base text-gray-600 mb-6">
+              Source systems send webhook events to LangHook. Try ingesting sample events to see how they're processed:
+            </p>
+            
+            <div className="grid gap-3 md:gap-4">
+              {selectedSubscription.mockEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className="border border-gray-200 rounded-lg p-3 md:p-4 hover:shadow-sm transition-shadow"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 mb-2 text-sm md:text-base">📦 {event.description}</div>
+                    </div>
+                    <button
+                      onClick={() => handleEventProcess(event)}
+                      className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs md:text-sm font-medium flex-shrink-0"
+                      disabled={showProcessing}
+                    >
+                      {showProcessing && selectedEvent?.id === event.id ? 'Processing...' : 'Ingest Event'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Processing Timeline */}
+      {/* Step 3: Processing Timeline - Full width, horizontal layout */}
       {showProcessing && selectedEvent && (
         <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
           <h2 className="text-xl font-semibold mb-6 text-gray-800 flex items-center gap-2">
@@ -383,133 +368,121 @@ const Demo: React.FC = () => {
             What Happens Inside LangHook
           </h2>
           
-          <div className="space-y-6">
-            {/* Step 1: Natural Language to Subject Filter */}
-            <div className={`flex items-center gap-4 p-4 rounded-lg transition-all ${
+          {/* Horizontal steps layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Step 1: Payload to Canonical */}
+            <div className={`p-4 rounded-lg transition-all ${
               currentStep >= 1 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
             }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-medium ${
-                currentStep >= 1 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
-              }`}>
-                1
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                  <Filter size={18} />
-                  Natural Language → Subject Filter
-                </h3>
-                <div className="text-sm text-gray-600 mt-1">
-                  "{selectedSubscription.sentence}" → <code className="font-mono">{selectedSubscription.pattern}</code>
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentStep >= 1 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
+                }`}>
+                  1
                 </div>
+                <h3 className="font-medium text-gray-900 text-sm">Ingestion</h3>
               </div>
-              {currentStep >= 1 && <Check size={20} className="text-green-600" />}
+              <div className="text-xs text-gray-600 mb-2">
+                Raw webhook → Canonical format
+              </div>
+              {currentStep >= 1 && (
+                <div className="text-xs bg-white rounded border p-2">
+                  <pre className="text-xs overflow-x-auto">{JSON.stringify(selectedEvent.canonicalEvent, null, 1)}</pre>
+                </div>
+              )}
+              {currentStep >= 1 && <Check size={16} className="text-green-600 mt-2" />}
             </div>
 
-            {/* Step 2: Payload to Canonical */}
-            <div className={`flex items-center gap-4 p-4 rounded-lg transition-all ${
+            {/* Step 2: Pattern Matching */}
+            <div className={`p-4 rounded-lg transition-all ${
               currentStep >= 2 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
             }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-medium ${
-                currentStep >= 2 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
-              }`}>
-                2
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-900">Ingested Payload → Canonical Format</h3>
-                <div className="text-sm text-gray-600 mt-1">
-                  Raw webhook data transformed to canonical event structure
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentStep >= 2 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
+                }`}>
+                  2
                 </div>
-                {currentStep >= 2 && (
-                  <div className="mt-2 p-3 bg-white rounded border text-sm">
-                    <pre className="text-xs">{JSON.stringify(selectedEvent.canonicalEvent, null, 2)}</pre>
+                <h3 className="font-medium text-gray-900 text-sm">Pattern Match</h3>
+              </div>
+              <div className="text-xs text-gray-600 mb-2">
+                Subject vs subscription filter
+              </div>
+              {currentStep >= 2 && (
+                <div className="text-xs">
+                  {selectedEvent.outcome !== 'no_match' ? '✅ Match' : '❌ No match'}
+                </div>
+              )}
+              {currentStep >= 2 && <Check size={16} className="text-green-600 mt-2" />}
+            </div>
+
+            {/* Step 3: LLM Gate (conditional) */}
+            {selectedEvent.outcome !== 'no_match' && (
+              <div className={`p-4 rounded-lg transition-all ${
+                currentStep >= 3 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+              }`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium ${
+                    currentStep >= 3 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
+                  }`}>
+                    3
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Bot size={14} />
+                    <h3 className="font-medium text-gray-900 text-sm">LLM Gate</h3>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-600 mb-2">
+                  AI relevance evaluation
+                </div>
+                {currentStep >= 3 && (
+                  <div className="text-xs">
+                    <div className={`px-2 py-1 rounded text-xs ${
+                      selectedEvent.outcome === 'approved' 
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {selectedEvent.outcome === 'approved' ? '✅ Approved' : '🚫 Rejected'}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">{selectedEvent.reason}</div>
                   </div>
                 )}
-              </div>
-              {currentStep >= 2 && <Check size={20} className="text-green-600" />}
-            </div>
-
-            {/* Step 3: Pattern Matching */}
-            <div className={`flex items-center gap-4 p-4 rounded-lg transition-all ${
-              currentStep >= 3 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
-            }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-medium ${
-                currentStep >= 3 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
-              }`}>
-                3
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-900">Pattern Matching</h3>
-                <div className="text-sm text-gray-600 mt-1">
-                  Event subject matches subscription pattern: {selectedEvent.outcome !== 'no_match' ? '✅ Yes' : '❌ No'}
-                </div>
-              </div>
-              {currentStep >= 3 && <Check size={20} className="text-green-600" />}
-            </div>
-
-            {/* Step 4: LLM Gate */}
-            {selectedEvent.outcome !== 'no_match' && (
-              <div className={`flex items-center gap-4 p-4 rounded-lg transition-all ${
-                currentStep >= 4 ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
-              }`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-medium ${
-                  currentStep >= 4 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
-                }`}>
-                  4
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                    <Bot size={18} />
-                    LLM Gate Evaluation
-                  </h3>
-                  <div className="text-sm text-gray-600 mt-1">
-                    AI evaluates event importance and relevance
-                  </div>
-                  {currentStep >= 4 && (
-                    <div className="mt-2">
-                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
-                        selectedEvent.outcome === 'approved' 
-                          ? 'bg-green-100 text-green-800 border border-green-200'
-                          : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                      }`}>
-                        {selectedEvent.outcome === 'approved' ? '✅ Approved' : '🚫 Rejected'}
-                      </div>
-                      <div className="text-xs text-gray-600 mt-1">{selectedEvent.reason}</div>
-                    </div>
-                  )}
-                </div>
-                {currentStep >= 4 && <Check size={20} className="text-green-600" />}
+                {currentStep >= 3 && <Check size={16} className="text-green-600 mt-2" />}
               </div>
             )}
 
-            {/* Step 5: Final Decision */}
-            <div className={`flex items-center gap-4 p-4 rounded-lg transition-all ${
-              currentStep >= 5 ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50 border border-gray-200'
+            {/* Step 4: Final Decision */}
+            <div className={`p-4 rounded-lg transition-all ${
+              currentStep >= 4 ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50 border border-gray-200'
             }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-medium ${
-                currentStep >= 5 ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-600'
-              }`}>
-                5
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentStep >= 4 ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-600'
+                }`}>
+                  4
+                </div>
+                <h3 className="font-medium text-gray-900 text-sm">Final Action</h3>
               </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-900">Final Decision</h3>
-                {currentStep >= 5 && (
-                  <div className="mt-2">
-                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
-                      selectedEvent.outcome === 'approved'
-                        ? 'bg-green-100 text-green-800 border border-green-200'
-                        : selectedEvent.outcome === 'llm_rejected'
-                        ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                        : 'bg-red-100 text-red-800 border border-red-200'
-                    }`}>
-                      {getOutcomeIcon(selectedEvent.outcome)}
-                      {selectedEvent.outcome === 'approved' && '📬 Message sent to Slack/email'}
-                      {selectedEvent.outcome === 'llm_rejected' && '🤖 LLM gate rejected: not significant'}
-                      {selectedEvent.outcome === 'no_match' && '📭 Event discarded'}
-                    </div>
+              <div className="text-xs text-gray-600 mb-2">
+                Notification decision
+              </div>
+              {currentStep >= 4 && (
+                <div className="text-xs">
+                  <div className={`px-2 py-1 rounded text-xs ${
+                    selectedEvent.outcome === 'approved'
+                      ? 'bg-green-100 text-green-800'
+                      : selectedEvent.outcome === 'llm_rejected'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {getOutcomeIcon(selectedEvent.outcome)}
+                    {selectedEvent.outcome === 'approved' && '📬 Sent'}
+                    {selectedEvent.outcome === 'llm_rejected' && '🤖 Filtered'}
+                    {selectedEvent.outcome === 'no_match' && '📭 Discarded'}
                   </div>
-                )}
-              </div>
-              {currentStep >= 5 && <Check size={20} className="text-blue-600" />}
+                </div>
+              )}
+              {currentStep >= 4 && <Check size={16} className="text-blue-600 mt-2" />}
             </div>
           </div>
         </div>
