@@ -126,9 +126,11 @@ class MappingService:
                     mapping_result = await llm_service.generate_jsonata_mapping_with_event_field(source, payload)
 
                     if mapping_result is None:
+                        # include LLM response detail in error message
+                        error_detail = getattr(llm_service, 'get_last_response', lambda: 'No response')()
                         await self._send_mapping_failure(
                             raw_event,
-                            "LLM failed to generate valid JSONata expression with event field"
+                            f"LLM failed to generate valid JSONata expression with event field: {error_detail}"
                         )
                         metrics.record_event_failed(source or "unknown", "llm_jsonata_generation_failed")
                         return
@@ -139,9 +141,10 @@ class MappingService:
                     canonical_data = await mapping_engine._apply_jsonata_mapping(jsonata_expr, payload, source)
 
                     if canonical_data is None:
+                        # include the expression in the error message
                         await self._send_mapping_failure(
                             raw_event,
-                            "Generated JSONata expression failed to produce valid canonical data"
+                            f"Generated JSONata expression '{jsonata_expr}' failed to produce valid canonical data"
                         )
                         metrics.record_event_failed(source or "unknown", "jsonata_expression_invalid")
                         return

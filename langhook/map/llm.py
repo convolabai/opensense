@@ -60,9 +60,8 @@ class LLMSuggestionService:
 
         # For backward compatibility, generate JSONata and apply it
         jsonata_expr = await self.generate_jsonata_mapping(source, raw_payload)
-        if not jsonata_expr:
-            return None
-
+        # Sanitize JSONata expression for compatibility
+        jsonata_expr = jsonata_expr.replace("\\'", '"')
         # Apply the JSONata expression to get canonical data
         try:
             import jsonata

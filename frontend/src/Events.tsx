@@ -402,7 +402,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
                         </button>
                       </td>
                     </tr>
-                  )})}
+                  ); })}
                 </tbody>
               </table>
             </div>
