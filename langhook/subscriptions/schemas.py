@@ -145,6 +145,7 @@ class IngestMappingResponse(BaseModel):
     publisher: str
     event_name: str
     mapping_expr: str
+    event_field_expr: str | None = None
     structure: dict[str, Any]
     created_at: datetime
     updated_at: datetime | None = None

@@ -603,6 +603,32 @@ class DatabaseService:
 
             return mappings, total
 
+    async def delete_ingestion_mapping(self, fingerprint: str) -> bool:
+        """Delete an ingestion mapping by fingerprint."""
+        with self.get_session() as session:
+            mapping = session.query(IngestMapping).filter(
+                IngestMapping.fingerprint == fingerprint
+            ).first()
+            
+            if not mapping:
+                logger.info(
+                    "Ingest mapping not found for deletion",
+                    fingerprint=fingerprint
+                )
+                return False
+            
+            session.delete(mapping)
+            session.commit()
+            
+            logger.info(
+                "Ingest mapping deleted",
+                fingerprint=fingerprint,
+                publisher=mapping.publisher,
+                event_name=mapping.event_name
+            )
+            
+            return True
+
 
 # Global database service instance
 db_service = DatabaseService()
