@@ -54,7 +54,7 @@ class TestLLMSchemaIntegration:
 
             prompt = await llm_service._get_system_prompt_with_schemas()
 
-            # Check that actual schema data is included
+            # Check that actual schema data is included (fallback format since no granular data)
             assert "github, stripe" in prompt
             assert "created, updated, deleted" in prompt
             assert "github: pull_request, repository" in prompt
@@ -62,12 +62,50 @@ class TestLLMSchemaIntegration:
             assert "ONLY use the publishers, resource types, and actions listed above" in prompt
 
     @pytest.mark.asyncio
+    async def test_system_prompt_with_granular_schemas(self, llm_service):
+        """Test that system prompt uses granular schema format when available."""
+        mock_schema_data = {
+            "publishers": ["github", "stripe"],
+            "resource_types": {
+                "github": ["pull_request", "repository"],
+                "stripe": ["refund"]
+            },
+            "actions": ["created", "updated", "deleted"],
+            "publisher_resource_actions": {
+                "github": {
+                    "pull_request": ["created", "updated", "deleted"],
+                    "repository": ["created", "updated"]
+                },
+                "stripe": {
+                    "refund": ["created", "updated"]
+                }
+            }
+        }
+
+        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+            mock_registry.get_schema_summary = AsyncMock(return_value=mock_schema_data)
+
+            prompt = await llm_service._get_system_prompt_with_schemas()
+
+            # Check that granular schema data is included
+            assert "github, stripe" in prompt
+            assert "github.pull_request: created, updated, deleted" in prompt
+            assert "github.repository: created, updated" in prompt
+            assert "stripe.refund: created, updated" in prompt
+            assert "ONLY use the exact publisher, resource type, and action combinations listed above" in prompt
+            
+            # Verify old format is NOT used
+            assert "Actions: created, updated, deleted" not in prompt
+            assert "Resource types by publisher:" not in prompt
+
+    @pytest.mark.asyncio
     async def test_system_prompt_with_empty_schemas(self, llm_service):
         """Test that system prompt handles empty schema registry."""
         mock_empty_data = {
             "publishers": [],
             "resource_types": {},
-            "actions": []
+            "actions": [],
+            "publisher_resource_actions": {}
         }
 
         with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
