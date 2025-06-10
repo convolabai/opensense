@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Check, X, ArrowRight, Zap, Bot, Smartphone, BellRing } from 'lucide-react';
+import { samplePayloads } from './sampleWebhookPayloads';
 
 // Demo-specific subscription sentences and their mock events
 const demoSubscriptions = [
@@ -15,6 +16,7 @@ const demoSubscriptions = [
         description: 'PR 1234 approved by Alice',
         outcome: 'no_match',
         reason: 'Different PR number (1234 vs 1374)',
+        rawPayloadKey: 'github_pr_review_1234_approved',
         canonicalEvent: {
           publisher: 'github',
           resource: { type: 'pull_request', id: 1234 },
@@ -27,6 +29,7 @@ const demoSubscriptions = [
         description: 'PR 1374 title changed',
         outcome: 'llm_rejected',
         reason: 'Title change is not an approval',
+        rawPayloadKey: 'github_pr_review_1374_title_change',
         canonicalEvent: {
           publisher: 'github',
           resource: { type: 'pull_request', id: 1374 },
@@ -39,6 +42,7 @@ const demoSubscriptions = [
         description: 'PR 1374 approved by Alice',
         outcome: 'approved',
         reason: 'Matches PR number and is an approval',
+        rawPayloadKey: 'github_pr_review_1374_approved',
         canonicalEvent: {
           publisher: 'github',
           resource: { type: 'pull_request', id: 1374 },
@@ -60,6 +64,7 @@ const demoSubscriptions = [
         description: 'Refund of $100 issued',
         outcome: 'no_match',
         reason: 'Amount too low for high-value threshold',
+        rawPayloadKey: 'stripe_refund_low_value',
         canonicalEvent: {
           publisher: 'stripe',
           resource: { type: 'refund', id: 're_1234' },
@@ -72,6 +77,7 @@ const demoSubscriptions = [
         description: 'Refund of $800 issued for test customer',
         outcome: 'llm_rejected',
         reason: 'Test transactions are not important',
+        rawPayloadKey: 'stripe_refund_high_value_test',
         canonicalEvent: {
           publisher: 'stripe',
           resource: { type: 'refund', id: 're_5678' },
@@ -84,6 +90,7 @@ const demoSubscriptions = [
         description: 'Refund of $950 issued for real transaction',
         outcome: 'approved',
         reason: 'High-value refund for real customer',
+        rawPayloadKey: 'stripe_refund_high_value_real',
         canonicalEvent: {
           publisher: 'stripe',
           resource: { type: 'refund', id: 're_9012' },
@@ -105,6 +112,7 @@ const demoSubscriptions = [
         description: 'Ticket moved to "In Progress"',
         outcome: 'no_match',
         reason: 'Status changed but not to Done',
+        rawPayloadKey: 'jira_issue_to_in_progress',
         canonicalEvent: {
           publisher: 'jira',
           resource: { type: 'issue', id: 'PROJ-123' },
@@ -117,6 +125,7 @@ const demoSubscriptions = [
         description: 'Ticket moved to Done: unassigned',
         outcome: 'llm_rejected',
         reason: 'Unassigned tickets may not be truly complete',
+        rawPayloadKey: 'jira_issue_done_unassigned',
         canonicalEvent: {
           publisher: 'jira',
           resource: { type: 'issue', id: 'PROJ-456' },
@@ -129,6 +138,7 @@ const demoSubscriptions = [
         description: 'Ticket moved to Done by product owner',
         outcome: 'approved',
         reason: 'Properly completed by authorized person',
+        rawPayloadKey: 'jira_issue_done_by_owner',
         canonicalEvent: {
           publisher: 'jira',
           resource: { type: 'issue', id: 'PROJ-789' },
@@ -150,6 +160,7 @@ const demoSubscriptions = [
         description: 'Message posted (not a file)',
         outcome: 'no_match',
         reason: 'Not a file upload event',
+        rawPayloadKey: 'slack_message_not_file',
         canonicalEvent: {
           publisher: 'slack',
           resource: { type: 'message', id: 'msg_123' },
@@ -162,6 +173,7 @@ const demoSubscriptions = [
         description: 'File uploaded with no context',
         outcome: 'llm_rejected',
         reason: 'Random file uploads may not be important',
+        rawPayloadKey: 'slack_file_upload_no_context',
         canonicalEvent: {
           publisher: 'slack',
           resource: { type: 'file', id: 'file_456' },
@@ -174,6 +186,7 @@ const demoSubscriptions = [
         description: 'File uploaded titled "Quarterly Results.pdf"',
         outcome: 'approved',
         reason: 'Important business document',
+        rawPayloadKey: 'slack_file_upload_important',
         canonicalEvent: {
           publisher: 'slack',
           resource: { type: 'file', id: 'file_789' },
@@ -195,6 +208,7 @@ const demoSubscriptions = [
         description: 'Email from newsletter@example.com',
         outcome: 'no_match',
         reason: 'Marketing emails are filtered out',
+        rawPayloadKey: 'email_newsletter',
         canonicalEvent: {
           publisher: 'email',
           resource: { type: 'message', id: 'email_123' },
@@ -207,6 +221,7 @@ const demoSubscriptions = [
         description: 'Email from CEO: "FYI draft for later"',
         outcome: 'llm_rejected',
         reason: 'FYI emails are not urgent',
+        rawPayloadKey: 'email_fyi_from_ceo',
         canonicalEvent: {
           publisher: 'email',
           resource: { type: 'message', id: 'email_456' },
@@ -216,14 +231,15 @@ const demoSubscriptions = [
       },
       {
         id: 3,
-        description: 'Email from CEO: "Board slides for tomorrow"',
+        description: 'Email from important client: "URGENT: System down"',
         outcome: 'approved',
-        reason: 'Urgent request from leadership',
+        reason: 'Urgent request from important client',
+        rawPayloadKey: 'email_urgent_from_client',
         canonicalEvent: {
           publisher: 'email',
           resource: { type: 'message', id: 'email_789' },
           action: 'received',
-          summary: 'Email from CEO: "Board slides for tomorrow"'
+          summary: 'Email from important client: "URGENT: System down"'
         }
       }
     ]
@@ -395,7 +411,7 @@ const Demo: React.FC = () => {
               Ingest new event
             </h2>
             <p className="text-sm md:text-base text-gray-600 mb-6">
-              Source systems send webhook events to LangHook. Select an event to see its raw JSON, then ingest it:
+              Source systems send webhook events to LangHook's /ingest/ endpoint. Select an event to see its raw JSON payload, then ingest it:
             </p>
             
             <div className="grid gap-3 md:gap-4 mb-6">
@@ -428,7 +444,7 @@ const Demo: React.FC = () => {
                         <div className="mt-3">
                           <h4 className="text-sm font-medium text-gray-700 mb-2">Raw JSON Event:</h4>
                           <div className="bg-gray-800 text-gray-200 p-3 rounded-md font-mono text-xs overflow-x-auto max-h-40">
-                            <pre>{JSON.stringify(event.canonicalEvent, null, 2)}</pre>
+                            <pre>{JSON.stringify(event.rawPayloadKey ? samplePayloads[event.rawPayloadKey]?.payload : event.canonicalEvent, null, 2)}</pre>
                           </div>
                         </div>
                       )}
@@ -488,14 +504,14 @@ const Demo: React.FC = () => {
                 Raw webhook → Canonical format
               </div>
               {(currentStep >= 1 || loadingSteps.has(1)) && (
-                <div className="text-xs bg-white rounded border p-2">
+                <div className="text-xs bg-white rounded border p-2 min-h-[4rem]">
                   {loadingSteps.has(1) ? (
-                    <div className="flex items-center justify-center gap-2 py-4">
+                    <div className="flex items-center justify-center gap-2 h-full">
                       <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                       <span className="text-gray-600">Processing...</span>
                     </div>
                   ) : (
-                    <pre className="text-xs overflow-x-auto">{JSON.stringify(selectedEvent.canonicalEvent, null, 1)}</pre>
+                    <pre className="text-xs break-words whitespace-pre-wrap">{JSON.stringify(selectedEvent.canonicalEvent, null, 1)}</pre>
                   )}
                 </div>
               )}
@@ -527,12 +543,12 @@ const Demo: React.FC = () => {
                   ) : (
                     <>
                       <div className="bg-white rounded border p-2">
-                        <div className="font-medium text-gray-700 mb-1">Input Event:</div>
-                        <code className="text-xs text-blue-600 block overflow-x-auto max-w-full">langhook.events.{selectedEvent.canonicalEvent.publisher}.{selectedEvent.canonicalEvent.resource.type}.{selectedEvent.canonicalEvent.resource.id}.{selectedEvent.canonicalEvent.action}</code>
+                        <div className="font-medium text-gray-700 mb-1">Canonical Event Subject:</div>
+                        <code className="text-xs text-blue-600 block break-words whitespace-normal">langhook.events.{selectedEvent.canonicalEvent.publisher}.{selectedEvent.canonicalEvent.resource.type}.{selectedEvent.canonicalEvent.resource.id}.{selectedEvent.canonicalEvent.action}</code>
                       </div>
                       <div className="bg-white rounded border p-2">
                         <div className="font-medium text-gray-700 mb-1">Subscription Filter:</div>
-                        <code className="text-xs text-purple-600 block overflow-x-auto max-w-full">{selectedSubscription.pattern}</code>
+                        <code className="text-xs text-purple-600 block break-words whitespace-normal">{selectedSubscription.pattern}</code>
                       </div>
                       <div className={`px-2 py-1 rounded ${selectedEvent.outcome !== 'no_match' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {selectedEvent.outcome !== 'no_match' ? '✅ Match' : '❌ No match'}
