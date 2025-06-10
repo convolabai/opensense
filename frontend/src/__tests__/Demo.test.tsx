@@ -103,4 +103,52 @@ describe('Demo Component', () => {
     expect(screen.getByText('What Happens Inside LangHook')).toBeInTheDocument();
     expect(screen.getByText('Ingestion')).toBeInTheDocument();
   });
+
+  test('shows ingestion endpoint when event is selected', async () => {
+    render(<Demo />);
+    
+    // Add subscription first
+    const addButton = screen.getByRole('button', { name: /Add Subscription/ });
+    fireEvent.click(addButton);
+    
+    // Wait for subscription to be added
+    await waitFor(() => {
+      expect(screen.getByText('✓ Subscription Added')).toBeInTheDocument();
+    }, { timeout: 2000 });
+    
+    // Select an event
+    const eventDiv = screen.getByText(/PR 1234 approved by Alice/).closest('div');
+    fireEvent.click(eventDiv);
+    
+    // Should show ingestion endpoint
+    expect(screen.getByText('Ingestion Endpoint:')).toBeInTheDocument();
+    expect(screen.getByText('POST /ingest/github')).toBeInTheDocument();
+  });
+
+  test('shows raw payload during processing step 1', async () => {
+    render(<Demo />);
+    
+    // Add subscription first
+    const addButton = screen.getByRole('button', { name: /Add Subscription/ });
+    fireEvent.click(addButton);
+    
+    // Wait for subscription to be added
+    await waitFor(() => {
+      expect(screen.getByText('✓ Subscription Added')).toBeInTheDocument();
+    }, { timeout: 2000 });
+    
+    // Select an event first
+    const eventDiv = screen.getByText(/PR 1234 approved by Alice/).closest('div');
+    fireEvent.click(eventDiv);
+    
+    // Click on ingest event
+    const ingestButton = screen.getByRole('button', { name: /Ingest Event/ });
+    fireEvent.click(ingestButton);
+    
+    // During step 1 processing, should show both spinner and raw payload
+    await waitFor(() => {
+      expect(screen.getByText('Processing...')).toBeInTheDocument();
+      expect(screen.getByText('Raw Payload:')).toBeInTheDocument();
+    }, { timeout: 1000 });
+  });
 });
