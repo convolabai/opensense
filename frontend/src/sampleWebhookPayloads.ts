@@ -120,6 +120,82 @@ export const samplePayloads: Record<string, SamplePayload> = {
       }
     }
   },
+  github_pr_review_1234_approved: {
+    name: "GitHub - PR 1234 Review Approved",
+    source: "github",
+    payload: {
+      action: "submitted",
+      review: {
+        id: 12345678,
+        user: { login: "alice", id: 12345 },
+        body: "Looks good to me!",
+        state: "approved",
+        submitted_at: "2024-01-01T12:00:00Z"
+      },
+      pull_request: {
+        id: 1234,
+        number: 1234,
+        title: "Fix bug in authentication",
+        state: "open",
+        user: { login: "bob", id: 67890 }
+      },
+      repository: {
+        id: 12345,
+        name: "test-repo",
+        full_name: "alice/test-repo"
+      }
+    }
+  },
+  github_pr_review_1374_title_change: {
+    name: "GitHub - PR 1374 Title Changed",
+    source: "github",
+    payload: {
+      action: "edited",
+      changes: {
+        title: {
+          from: "Old title"
+        }
+      },
+      pull_request: {
+        id: 1374,
+        number: 1374,
+        title: "Updated feature implementation",
+        state: "open",
+        user: { login: "bob", id: 67890 }
+      },
+      repository: {
+        id: 12345,
+        name: "test-repo",
+        full_name: "alice/test-repo"
+      }
+    }
+  },
+  github_pr_review_1374_approved: {
+    name: "GitHub - PR 1374 Review Approved",
+    source: "github",
+    payload: {
+      action: "submitted",
+      review: {
+        id: 12345679,
+        user: { login: "alice", id: 12345 },
+        body: "Great work!",
+        state: "approved",
+        submitted_at: "2024-01-01T12:00:00Z"
+      },
+      pull_request: {
+        id: 1374,
+        number: 1374,
+        title: "Add new feature",
+        state: "open",
+        user: { login: "bob", id: 67890 }
+      },
+      repository: {
+        id: 12345,
+        name: "test-repo",
+        full_name: "alice/test-repo"
+      }
+    }
+  },
 
   // Slack Events
   slack_message: {
@@ -189,6 +265,109 @@ export const samplePayloads: Record<string, SamplePayload> = {
       team_id: "T123456789"
     }
   },
+  slack_message_not_file: {
+    name: "Slack - Regular Message",
+    source: "slack",
+    payload: {
+      type: "event_callback",
+      event: {
+        type: "message",
+        channel: "C123456789",
+        user: "U123456789",
+        text: "Hey everyone, just sharing a quick update on the project status.",
+        ts: "1234567890.123456"
+      },
+      team_id: "T123456789"
+    }
+  },
+  slack_file_upload_no_context: {
+    name: "Slack - File Upload No Context",
+    source: "slack",
+    payload: {
+      type: "event_callback",
+      event: {
+        type: "file_shared",
+        file_id: "F456789",
+        user_id: "U123456789",
+        file: {
+          id: "F456789",
+          name: "random_image.jpg",
+          title: "",
+          mimetype: "image/jpeg",
+          filetype: "jpg",
+          size: 2048000
+        },
+        channel_id: "C123456789"
+      },
+      team_id: "T123456789"
+    }
+  },
+  slack_file_upload_important: {
+    name: "Slack - Important Document Upload",
+    source: "slack",
+    payload: {
+      type: "event_callback",
+      event: {
+        type: "file_shared",
+        file_id: "F789012",
+        user_id: "U123456789",
+        file: {
+          id: "F789012",
+          name: "quarterly_report.pdf",
+          title: "Q4 Financial Report",
+          mimetype: "application/pdf",
+          filetype: "pdf",
+          size: 5120000
+        },
+        channel_id: "C123456789"
+      },
+      team_id: "T123456789"
+    }
+  },
+  email_newsletter: {
+    name: "Email - Newsletter",
+    source: "email",
+    payload: {
+      messageId: "email_123",
+      from: "newsletter@example.com",
+      to: "user@company.com",
+      subject: "Weekly Newsletter - Tech Updates",
+      body: "This week in tech: new frameworks, AI updates, and more!",
+      timestamp: "2024-01-01T12:00:00Z",
+      headers: {
+        "List-Unsubscribe": "mailto:unsubscribe@example.com"
+      }
+    }
+  },
+  email_fyi_from_ceo: {
+    name: "Email - FYI from CEO",
+    source: "email",
+    payload: {
+      messageId: "email_456",
+      from: "ceo@company.com",
+      to: "user@company.com",
+      subject: "FYI: Draft for later review",
+      body: "Hey team, here's a draft document for your review when you have time. No rush on this one.",
+      timestamp: "2024-01-01T12:00:00Z",
+      headers: {}
+    }
+  },
+  email_urgent_from_client: {
+    name: "Email - Urgent from Client",
+    source: "email",
+    payload: {
+      messageId: "email_789",
+      from: "client@important-customer.com",
+      to: "user@company.com",
+      subject: "URGENT: Production system down",
+      body: "Our production system is experiencing critical issues. Please respond immediately.",
+      timestamp: "2024-01-01T12:00:00Z",
+      priority: "high",
+      headers: {
+        "Importance": "high"
+      }
+    }
+  },
 
   // Atlassian Jira Events
   jira_issue_created: {
@@ -237,6 +416,93 @@ export const samplePayloads: Record<string, SamplePayload> = {
             fromString: "To Do",
             to: "3",
             toString: "In Progress"
+          }
+        ]
+      }
+    }
+  },
+  jira_issue_to_in_progress: {
+    name: "Jira - Issue Moved to In Progress",
+    source: "jira",
+    payload: {
+      timestamp: 1640995200000,
+      webhookEvent: "jira:issue_updated",
+      issue: {
+        id: "10123",
+        key: "PROJ-123",
+        fields: {
+          summary: "Implement new authentication flow",
+          status: { name: "In Progress", id: "3" },
+          assignee: { displayName: "Alice Smith", emailAddress: "alice@company.com" }
+        }
+      },
+      changelog: {
+        items: [
+          {
+            field: "status",
+            fieldtype: "jira",
+            from: "1",
+            fromString: "To Do",
+            to: "3",
+            toString: "In Progress"
+          }
+        ]
+      }
+    }
+  },
+  jira_issue_done_unassigned: {
+    name: "Jira - Issue Moved to Done (Unassigned)",
+    source: "jira",
+    payload: {
+      timestamp: 1640995200000,
+      webhookEvent: "jira:issue_updated",
+      issue: {
+        id: "10456",
+        key: "PROJ-456",
+        fields: {
+          summary: "Update documentation",
+          status: { name: "Done", id: "6" },
+          assignee: null
+        }
+      },
+      changelog: {
+        items: [
+          {
+            field: "status",
+            fieldtype: "jira",
+            from: "3",
+            fromString: "In Progress",
+            to: "6",
+            toString: "Done"
+          }
+        ]
+      }
+    }
+  },
+  jira_issue_done_by_owner: {
+    name: "Jira - Issue Moved to Done by Owner",
+    source: "jira",
+    payload: {
+      timestamp: 1640995200000,
+      webhookEvent: "jira:issue_updated",
+      issue: {
+        id: "10789",
+        key: "PROJ-789",
+        fields: {
+          summary: "Implement payment processing",
+          status: { name: "Done", id: "6" },
+          assignee: { displayName: "Product Owner", emailAddress: "po@company.com" }
+        }
+      },
+      changelog: {
+        items: [
+          {
+            field: "status",
+            fieldtype: "jira",
+            from: "3",
+            fromString: "In Progress",
+            to: "6",
+            toString: "Done"
           }
         ]
       }
@@ -390,6 +656,83 @@ export const samplePayloads: Record<string, SamplePayload> = {
             nickname: "Premium Plan",
             amount: 2999,
             currency: "usd"
+          }
+        }
+      },
+      created: 1640995200
+    }
+  },
+  stripe_refund_low_value: {
+    name: "Stripe - Low Value Refund",
+    source: "stripe",
+    payload: {
+      id: "evt_refund_100",
+      object: "event",
+      type: "charge.dispute.created",
+      data: {
+        object: {
+          id: "re_1234",
+          object: "refund",
+          amount: 10000,  // $100.00
+          currency: "usd",
+          charge: "ch_1234567890",
+          reason: "requested_by_customer",
+          status: "succeeded",
+          created: 1640995200,
+          metadata: {
+            order_id: "order_100"
+          }
+        }
+      },
+      created: 1640995200
+    }
+  },
+  stripe_refund_high_value_test: {
+    name: "Stripe - High Value Test Refund",
+    source: "stripe",
+    payload: {
+      id: "evt_refund_800",
+      object: "event",
+      type: "charge.dispute.created",
+      data: {
+        object: {
+          id: "re_5678",
+          object: "refund",
+          amount: 80000,  // $800.00
+          currency: "usd",
+          charge: "ch_test_1234567890",
+          reason: "requested_by_customer",
+          status: "succeeded",
+          created: 1640995200,
+          metadata: {
+            order_id: "test_order_800",
+            customer_type: "test"
+          }
+        }
+      },
+      created: 1640995200
+    }
+  },
+  stripe_refund_high_value_real: {
+    name: "Stripe - High Value Real Refund",
+    source: "stripe",
+    payload: {
+      id: "evt_refund_1200",
+      object: "event",
+      type: "charge.dispute.created",
+      data: {
+        object: {
+          id: "re_9012",
+          object: "refund",
+          amount: 120000,  // $1200.00
+          currency: "usd",
+          charge: "ch_live_1234567890",
+          reason: "requested_by_customer",
+          status: "succeeded",
+          created: 1640995200,
+          metadata: {
+            order_id: "order_1200",
+            customer_id: "cus_real_customer"
           }
         }
       },

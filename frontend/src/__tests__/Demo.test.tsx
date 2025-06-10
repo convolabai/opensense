@@ -20,7 +20,7 @@ describe('Demo Component', () => {
     
     // Check subscription options are present
     expect(screen.getByText(/Notify me when PR 1374 is approved/)).toBeInTheDocument();
-    expect(screen.getByText(/Alert me when a \$500 value Stripe refund/)).toBeInTheDocument();
+    expect(screen.getByText(/Alert me when there is a Stripe with > \$500 value/)).toBeInTheDocument();
   });
 
   test('shows loading state when adding subscription', async () => {
