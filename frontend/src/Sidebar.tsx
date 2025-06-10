@@ -1,7 +1,7 @@
 import React from 'react';
-import { LayoutDashboard, ListChecks, MailQuestion, BookOpen, GitMerge } from 'lucide-react'; // Add GitMerge for Ingest Mapping
+import { LayoutDashboard, ListChecks, MailQuestion, BookOpen, GitMerge, PlayCircle } from 'lucide-react'; // Add PlayCircle for Demo
 
-type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema' | 'Ingest Mapping';
+type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema' | 'Ingest Mapping' | 'Demo';
 
 interface SidebarProps {
   activeTab: TabName;
@@ -10,6 +10,7 @@ interface SidebarProps {
 
 const navItems = [
   { name: 'Dashboard', icon: LayoutDashboard },
+  { name: 'Demo', icon: PlayCircle },
   { name: 'Events', icon: ListChecks },
   { name: 'Subscriptions', icon: MailQuestion },
   { name: 'Schema', icon: BookOpen },
