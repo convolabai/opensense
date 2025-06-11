@@ -19,37 +19,39 @@ class LLMPatternService:
     """Service for converting natural language descriptions to NATS filter patterns using LLM."""
 
     def __init__(self) -> None:
-        self.llm_available = False
-        self.llm: Any | None = None
-
         # Support legacy OpenAI API key for backward compatibility
         api_key = subscription_settings.llm_api_key or subscription_settings.openai_api_key
 
-        if api_key:
-            try:
-                self.llm = self._initialize_llm(api_key)
-                if self.llm:
-                    self.llm_available = True
-                    logger.info(
-                        "LLM initialized for pattern service",
-                        provider=subscription_settings.llm_provider,
-                        model=subscription_settings.llm_model
-                    )
-            except ImportError as e:
-                logger.warning(
-                    "LLM dependencies not available, pattern service disabled",
-                    provider=subscription_settings.llm_provider,
-                    error=str(e)
-                )
-            except Exception as e:
-                logger.error(
-                    "Failed to initialize LLM for pattern service",
-                    provider=subscription_settings.llm_provider,
-                    error=str(e),
-                    exc_info=True
-                )
-        else:
-            logger.info("No LLM API key provided, pattern service using fallback")
+        if not api_key:
+            logger.error("No LLM API key provided - LLM is required for pattern service startup")
+            raise ValueError("LLM API key is required for pattern service startup")
+
+        try:
+            self.llm = self._initialize_llm(api_key)
+            if not self.llm:
+                logger.error("Failed to initialize LLM - startup aborted")
+                raise RuntimeError("Failed to initialize LLM for pattern service")
+            
+            logger.info(
+                "LLM initialized for pattern service",
+                provider=subscription_settings.llm_provider,
+                model=subscription_settings.llm_model
+            )
+        except ImportError as e:
+            logger.error(
+                "LLM dependencies not available - startup aborted",
+                provider=subscription_settings.llm_provider,
+                error=str(e)
+            )
+            raise e
+        except Exception as e:
+            logger.error(
+                "Failed to initialize LLM for pattern service - startup aborted",
+                provider=subscription_settings.llm_provider,
+                error=str(e),
+                exc_info=True
+            )
+            raise e
 
     def _initialize_llm(self, api_key: str) -> Any | None:
         """Initialize the appropriate LLM based on provider configuration."""
@@ -116,7 +118,7 @@ class LLMPatternService:
 
     def is_available(self) -> bool:
         """Check if LLM service is available."""
-        return self.llm_available
+        return True  # Always True since initialization fails fast if LLM not available
 
     async def convert_to_pattern_and_gate(self, description: str, gate_enabled: bool = False) -> dict:
         """
@@ -134,13 +136,6 @@ class LLMPatternService:
         Raises:
             NoSuitableSchemaError: When no suitable schema is found for the request
         """
-        if not self.llm_available:
-            pattern = self._fallback_pattern_conversion(description)
-            result = {"pattern": pattern}
-            if gate_enabled:
-                result["gate_prompt"] = self._fallback_gate_prompt(description)
-            return result
-
         try:
             system_prompt = await self._get_system_prompt_with_schemas(gate_enabled)
             user_prompt = self._create_user_prompt(description, gate_enabled)
@@ -188,7 +183,6 @@ class LLMPatternService:
             else:
                 if gate_enabled:
                     # When gate is enabled, we require LLM to provide both pattern and gate_prompt
-                    # Don't fall back to hardcoded prompts
                     logger.error(
                         "LLM failed to provide required gate prompt",
                         description=description,
@@ -199,38 +193,23 @@ class LLMPatternService:
                         f"Gate prompts require LLM to return JSON with both 'pattern' and 'gate_prompt' fields."
                     )
                 else:
-                    logger.warning(
-                        "Failed to extract pattern from LLM response, using fallback",
+                    logger.error(
+                        "Failed to extract pattern from LLM response",
                         description=description,
                         response=response_text
                     )
-                    pattern = self._fallback_pattern_conversion(description)
-                    return {"pattern": pattern}
+                    raise ValueError(f"LLM failed to generate valid pattern for description: '{description}'")
 
         except NoSuitableSchemaError:
             raise
         except ValueError as e:
-            # If it's a gate prompt error when gate is enabled, re-raise it
-            if gate_enabled and ("gate_prompt" in str(e) or "JSON response" in str(e)):
-                logger.error(
-                    "Gate prompt generation failed",
-                    description=description,
-                    error=str(e)
-                )
-                raise
-            # For other ValueError cases, fall back
+            # Re-raise ValueError as they are expected error conditions
             logger.error(
-                "LLM pattern conversion failed with ValueError, using fallback",
+                "Pattern conversion failed",
                 description=description,
-                error=str(e),
-                exc_info=True
+                error=str(e)
             )
-            pattern = self._fallback_pattern_conversion(description)
-            result = {"pattern": pattern}
-            if gate_enabled:
-                # If gate is enabled but we hit a different error, still fail
-                raise ValueError(f"Failed to generate gate prompt: {str(e)}") from e
-            return result
+            raise
         except Exception as e:
             logger.error(
                 "LLM pattern and gate conversion failed",
@@ -238,15 +217,10 @@ class LLMPatternService:
                 error=str(e),
                 exc_info=True
             )
-            if gate_enabled:
-                # When gate is enabled, don't fall back to hardcoded prompts - fail explicitly
-                raise ValueError(
-                    f"LLM service failed to generate gate prompt for description: '{description}'. "
-                    f"Error: {str(e)}"
-                ) from e
-            # Only provide fallback for non-gate scenarios
-            pattern = self._fallback_pattern_conversion(description)
-            return {"pattern": pattern}
+            raise ValueError(
+                f"LLM service failed to generate pattern for description: '{description}'. "
+                f"Error: {str(e)}"
+            ) from e
 
     async def convert_to_pattern(self, description: str) -> str:
         """
@@ -438,59 +412,6 @@ Pattern:"""
 
         return None
 
-    def _fallback_pattern_conversion(self, description: str) -> str:
-        """
-        Fallback pattern conversion using simple text matching.
-
-        This provides basic functionality when LLM is not available.
-        """
-        description_lower = description.lower()
-
-        # Extract common patterns
-        publisher = "*"
-        resource_type = "*"
-        resource_id = "*"
-        action = "*"
-
-        # Try to detect publisher
-        if "github" in description_lower or "pr" in description_lower or "pull request" in description_lower:
-            publisher = "github"
-            if "pr" in description_lower or "pull request" in description_lower:
-                resource_type = "pull_request"
-        elif "stripe" in description_lower or "payment" in description_lower:
-            publisher = "stripe"
-            if "payment" in description_lower:
-                resource_type = "payment_intent"
-        elif "slack" in description_lower:
-            publisher = "slack"
-        elif "jira" in description_lower:
-            publisher = "jira"
-
-        # Try to extract specific IDs
-        id_match = re.search(r'\b(\d+)\b', description)
-        if id_match:
-            resource_id = id_match.group(1)
-
-        # Try to detect action (convert to past tense)
-        if any(word in description_lower for word in ["create", "created", "new"]):
-            action = "created"
-        elif any(word in description_lower for word in ["update", "updated", "change", "modified"]):
-            action = "updated"
-        elif any(word in description_lower for word in ["delete", "deleted", "remove", "removed"]):
-            action = "deleted"
-        elif any(word in description_lower for word in ["approve", "approved"]):
-            action = "updated"  # Approval is typically an update action
-
-        pattern = f"langhook.events.{publisher}.{resource_type}.{resource_id}.{action}"
-
-        logger.info(
-            "Fallback pattern conversion completed",
-            description=description,
-            pattern=pattern
-        )
-
-        return pattern
-
     def _parse_llm_response(self, response: str, gate_enabled: bool) -> dict | None:
         """Parse LLM response for pattern and optional gate prompt."""
         import json
@@ -508,7 +429,6 @@ Pattern:"""
                 pass
 
             # For gate-enabled requests, we need proper JSON with both pattern and gate_prompt
-            # Don't fall back to hardcoded prompts - this defeats the purpose of LLM-generated gates
             pattern = self._extract_pattern_from_response(response)
             if pattern:
                 raise ValueError(
@@ -523,17 +443,7 @@ Pattern:"""
 
         return None
 
-    def _fallback_gate_prompt(self, description: str) -> str:
-        """Generate a fallback gate prompt when LLM is not available."""
-        return f"""Evaluate if this event matches the subscription: "{description}"
-
-Return ONLY a JSON object:
-{{
-    "decision": true or false
-}}
-
-Return true if the event matches what the user requested, false otherwise."""
-
 
 # Global LLM service instance
-llm_service = LLMPatternService()
+# Note: Service initialization moved to calling code to avoid import-time failures
+# when LLM is not configured. Use LLMPatternService() directly where needed.

@@ -8,7 +8,7 @@ import structlog
 
 from langhook.map.cloudevents import cloud_event_wrapper
 from langhook.map.config import settings
-from langhook.map.llm import llm_service
+from langhook.map.llm import LLMSuggestionService
 from langhook.map.mapper import mapping_engine
 from langhook.map.metrics import metrics
 from langhook.map.nats import MapNATSConsumer, map_producer
@@ -23,6 +23,9 @@ class MappingService:
     def __init__(self) -> None:
         self.consumer: MapNATSConsumer | None = None
         self._running = False
+
+        # Initialize LLM service - will fail fast if not properly configured
+        self.llm_service = LLMSuggestionService()
 
         # Legacy metrics (for backward compatibility)
         self.events_processed = 0
@@ -112,59 +115,54 @@ class MappingService:
 
             if canonical_data is None:
                 # No mapping available, use LLM to generate JSONata expression directly
-                if llm_service.is_available():
-                    logger.info(
-                        "No mapping found, using LLM to generate JSONata expression",
-                        event_id=event_id,
-                        source=source
+                logger.info(
+                    "No mapping found, using LLM to generate JSONata expression",
+                    event_id=event_id,
+                    source=source
+                )
+
+                self.llm_invocations += 1
+                metrics.record_llm_invocation(source or "unknown")
+
+                # Generate JSONata expression with event field using LLM
+                mapping_result = await self.llm_service.generate_jsonata_mapping_with_event_field(source, payload)
+
+                if mapping_result is None:
+                    # include LLM response detail in error message
+                    error_detail = getattr(self.llm_service, 'get_last_response', lambda: 'No response')()
+                    await self._send_mapping_failure(
+                        raw_event,
+                        f"LLM failed to generate valid JSONata expression with event field: {error_detail}"
                     )
-
-                    self.llm_invocations += 1
-                    metrics.record_llm_invocation(source or "unknown")
-
-                    # Generate JSONata expression with event field using LLM
-                    mapping_result = await llm_service.generate_jsonata_mapping_with_event_field(source, payload)
-
-                    if mapping_result is None:
-                        # include LLM response detail in error message
-                        error_detail = getattr(llm_service, 'get_last_response', lambda: 'No response')()
-                        await self._send_mapping_failure(
-                            raw_event,
-                            f"LLM failed to generate valid JSONata expression with event field: {error_detail}"
-                        )
-                        metrics.record_event_failed(source or "unknown", "llm_jsonata_generation_failed")
-                        return
-
-                    jsonata_expr, event_field_expr = mapping_result
-
-                    # Apply the generated JSONata expression
-                    canonical_data = await mapping_engine._apply_jsonata_mapping(jsonata_expr, payload, source)
-
-                    if canonical_data is None:
-                        # include the expression in the error message
-                        await self._send_mapping_failure(
-                            raw_event,
-                            f"Generated JSONata expression '{jsonata_expr}' failed to produce valid canonical data"
-                        )
-                        metrics.record_event_failed(source or "unknown", "jsonata_expression_invalid")
-                        return
-
-                    # Store the generated JSONata expression with event field for future use
-                    try:
-                        await mapping_engine.store_jsonata_mapping_with_event_field(source, payload, jsonata_expr, event_field_expr)
-                    except Exception as e:
-                        # Log the error but don't fail the event processing
-                        logger.warning(
-                            "Failed to store generated JSONata mapping with event field",
-                            event_id=event_id,
-                            source=source,
-                            has_event_field_expr=event_field_expr is not None,
-                            error=str(e)
-                        )
-                else:
-                    await self._send_mapping_failure(raw_event, "No mapping available and LLM service unavailable")
-                    metrics.record_event_failed(source or "unknown", "no_mapping_no_llm")
+                    metrics.record_event_failed(source or "unknown", "llm_jsonata_generation_failed")
                     return
+
+                jsonata_expr, event_field_expr = mapping_result
+
+                # Apply the generated JSONata expression
+                canonical_data = await mapping_engine._apply_jsonata_mapping(jsonata_expr, payload, source)
+
+                if canonical_data is None:
+                    # include the expression in the error message
+                    await self._send_mapping_failure(
+                        raw_event,
+                        f"Generated JSONata expression '{jsonata_expr}' failed to produce valid canonical data"
+                    )
+                    metrics.record_event_failed(source or "unknown", "jsonata_expression_invalid")
+                    return
+
+                # Store the generated JSONata expression with event field for future use
+                try:
+                    await mapping_engine.store_jsonata_mapping_with_event_field(source, payload, jsonata_expr, event_field_expr)
+                except Exception as e:
+                    # Log the error but don't fail the event processing
+                    logger.warning(
+                        "Failed to store generated JSONata mapping with event field",
+                        event_id=event_id,
+                        source=source,
+                        has_event_field_expr=event_field_expr is not None,
+                        error=str(e)
+                    )
 
             # Create canonical CloudEvent
             canonical_event = cloud_event_wrapper.wrap_and_validate(
@@ -272,4 +270,5 @@ class MappingService:
 
 
 # Global mapping service instance
-mapping_service = MappingService()
+# Note: Service initialization moved to calling code to avoid import-time failures
+# when LLM is not configured. Use MappingService() directly where needed.

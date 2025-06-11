@@ -13,35 +13,34 @@ class LLMSuggestionService:
     """Service for generating JSONata mapping suggestions using LLM."""
 
     def __init__(self) -> None:
-        self.llm_available = False
-        if settings.openai_api_key:
-            try:
-                # Import and initialize LLM only if API key is available
-                from langchain.chat_models import ChatOpenAI
-                self.llm = ChatOpenAI(
-                    openai_api_key=settings.openai_api_key,
-                    model_name="gpt-4o-mini",
-                    temperature=0.1,
-                    max_tokens=1000,
-                )
-                self.llm_available = True
-                logger.info("OpenAI LLM initialized")
-            except ImportError as e:
-                logger.warning("LangChain not available, LLM suggestions disabled")
-                raise e
-            except Exception as e:
-                logger.error(
-                    "Failed to initialize OpenAI LLM",
-                    error=str(e),
-                    exc_info=True
-                )
-                raise e
-        else:
-            logger.info("No OpenAI API key provided, LLM suggestions disabled")
+        if not settings.openai_api_key:
+            logger.error("No OpenAI API key provided - LLM is required for mapping service startup")
+            raise ValueError("OpenAI API key is required for mapping service startup")
+
+        try:
+            # Import and initialize LLM only if API key is available
+            from langchain_openai import ChatOpenAI
+            self.llm = ChatOpenAI(
+                openai_api_key=settings.openai_api_key,
+                model="gpt-4o-mini",
+                temperature=0.1,
+                max_tokens=1000,
+            )
+            logger.info("OpenAI LLM initialized")
+        except ImportError as e:
+            logger.error("LangChain OpenAI not available - startup aborted")
+            raise e
+        except Exception as e:
+            logger.error(
+                "Failed to initialize OpenAI LLM - startup aborted",
+                error=str(e),
+                exc_info=True
+            )
+            raise e
 
     def is_available(self) -> bool:
         """Check if LLM service is available."""
-        return self.llm_available
+        return True  # Always True since initialization fails fast if LLM not available
 
     async def transform_to_canonical(self, source: str, raw_payload: dict[str, Any]) -> dict[str, Any] | None:
         """
@@ -60,6 +59,10 @@ class LLMSuggestionService:
 
         # For backward compatibility, generate JSONata and apply it
         jsonata_expr = await self.generate_jsonata_mapping(source, raw_payload)
+        if jsonata_expr is None:
+            logger.error("Failed to generate JSONata expression", source=source)
+            return None
+            
         # Sanitize JSONata expression for compatibility
         jsonata_expr = jsonata_expr.replace("\\'", '"')
         # Apply the JSONata expression to get canonical data
@@ -95,10 +98,6 @@ class LLMSuggestionService:
         Returns:
             Tuple of (jsonata_expression, event_field_expression) or None if generation fails
         """
-        if not self.is_available():
-            logger.warning("LLM service not available for JSONata generation")
-            return None
-
         try:
             # Import here to avoid errors if langchain is not installed
             import json
@@ -183,10 +182,6 @@ class LLMSuggestionService:
         Returns:
             JSONata expression string or None if generation fails
         """
-        if not self.is_available():
-            logger.warning("LLM service not available for JSONata generation")
-            return None
-
         try:
             # Import here to avoid errors if langchain is not installed
             from langchain.schema import HumanMessage, SystemMessage
@@ -511,4 +506,5 @@ Example 5 - Salesforce Contact Updated
 
 
 # Global LLM suggestion service instance
-llm_service = LLMSuggestionService()
+# Note: Service initialization moved to calling code to avoid import-time failures
+# when LLM is not configured. Use LLMSuggestionService() directly where needed.
