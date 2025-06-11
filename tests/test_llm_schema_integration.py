@@ -188,13 +188,28 @@ class TestLLMSchemaIntegration:
             assert pattern == "langhook.events.github.pull_request.123.updated"
 
     @pytest.mark.asyncio
-    async def test_fallback_when_llm_unavailable(self, llm_service):
-        """Test that fallback still works when LLM is unavailable."""
-        llm_service.llm_available = False
-
-        pattern = await llm_service.convert_to_pattern("Notify me about GitHub pull requests")
-
-        # Should return fallback pattern
-        assert pattern.startswith("langhook.events.")
-        assert "github" in pattern
-        assert "pull_request" in pattern
+    async def test_service_requires_llm_configuration(self):
+        """Test that service fails when LLM is not properly configured."""
+        import os
+        
+        # Save original API key if it exists
+        original_key = os.environ.get('LLM_API_KEY')
+        original_openai_key = os.environ.get('OPENAI_API_KEY')
+        
+        try:
+            # Remove API keys to simulate unavailable LLM
+            if 'LLM_API_KEY' in os.environ:
+                del os.environ['LLM_API_KEY']
+            if 'OPENAI_API_KEY' in os.environ:
+                del os.environ['OPENAI_API_KEY']
+            
+            # Should raise ValueError during initialization
+            with pytest.raises(ValueError, match="LLM API key is required"):
+                LLMPatternService()
+                
+        finally:
+            # Restore original API keys if they existed
+            if original_key:
+                os.environ['LLM_API_KEY'] = original_key
+            if original_openai_key:
+                os.environ['OPENAI_API_KEY'] = original_openai_key
