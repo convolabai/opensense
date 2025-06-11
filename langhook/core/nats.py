@@ -115,6 +115,9 @@ class BaseNATSConsumer:
             self.nc = await nats.connect(self.nats_url)
             self.js = self.nc.jetstream()
 
+            # Wait for stream to exist with retry logic
+            await self._wait_for_stream()
+
             # Create consumer if it doesn't exist
             consumer_config = ConsumerConfig(
                 name=self.consumer_name,
@@ -153,6 +156,59 @@ class BaseNATSConsumer:
                 consumer=self.consumer_name,
                 filter_subject=self.filter_subject,
             )
+
+    async def _wait_for_stream(self, max_retries: int = 30, initial_delay: float = 0.5) -> None:
+        """
+        Wait for the NATS stream to exist with exponential backoff.
+
+        Args:
+            max_retries: Maximum number of retry attempts
+            initial_delay: Initial delay in seconds, doubles with each retry
+
+        Raises:
+            RuntimeError: If stream is not found after max_retries
+        """
+        delay = initial_delay
+
+        for attempt in range(max_retries):
+            try:
+                # Try to get stream info to verify it exists
+                await self.js.stream_info(self.stream_name)
+                logger.debug(
+                    "Stream verified",
+                    stream=self.stream_name,
+                    attempt=attempt + 1
+                )
+                return
+            except Exception as e:
+                error_str = str(e).lower()
+                if "stream not found" in error_str or "not found" in error_str:
+                    if attempt == max_retries - 1:
+                        logger.error(
+                            "Stream not found after maximum retries",
+                            stream=self.stream_name,
+                            attempts=max_retries,
+                            total_wait_time=sum(initial_delay * (2 ** i) for i in range(max_retries))
+                        )
+                        raise RuntimeError(f"Stream '{self.stream_name}' not found after {max_retries} attempts") from e
+
+                    logger.warning(
+                        "Stream not found, retrying",
+                        stream=self.stream_name,
+                        attempt=attempt + 1,
+                        max_retries=max_retries,
+                        delay=delay
+                    )
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, 30.0)  # Cap at 30 seconds
+                else:
+                    # Some other error, re-raise immediately
+                    logger.error(
+                        "Unexpected error checking stream",
+                        stream=self.stream_name,
+                        error=str(e)
+                    )
+                    raise
 
     async def stop(self) -> None:
         """Stop the NATS consumer."""
