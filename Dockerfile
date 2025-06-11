@@ -5,15 +5,15 @@ FROM node:18-slim as frontend-builder
 WORKDIR /app/frontend
 
 # Copy package files
-COPY frontend/package*.json ./
+COPY server/frontend/package*.json ./
 
 # Install dependencies
 RUN npm install --only=production
 
 # Copy frontend source
-COPY frontend/src ./src
-COPY frontend/public ./public
-COPY frontend/tsconfig.json ./
+COPY server/frontend/src ./src
+COPY server/frontend/public ./public
+COPY server/frontend/tsconfig.json ./
 
 # Build frontend
 RUN npm run build
@@ -67,12 +67,13 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY langhook/ ./langhook/
+COPY server/ ./server/
 COPY mappings/ ./mappings/
 COPY schemas/ ./schemas/
 COPY scripts/ ./scripts/
 
 # Copy built frontend from frontend-builder
-COPY --from=frontend-builder /app/frontend/build ./frontend/build
+COPY --from=frontend-builder /app/frontend/build ./server/frontend/build
 
 # Set ownership
 RUN chown -R langhook:langhook /app
@@ -92,4 +93,4 @@ ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
 # Run the consolidated application
-CMD ["python", "-m", "langhook.main"]
+CMD ["python", "-m", "server.main"]

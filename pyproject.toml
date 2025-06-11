@@ -58,9 +58,9 @@ dev = [
 ]
 
 [project.scripts]
-langhook-dlq-show = "langhook.cli.dlq_show:main"
-langhook-streams = "langhook.cli.stream_manager:main"
-langhook = "langhook.main:main"
+langhook-dlq-show = "server.cli.dlq_show:main"
+langhook-streams = "server.cli.stream_manager:main"
+langhook = "server.main:main"
 
 [project.urls]
 Homepage = "https://github.com/convolabai/langhook"
