@@ -272,3 +272,6 @@ class MappingService:
 # Global mapping service instance
 # Note: Service initialization moved to calling code to avoid import-time failures
 # when LLM is not configured. Use MappingService() directly where needed.
+
+# Global mapping service instance
+mapping_service = MappingService()
