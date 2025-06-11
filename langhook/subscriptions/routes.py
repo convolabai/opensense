@@ -5,7 +5,7 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 
 from langhook.subscriptions.database import db_service
-from langhook.subscriptions.llm import NoSuitableSchemaError, llm_service
+from langhook.subscriptions.llm import LLMPatternService, NoSuitableSchemaError
 from langhook.subscriptions.schemas import (
     IngestMappingListResponse,
     IngestMappingResponse,
@@ -42,6 +42,7 @@ async def create_subscription(
 
         # Convert natural language description to NATS filter pattern
         try:
+            llm_service = LLMPatternService()  # Will fail fast if LLM not configured
             result = await llm_service.convert_to_pattern_and_gate(
                 subscription_data.description,
                 gate_enabled=False  # Never generate gate prompts via LLM
@@ -329,6 +330,7 @@ async def update_subscription(
                     not update_data.gate.prompt
                 )
 
+                llm_service = LLMPatternService()  # Will fail fast if LLM not configured
                 result = await llm_service.convert_to_pattern_and_gate(
                     update_data.description,
                     gate_enabled=need_gate_prompt

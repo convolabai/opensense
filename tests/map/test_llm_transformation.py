@@ -85,20 +85,26 @@ async def test_transform_to_canonical_missing_fields(mock_llm_service):
 
 
 @pytest.mark.asyncio
-async def test_transform_to_canonical_service_unavailable():
-    """Test transformation when LLM service is unavailable."""
-    service = LLMSuggestionService()
-    service.llm_available = False
-
-    # Test data
-    source = "github"
-    raw_payload = {"action": "opened", "pull_request": {"number": 123}}
-
-    # Call the transformation
-    result = await service.transform_to_canonical(source, raw_payload)
-
-    # Should return None when service unavailable
-    assert result is None
+async def test_llm_service_initialization_failure():
+    """Test that LLM service fails to initialize when not properly configured."""
+    import os
+    
+    # Save current API key if it exists
+    original_key = os.environ.get('OPENAI_API_KEY')
+    
+    try:
+        # Remove API key to simulate unavailable LLM
+        if 'OPENAI_API_KEY' in os.environ:
+            del os.environ['OPENAI_API_KEY']
+        
+        # Should raise ValueError during initialization
+        with pytest.raises(ValueError, match="OpenAI API key is required"):
+            LLMSuggestionService()
+            
+    finally:
+        # Restore original API key if it existed
+        if original_key:
+            os.environ['OPENAI_API_KEY'] = original_key
 
 
 def test_validate_canonical_format_success():
