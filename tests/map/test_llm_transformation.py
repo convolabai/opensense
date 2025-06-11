@@ -8,12 +8,21 @@ from langhook.map.llm import LLMSuggestionService
 
 
 @pytest.fixture
-def mock_llm_service():
+def mock_llm_service(monkeypatch):
     """Create a mock LLM service for testing."""
-    service = LLMSuggestionService()
-    service.llm_available = True
-    service.llm = Mock()
-    return service
+    # Mock the settings to have an API key
+    from langhook.map import config
+    monkeypatch.setattr(config.settings, 'openai_api_key', 'test-key-for-testing')
+    
+    # Mock the ChatOpenAI import to avoid actual initialization
+    from unittest.mock import Mock, patch
+    with patch('langchain_openai.ChatOpenAI') as mock_chat_openai:
+        mock_llm_instance = Mock()
+        mock_chat_openai.return_value = mock_llm_instance
+        
+        service = LLMSuggestionService()
+        service.llm = Mock()
+        return service
 
 
 @pytest.mark.asyncio
@@ -107,61 +116,101 @@ async def test_llm_service_initialization_failure():
             os.environ['OPENAI_API_KEY'] = original_key
 
 
-def test_validate_canonical_format_success():
+def test_validate_canonical_format_success(monkeypatch):
     """Test validation of correct canonical format."""
-    service = LLMSuggestionService()
+    # Mock the settings to have an API key
+    from langhook.map import config
+    monkeypatch.setattr(config.settings, 'openai_api_key', 'test-key-for-testing')
+    
+    # Mock the ChatOpenAI import to avoid actual initialization
+    from unittest.mock import Mock, patch
+    with patch('langchain_openai.ChatOpenAI') as mock_chat_openai:
+        mock_llm_instance = Mock()
+        mock_chat_openai.return_value = mock_llm_instance
+        
+        service = LLMSuggestionService()
 
-    canonical_data = {
-        "publisher": "github",
-        "resource": {"type": "pull_request", "id": 123},
-        "action": "created",
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
+        canonical_data = {
+            "publisher": "github",
+            "resource": {"type": "pull_request", "id": 123},
+            "action": "created",
+            "timestamp": "2024-01-01T00:00:00Z"
+        }
 
-    result = service._validate_canonical_format(canonical_data, "github")
-    assert result is True
+        result = service._validate_canonical_format(canonical_data, "github")
+        assert result is True
 
 
-def test_validate_canonical_format_invalid_action():
+def test_validate_canonical_format_invalid_action(monkeypatch):
     """Test validation fails for invalid action."""
-    service = LLMSuggestionService()
+    # Mock the settings to have an API key
+    from langhook.map import config
+    monkeypatch.setattr(config.settings, 'openai_api_key', 'test-key-for-testing')
+    
+    # Mock the ChatOpenAI import to avoid actual initialization
+    from unittest.mock import Mock, patch
+    with patch('langchain_openai.ChatOpenAI') as mock_chat_openai:
+        mock_llm_instance = Mock()
+        mock_chat_openai.return_value = mock_llm_instance
+        
+        service = LLMSuggestionService()
 
-    canonical_data = {
-        "publisher": "github",
-        "resource": {"type": "pull_request", "id": 123},
-        "action": "invalid_action",  # Invalid action
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
+        canonical_data = {
+            "publisher": "github",
+            "resource": {"type": "pull_request", "id": 123},
+            "action": "invalid_action",  # Invalid action
+            "timestamp": "2024-01-01T00:00:00Z"
+        }
 
-    result = service._validate_canonical_format(canonical_data, "github")
-    assert result is False
+        result = service._validate_canonical_format(canonical_data, "github")
+        assert result is False
 
 
-def test_validate_canonical_format_invalid_resource_id():
+def test_validate_canonical_format_invalid_resource_id(monkeypatch):
     """Test validation fails for resource ID with invalid characters."""
-    service = LLMSuggestionService()
+    # Mock the settings to have an API key
+    from langhook.map import config
+    monkeypatch.setattr(config.settings, 'openai_api_key', 'test-key-for-testing')
+    
+    # Mock the ChatOpenAI import to avoid actual initialization
+    from unittest.mock import Mock, patch
+    with patch('langchain_openai.ChatOpenAI') as mock_chat_openai:
+        mock_llm_instance = Mock()
+        mock_chat_openai.return_value = mock_llm_instance
+        
+        service = LLMSuggestionService()
 
-    canonical_data = {
-        "publisher": "github",
-        "resource": {"type": "pull_request", "id": "123#456"},  # Invalid ID with hash
-        "action": "created",
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
+        canonical_data = {
+            "publisher": "github",
+            "resource": {"type": "pull_request", "id": "123#456"},  # Invalid ID with hash
+            "action": "created",
+            "timestamp": "2024-01-01T00:00:00Z"
+        }
 
-    result = service._validate_canonical_format(canonical_data, "github")
-    assert result is False
+        result = service._validate_canonical_format(canonical_data, "github")
+        assert result is False
 
 
-def test_validate_canonical_format_allows_slash_in_resource_id():
+def test_validate_canonical_format_allows_slash_in_resource_id(monkeypatch):
     """Test validation allows slash in resource ID."""
-    service = LLMSuggestionService()
+    # Mock the settings to have an API key
+    from langhook.map import config
+    monkeypatch.setattr(config.settings, 'openai_api_key', 'test-key-for-testing')
+    
+    # Mock the ChatOpenAI import to avoid actual initialization
+    from unittest.mock import Mock, patch
+    with patch('langchain_openai.ChatOpenAI') as mock_chat_openai:
+        mock_llm_instance = Mock()
+        mock_chat_openai.return_value = mock_llm_instance
+        
+        service = LLMSuggestionService()
 
-    canonical_data = {
-        "publisher": "github",
-        "resource": {"type": "pull_request", "id": "123/456"},  # Valid ID with slash (now allowed)
-        "action": "created",
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
+        canonical_data = {
+            "publisher": "github",
+            "resource": {"type": "pull_request", "id": "123/456"},  # Valid ID with slash (now allowed)
+            "action": "created",
+            "timestamp": "2024-01-01T00:00:00Z"
+        }
 
-    result = service._validate_canonical_format(canonical_data, "github")
-    assert result is True
+        result = service._validate_canonical_format(canonical_data, "github")
+        assert result is True
