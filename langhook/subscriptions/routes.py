@@ -40,22 +40,23 @@ async def create_subscription(
         # Check if gate is enabled to determine if we need gate prompt generation
         gate_enabled = subscription_data.gate and subscription_data.gate.enabled
 
-        # Convert natural language description to NATS filter pattern and generate gate prompt if needed
+        # Convert natural language description to NATS filter pattern
         try:
             result = await llm_service.convert_to_pattern_and_gate(
                 subscription_data.description,
-                gate_enabled=gate_enabled and not subscription_data.gate.prompt
+                gate_enabled=False  # Never generate gate prompts via LLM
             )
             pattern = result["pattern"]
 
-            # Set auto-generated gate prompt if gate is enabled and no custom prompt provided
-            if gate_enabled and not subscription_data.gate.prompt and "gate_prompt" in result:
-                subscription_data.gate.prompt = result["gate_prompt"]
+            # Set gate prompt based on the new logic:
+            # 1. If user provided a custom gate prompt, use that (already set)
+            # 2. If no custom gate prompt provided, use the subscription description
+            if gate_enabled and not subscription_data.gate.prompt:
+                subscription_data.gate.prompt = subscription_data.description
                 logger.info(
-                    "Auto-generated gate prompt for subscription",
+                    "Using subscription description as gate prompt",
                     subscriber_id=subscriber_id,
-                    description=subscription_data.description,
-                    prompt_length=len(result["gate_prompt"])
+                    description=subscription_data.description
                 )
         except NoSuitableSchemaError as e:
             logger.warning(

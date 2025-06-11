@@ -5,6 +5,7 @@ interface SchemaData {
   publishers: string[];
   resource_types: { [publisher: string]: string[] };
   actions: string[];
+  publisher_resource_actions?: { [publisher: string]: { [resource_type: string]: string[] } };
 }
 
 const Schema: React.FC = () => {
@@ -254,8 +255,8 @@ const Schema: React.FC = () => {
                   <div className="border-t border-gray-200 bg-gray-50">
                     {resourceTypes.map((resourceType) => {
                       // Get actions for this specific publisher/resource_type combination
-                      // Since the API doesn't provide this granular breakdown, we'll show all actions
-                      const relevantActions = schemaData.actions;
+                      const relevantActions = schemaData.publisher_resource_actions?.[publisher]?.[resourceType] 
+                        || schemaData.actions; // Fallback to all actions if granular data not available
                       
                       return (
                         <div key={resourceType} className="p-4 border-b border-gray-200 last:border-b-0">
