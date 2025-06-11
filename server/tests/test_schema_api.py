@@ -25,7 +25,7 @@ def test_schema_endpoint_success(client):
         "actions": ["created", "updated", "deleted"]
     }
 
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.get_schema_summary',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.get_schema_summary',
                new_callable=AsyncMock) as mock_get_summary:
         mock_get_summary.return_value = mock_schema_data
 
@@ -44,7 +44,7 @@ def test_schema_endpoint_empty_response(client):
         "actions": []
     }
 
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.get_schema_summary',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.get_schema_summary',
                new_callable=AsyncMock) as mock_get_summary:
         mock_get_summary.return_value = mock_empty_data
 
@@ -56,7 +56,7 @@ def test_schema_endpoint_empty_response(client):
 
 def test_schema_endpoint_service_error(client):
     """Test the /schema endpoint handles service errors gracefully."""
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.get_schema_summary',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.get_schema_summary',
                new_callable=AsyncMock) as mock_get_summary:
         # The service itself handles exceptions and returns empty structure
         mock_get_summary.return_value = {

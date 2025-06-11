@@ -16,7 +16,7 @@ def client():
 
 def test_delete_publisher_success(client):
     """Test successful publisher deletion."""
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.delete_publisher',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.delete_publisher',
                new_callable=AsyncMock) as mock_delete:
         mock_delete.return_value = True
 
@@ -28,7 +28,7 @@ def test_delete_publisher_success(client):
 
 def test_delete_publisher_not_found(client):
     """Test deleting non-existent publisher."""
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.delete_publisher',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.delete_publisher',
                new_callable=AsyncMock) as mock_delete:
         mock_delete.return_value = False
 
@@ -41,7 +41,7 @@ def test_delete_publisher_not_found(client):
 
 def test_delete_publisher_server_error(client):
     """Test server error during publisher deletion."""
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.delete_publisher',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.delete_publisher',
                new_callable=AsyncMock) as mock_delete:
         mock_delete.side_effect = Exception("Database error")
 
@@ -53,7 +53,7 @@ def test_delete_publisher_server_error(client):
 
 def test_delete_resource_type_success(client):
     """Test successful resource type deletion."""
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.delete_resource_type',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.delete_resource_type',
                new_callable=AsyncMock) as mock_delete:
         mock_delete.return_value = True
 
@@ -65,7 +65,7 @@ def test_delete_resource_type_success(client):
 
 def test_delete_resource_type_not_found(client):
     """Test deleting non-existent resource type."""
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.delete_resource_type',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.delete_resource_type',
                new_callable=AsyncMock) as mock_delete:
         mock_delete.return_value = False
 
@@ -78,7 +78,7 @@ def test_delete_resource_type_not_found(client):
 
 def test_delete_resource_type_server_error(client):
     """Test server error during resource type deletion."""
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.delete_resource_type',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.delete_resource_type',
                new_callable=AsyncMock) as mock_delete:
         mock_delete.side_effect = Exception("Database error")
 
@@ -90,7 +90,7 @@ def test_delete_resource_type_server_error(client):
 
 def test_delete_action_success(client):
     """Test successful action deletion."""
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.delete_action',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.delete_action',
                new_callable=AsyncMock) as mock_delete:
         mock_delete.return_value = True
 
@@ -102,7 +102,7 @@ def test_delete_action_success(client):
 
 def test_delete_action_not_found(client):
     """Test deleting non-existent action."""
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.delete_action',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.delete_action',
                new_callable=AsyncMock) as mock_delete:
         mock_delete.return_value = False
 
@@ -115,7 +115,7 @@ def test_delete_action_not_found(client):
 
 def test_delete_action_server_error(client):
     """Test server error during action deletion."""
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.delete_action',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.delete_action',
                new_callable=AsyncMock) as mock_delete:
         mock_delete.side_effect = Exception("Database error")
 
@@ -136,7 +136,7 @@ def test_get_schema_still_works(client):
         "actions": ["created", "updated", "deleted"]
     }
 
-    with patch('langhook.subscriptions.schema_routes.schema_registry_service.get_schema_summary',
+    with patch('server.subscriptions.schema_routes.schema_registry_service.get_schema_summary',
                new_callable=AsyncMock) as mock_get_summary:
         mock_get_summary.return_value = mock_schema_data
 

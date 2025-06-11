@@ -14,7 +14,7 @@ class TestSubscriptionWithGate:
     @pytest.fixture
     def mock_db_service(self):
         """Mock database service for testing."""
-        with patch('langhook.subscriptions.database.db_service') as mock_db:
+        with patch('server.subscriptions.database.db_service') as mock_db:
             # Setup mock subscription object
             mock_subscription = Mock(spec=Subscription)
             mock_subscription.id = 1
@@ -190,8 +190,8 @@ class TestSubscriptionConsumerWithGate:
         """Test that consumer processes event when gate passes."""
         from server.subscriptions.consumer_service import SubscriptionConsumer
         
-        with patch('langhook.subscriptions.consumer_service.llm_gate_service') as mock_gate, \
-             patch('langhook.subscriptions.consumer_service.db_service') as mock_db, \
+        with patch('server.subscriptions.consumer_service.llm_gate_service') as mock_gate, \
+             patch('server.subscriptions.consumer_service.db_service') as mock_db, \
              patch('httpx.AsyncClient') as mock_http:
             
             # Mock gate passes
@@ -230,8 +230,8 @@ class TestSubscriptionConsumerWithGate:
         """Test that consumer blocks event when gate fails."""
         from server.subscriptions.consumer_service import SubscriptionConsumer
         
-        with patch('langhook.subscriptions.consumer_service.llm_gate_service') as mock_gate, \
-             patch('langhook.subscriptions.consumer_service.db_service') as mock_db, \
+        with patch('server.subscriptions.consumer_service.llm_gate_service') as mock_gate, \
+             patch('server.subscriptions.consumer_service.db_service') as mock_db, \
              patch('httpx.AsyncClient') as mock_http:
             
             # Mock gate blocks
@@ -260,8 +260,8 @@ class TestSubscriptionConsumerWithGate:
         """Test that consumer bypasses gate when not enabled."""
         from server.subscriptions.consumer_service import SubscriptionConsumer
         
-        with patch('langhook.subscriptions.consumer_service.llm_gate_service') as mock_gate, \
-             patch('langhook.subscriptions.consumer_service.db_service') as mock_db, \
+        with patch('server.subscriptions.consumer_service.llm_gate_service') as mock_gate, \
+             patch('server.subscriptions.consumer_service.db_service') as mock_db, \
              patch('httpx.AsyncClient') as mock_http:
             
             # Mock database save

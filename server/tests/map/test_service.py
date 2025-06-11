@@ -11,8 +11,8 @@ async def test_llm_transformation_flow():
     print("Testing LLM transformation flow...")
 
     # Mock both the Kafka producer and LLM service
-    with patch('langhook.map.service.map_producer') as mock_producer, \
-         patch('langhook.map.service.llm_service') as mock_llm:
+    with patch('server.map.service.map_producer') as mock_producer, \
+         patch('server.map.service.llm_service') as mock_llm:
 
         mock_producer.send_canonical_event = AsyncMock()
         mock_producer.send_mapping_failure = AsyncMock()
@@ -74,8 +74,8 @@ async def test_llm_unavailable_flow():
     """Test handling when LLM service is unavailable."""
     print("\nTesting LLM unavailable flow...")
 
-    with patch('langhook.map.service.map_producer') as mock_producer, \
-         patch('langhook.map.service.llm_service') as mock_llm:
+    with patch('server.map.service.map_producer') as mock_producer, \
+         patch('server.map.service.llm_service') as mock_llm:
 
         mock_producer.send_canonical_event = AsyncMock()
         mock_producer.send_mapping_failure = AsyncMock()
@@ -126,8 +126,8 @@ async def test_llm_transformation_failure():
     """Test handling when LLM transformation fails."""
     print("\nTesting LLM transformation failure...")
 
-    with patch('langhook.map.service.map_producer') as mock_producer, \
-         patch('langhook.map.service.llm_service') as mock_llm:
+    with patch('server.map.service.map_producer') as mock_producer, \
+         patch('server.map.service.llm_service') as mock_llm:
 
         mock_producer.send_canonical_event = AsyncMock()
         mock_producer.send_mapping_failure = AsyncMock()

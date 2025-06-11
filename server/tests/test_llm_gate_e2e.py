@@ -13,9 +13,9 @@ class TestLLMGateE2E:
     @pytest.fixture
     def mock_services(self):
         """Mock all required services for E2E testing."""
-        with patch('langhook.subscriptions.database.db_service') as mock_db, \
-             patch('langhook.subscriptions.llm.llm_service') as mock_llm, \
-             patch('langhook.subscriptions.gate.llm_gate_service') as mock_gate:
+        with patch('server.subscriptions.database.db_service') as mock_db, \
+             patch('server.subscriptions.llm.llm_service') as mock_llm, \
+             patch('server.subscriptions.gate.llm_gate_service') as mock_gate:
             
             # Mock subscription
             mock_subscription = Mock()
@@ -64,9 +64,9 @@ class TestLLMGateE2E:
     @pytest.fixture
     def client(self, mock_services):
         """Create a test client with mocked services."""
-        with patch('langhook.ingest.nats.nats_producer') as mock_nats, \
-             patch('langhook.map.service.mapping_service') as mock_mapping, \
-             patch('langhook.ingest.middleware.RateLimitMiddleware.is_rate_limited') as mock_rate_limit, \
+        with patch('server.ingest.nats.nats_producer') as mock_nats, \
+             patch('server.map.service.mapping_service') as mock_mapping, \
+             patch('server.ingest.middleware.RateLimitMiddleware.is_rate_limited') as mock_rate_limit, \
              patch('nats.connect') as mock_nats_connect:
 
             # Mock NATS

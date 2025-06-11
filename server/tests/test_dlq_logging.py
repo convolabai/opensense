@@ -35,7 +35,7 @@ class TestDLQLoggingService:
 
     async def test_start_when_disabled(self, dlq_logging_service):
         """Test service start when event logging is disabled."""
-        with patch('langhook.subscriptions.dlq_logging.subscription_settings') as mock_settings:
+        with patch('server.subscriptions.dlq_logging.subscription_settings') as mock_settings:
             mock_settings.event_logging_enabled = False
 
             await dlq_logging_service.start()
@@ -43,13 +43,13 @@ class TestDLQLoggingService:
             assert dlq_logging_service.consumer is None
             assert not dlq_logging_service._running
 
-    @patch('langhook.subscriptions.dlq_logging.db_service')
+    @patch('server.subscriptions.dlq_logging.db_service')
     async def test_start_when_enabled(self, mock_db_service, dlq_logging_service):
         """Test service start when event logging is enabled."""
-        with patch('langhook.subscriptions.dlq_logging.subscription_settings') as mock_settings:
+        with patch('server.subscriptions.dlq_logging.subscription_settings') as mock_settings:
             mock_settings.event_logging_enabled = True
 
-            with patch('langhook.subscriptions.dlq_logging.DLQLoggingConsumer') as mock_consumer_class:
+            with patch('server.subscriptions.dlq_logging.DLQLoggingConsumer') as mock_consumer_class:
                 mock_consumer = AsyncMock()
                 mock_consumer_class.return_value = mock_consumer
 
@@ -62,7 +62,7 @@ class TestDLQLoggingService:
 
     async def test_run_when_disabled(self, dlq_logging_service):
         """Test service run when event logging is disabled."""
-        with patch('langhook.subscriptions.dlq_logging.subscription_settings') as mock_settings:
+        with patch('server.subscriptions.dlq_logging.subscription_settings') as mock_settings:
             mock_settings.event_logging_enabled = False
 
             await dlq_logging_service.run()
@@ -70,7 +70,7 @@ class TestDLQLoggingService:
             assert dlq_logging_service.consumer is None
             assert not dlq_logging_service._running
 
-    @patch('langhook.subscriptions.dlq_logging.db_service')
+    @patch('server.subscriptions.dlq_logging.db_service')
     async def test_log_dlq_event_success(self, mock_db_service, sample_dlq_event, dlq_logging_service):
         """Test successful DLQ event logging."""
         # Mock database session
@@ -117,7 +117,7 @@ class TestDLQLoggingService:
             "payload": '{"invalid": json}'  # Invalid JSON
         }
 
-        with patch('langhook.subscriptions.dlq_logging.db_service') as mock_db_service:
+        with patch('server.subscriptions.dlq_logging.db_service') as mock_db_service:
             mock_session = MagicMock()
             mock_db_service.get_session.return_value.__enter__.return_value = mock_session
 
@@ -128,7 +128,7 @@ class TestDLQLoggingService:
             event_log = mock_session.add.call_args[0][0]
             assert event_log.raw_payload == {"raw_text": '{"invalid": json}'}
 
-    @patch('langhook.subscriptions.dlq_logging.db_service')
+    @patch('server.subscriptions.dlq_logging.db_service')
     async def test_log_dlq_event_database_error(self, mock_db_service, sample_dlq_event, dlq_logging_service):
         """Test DLQ event logging when database error occurs."""
         # Mock database error
@@ -145,7 +145,7 @@ class TestDLQLoggingConsumer:
         """Test DLQ consumer initialization."""
         message_handler = AsyncMock()
 
-        with patch('langhook.subscriptions.dlq_logging.subscription_settings') as mock_settings:
+        with patch('server.subscriptions.dlq_logging.subscription_settings') as mock_settings:
             mock_settings.nats_url = "nats://localhost:4222"
             mock_settings.nats_stream_events = "events"
             mock_settings.nats_consumer_group = "test_group"
@@ -171,13 +171,13 @@ async def test_dlq_logging_integration():
 
     service = DLQLoggingService()
 
-    with patch('langhook.subscriptions.dlq_logging.subscription_settings') as mock_settings:
+    with patch('server.subscriptions.dlq_logging.subscription_settings') as mock_settings:
         mock_settings.event_logging_enabled = True
         mock_settings.nats_url = "nats://localhost:4222"
         mock_settings.nats_stream_events = "events"
         mock_settings.nats_consumer_group = "test_group"
 
-        with patch('langhook.subscriptions.dlq_logging.db_service') as mock_db_service:
+        with patch('server.subscriptions.dlq_logging.db_service') as mock_db_service:
             mock_session = MagicMock()
             mock_db_service.get_session.return_value.__enter__.return_value = mock_session
 

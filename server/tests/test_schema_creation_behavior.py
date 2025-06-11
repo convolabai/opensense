@@ -10,7 +10,7 @@ from server.map.service import MappingService
 @pytest.mark.asyncio
 async def test_single_action_registration():
     """Test that only the specific action in the event is registered, not multiple default actions."""
-    with patch('langhook.subscriptions.schema_registry.db_service') as mock_db:
+    with patch('server.subscriptions.schema_registry.db_service') as mock_db:
         mock_session = MagicMock()
         mock_db.get_session.return_value.__enter__.return_value = mock_session
         
@@ -40,7 +40,7 @@ async def test_single_action_registration():
 @pytest.mark.asyncio
 async def test_canonical_event_processing_single_action():
     """Test that processing a canonical event only registers the actual action, not default actions."""
-    with patch('langhook.subscriptions.schema_registry.db_service') as mock_db:
+    with patch('server.subscriptions.schema_registry.db_service') as mock_db:
         mock_session = MagicMock()
         mock_db.get_session.return_value.__enter__.return_value = mock_session
         
@@ -78,7 +78,7 @@ async def test_canonical_event_processing_single_action():
 @pytest.mark.asyncio
 async def test_multiple_events_different_actions():
     """Test that multiple events with different actions register correctly."""
-    with patch('langhook.subscriptions.schema_registry.db_service') as mock_db:
+    with patch('server.subscriptions.schema_registry.db_service') as mock_db:
         mock_session = MagicMock()
         mock_db.get_session.return_value.__enter__.return_value = mock_session
         

@@ -49,7 +49,7 @@ def test_subscription_creation_without_webhook(client):
     """Test subscription creation without webhook (polling-only)."""
     test_client, mock_db_service = client
     
-    with patch('langhook.subscriptions.routes.llm_service.convert_to_pattern') as mock_convert:
+    with patch('server.subscriptions.routes.llm_service.convert_to_pattern') as mock_convert:
         # Mock the LLM service to return a pattern
         mock_convert.return_value = "langhook.events.github.pull_request.*.opened"
 
@@ -96,7 +96,7 @@ def test_subscription_creation_with_webhook(client):
     """Test subscription creation with webhook still works."""
     test_client, mock_db_service = client
     
-    with patch('langhook.subscriptions.routes.llm_service.convert_to_pattern') as mock_convert:
+    with patch('server.subscriptions.routes.llm_service.convert_to_pattern') as mock_convert:
         # Mock the LLM service to return a pattern
         mock_convert.return_value = "langhook.events.github.pull_request.*.opened"
 

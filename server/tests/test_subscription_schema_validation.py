@@ -12,11 +12,11 @@ from server.subscriptions.llm import NoSuitableSchemaError
 @pytest.fixture
 def client():
     """Create a test client for the consolidated FastAPI app."""
-    with patch('langhook.ingest.nats.nats_producer') as mock_nats, \
-         patch('langhook.map.service.mapping_service') as mock_mapping, \
-         patch('langhook.ingest.middleware.RateLimitMiddleware.is_rate_limited') as mock_rate_limit, \
+    with patch('server.ingest.nats.nats_producer') as mock_nats, \
+         patch('server.map.service.mapping_service') as mock_mapping, \
+         patch('server.ingest.middleware.RateLimitMiddleware.is_rate_limited') as mock_rate_limit, \
          patch('nats.connect') as mock_nats_connect, \
-         patch('langhook.subscriptions.database.db_service') as mock_db_service:
+         patch('server.subscriptions.database.db_service') as mock_db_service:
 
         mock_nats.start = AsyncMock()
         mock_nats.stop = AsyncMock()
@@ -54,7 +54,7 @@ def client():
 
 def test_subscription_creation_with_no_suitable_schema(client):
     """Test subscription creation when no suitable schema is found."""
-    with patch('langhook.subscriptions.routes.llm_service.convert_to_pattern') as mock_convert:
+    with patch('server.subscriptions.routes.llm_service.convert_to_pattern') as mock_convert:
         # Mock the LLM service to raise NoSuitableSchemaError
         mock_convert.side_effect = NoSuitableSchemaError("No suitable schema found for description")
 
@@ -80,8 +80,8 @@ def test_subscription_creation_with_no_suitable_schema(client):
 
 def test_subscription_update_with_no_suitable_schema(client):
     """Test subscription update when no suitable schema is found."""
-    with patch('langhook.subscriptions.routes.llm_service.convert_to_pattern') as mock_convert, \
-         patch('langhook.subscriptions.routes.db_service') as mock_db_service:
+    with patch('server.subscriptions.routes.llm_service.convert_to_pattern') as mock_convert, \
+         patch('server.subscriptions.routes.db_service') as mock_db_service:
 
         # Mock the LLM service to raise NoSuitableSchemaError
         mock_convert.side_effect = NoSuitableSchemaError("No suitable schema found for description")
@@ -103,8 +103,8 @@ def test_subscription_update_with_no_suitable_schema(client):
 
 def test_subscription_creation_with_valid_schema(client):
     """Test subscription creation with valid schema."""
-    with patch('langhook.subscriptions.routes.llm_service.convert_to_pattern') as mock_convert, \
-         patch('langhook.subscriptions.routes.db_service') as mock_db_service:
+    with patch('server.subscriptions.routes.llm_service.convert_to_pattern') as mock_convert, \
+         patch('server.subscriptions.routes.db_service') as mock_db_service:
 
         # Mock the LLM service to return a valid pattern
         mock_convert.return_value = "langhook.events.github.pull_request.*.updated"

@@ -18,7 +18,7 @@ def schema_service():
 @pytest.mark.asyncio
 async def test_register_event_schema_success(schema_service):
     """Test successful schema registration."""
-    with patch('langhook.subscriptions.schema_registry.db_service') as mock_db:
+    with patch('server.subscriptions.schema_registry.db_service') as mock_db:
         mock_session = Mock()
         mock_db.get_session.return_value.__enter__.return_value = mock_session
 
@@ -36,7 +36,7 @@ async def test_register_event_schema_success(schema_service):
 @pytest.mark.asyncio
 async def test_register_event_schema_sql_error(schema_service):
     """Test schema registration handles SQL errors gracefully."""
-    with patch('langhook.subscriptions.schema_registry.db_service') as mock_db:
+    with patch('server.subscriptions.schema_registry.db_service') as mock_db:
         mock_session = Mock()
         mock_session.execute.side_effect = SQLAlchemyError("Connection error")
         mock_db.get_session.return_value.__enter__.return_value = mock_session
@@ -52,7 +52,7 @@ async def test_register_event_schema_sql_error(schema_service):
 @pytest.mark.asyncio
 async def test_get_schema_summary_success(schema_service):
     """Test successful schema summary retrieval."""
-    with patch('langhook.subscriptions.schema_registry.db_service') as mock_db:
+    with patch('server.subscriptions.schema_registry.db_service') as mock_db:
         mock_session = Mock()
         mock_db.get_session.return_value.__enter__.return_value = mock_session
 
@@ -91,7 +91,7 @@ async def test_get_schema_summary_success(schema_service):
 @pytest.mark.asyncio
 async def test_get_schema_summary_empty_db(schema_service):
     """Test schema summary with empty database."""
-    with patch('langhook.subscriptions.schema_registry.db_service') as mock_db:
+    with patch('server.subscriptions.schema_registry.db_service') as mock_db:
         mock_session = Mock()
         mock_db.get_session.return_value.__enter__.return_value = mock_session
         mock_session.query.return_value.all.return_value = []
@@ -111,7 +111,7 @@ async def test_get_schema_summary_empty_db(schema_service):
 @pytest.mark.asyncio
 async def test_get_schema_summary_sql_error(schema_service):
     """Test schema summary handles SQL errors gracefully."""
-    with patch('langhook.subscriptions.schema_registry.db_service') as mock_db:
+    with patch('server.subscriptions.schema_registry.db_service') as mock_db:
         mock_session = Mock()
         mock_session.query.side_effect = SQLAlchemyError("Connection error")
         mock_db.get_session.return_value.__enter__.return_value = mock_session

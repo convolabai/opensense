@@ -11,9 +11,9 @@ from server.app import app
 @pytest.fixture
 def client():
     """Create a test client for the consolidated FastAPI app."""
-    with patch('langhook.ingest.nats.nats_producer') as mock_nats, \
-         patch('langhook.map.service.mapping_service') as mock_mapping, \
-         patch('langhook.ingest.middleware.RateLimitMiddleware.is_rate_limited') as mock_rate_limit, \
+    with patch('server.ingest.nats.nats_producer') as mock_nats, \
+         patch('server.map.service.mapping_service') as mock_mapping, \
+         patch('server.ingest.middleware.RateLimitMiddleware.is_rate_limited') as mock_rate_limit, \
          patch('nats.connect') as mock_nats_connect:
         mock_nats.start = AsyncMock()
         mock_nats.stop = AsyncMock()
@@ -59,7 +59,7 @@ def test_health_endpoint(client):
 
 def test_ingest_endpoint_valid_json(client):
     """Test ingesting valid JSON payload."""
-    with patch('langhook.ingest.nats.nats_producer') as mock_nats:
+    with patch('server.ingest.nats.nats_producer') as mock_nats:
         mock_nats.send_raw_event = AsyncMock()
 
         payload = {"test": "data", "value": 123}
@@ -77,7 +77,7 @@ def test_ingest_endpoint_valid_json(client):
 
 def test_ingest_endpoint_invalid_json(client):
     """Test ingesting invalid JSON payload."""
-    with patch('langhook.ingest.nats.nats_producer') as mock_nats:
+    with patch('server.ingest.nats.nats_producer') as mock_nats:
         mock_nats.send_dlq = AsyncMock()
 
         response = client.post(
@@ -106,7 +106,7 @@ def test_ingest_endpoint_body_too_large(client):
 
 def test_ingest_endpoint_different_sources(client):
     """Test that different sources are handled correctly."""
-    with patch('langhook.ingest.nats.nats_producer') as mock_nats:
+    with patch('server.ingest.nats.nats_producer') as mock_nats:
         mock_nats.send_raw_event = AsyncMock()
 
         payload = {"test": "data"}
@@ -126,7 +126,7 @@ def test_ingest_endpoint_different_sources(client):
 
 def test_map_metrics_endpoint(client):
     """Test map metrics endpoint."""
-    with patch('langhook.app.mapping_service') as mock_service:
+    with patch('server.app.mapping_service') as mock_service:
         mock_service.get_metrics.return_value = {
             "events_processed": 100,
             "events_mapped": 95,

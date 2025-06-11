@@ -42,7 +42,7 @@ def event_logging_service():
 class TestEventLoggingService:
     """Test the EventLoggingService class."""
 
-    @patch('langhook.subscriptions.event_logging.subscription_settings')
+    @patch('server.subscriptions.event_logging.subscription_settings')
     async def test_start_when_disabled(self, mock_settings, event_logging_service):
         """Test that service doesn't start when event logging is disabled."""
         mock_settings.event_logging_enabled = False
@@ -52,8 +52,8 @@ class TestEventLoggingService:
         assert event_logging_service.consumer is None
         assert not event_logging_service._running
 
-    @patch('langhook.subscriptions.event_logging.subscription_settings')
-    @patch('langhook.subscriptions.event_logging.db_service')
+    @patch('server.subscriptions.event_logging.subscription_settings')
+    @patch('server.subscriptions.event_logging.db_service')
     async def test_start_when_enabled(self, mock_db_service, mock_settings, event_logging_service):
         """Test that service starts when event logging is enabled."""
         mock_settings.event_logging_enabled = True
@@ -70,7 +70,7 @@ class TestEventLoggingService:
             mock_consumer_start.assert_called_once()
             assert event_logging_service._running
 
-    @patch('langhook.subscriptions.event_logging.subscription_settings')
+    @patch('server.subscriptions.event_logging.subscription_settings')
     async def test_run_when_disabled(self, mock_settings, event_logging_service):
         """Test that run method exits early when event logging is disabled."""
         mock_settings.event_logging_enabled = False
@@ -79,7 +79,7 @@ class TestEventLoggingService:
         
         assert event_logging_service.consumer is None
 
-    @patch('langhook.subscriptions.event_logging.db_service')
+    @patch('server.subscriptions.event_logging.db_service')
     async def test_log_event_success(self, mock_db_service, sample_canonical_event, event_logging_service):
         """Test successful event logging."""
         mock_session = MagicMock()
@@ -127,7 +127,7 @@ class TestEventLoggingService:
         # Should not raise an exception, just log a warning
         await event_logging_service._log_event(invalid_event)
 
-    @patch('langhook.subscriptions.event_logging.db_service')
+    @patch('server.subscriptions.event_logging.db_service')
     async def test_log_event_database_error(self, mock_db_service, sample_canonical_event, event_logging_service):
         """Test event logging when database error occurs."""
         # Mock database error
@@ -140,7 +140,7 @@ class TestEventLoggingService:
 class TestEventLoggingConsumer:
     """Test the EventLoggingConsumer class."""
 
-    @patch('langhook.subscriptions.event_logging.subscription_settings')
+    @patch('server.subscriptions.event_logging.subscription_settings')
     def test_consumer_initialization(self, mock_settings):
         """Test consumer initialization with correct parameters."""
         mock_settings.nats_url = "nats://test:4222"
@@ -161,8 +161,8 @@ class TestEventLoggingConsumer:
 async def test_event_logging_integration():
     """Integration test for event logging with mocked dependencies."""
     
-    with patch('langhook.subscriptions.event_logging.subscription_settings') as mock_settings, \
-         patch('langhook.subscriptions.event_logging.db_service') as mock_db_service:
+    with patch('server.subscriptions.event_logging.subscription_settings') as mock_settings, \
+         patch('server.subscriptions.event_logging.db_service') as mock_db_service:
         
         # Configure mocks
         mock_settings.event_logging_enabled = True

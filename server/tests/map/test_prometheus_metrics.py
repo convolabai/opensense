@@ -45,7 +45,7 @@ class TestPrometheusMetrics:
         """Test that metrics are actually pushed to gateway."""
         test_url = "http://localhost:9091"
         
-        with patch('langhook.map.metrics.push_to_gateway') as mock_push:
+        with patch('server.map.metrics.push_to_gateway') as mock_push:
             metrics.configure_push_gateway(test_url, "test-job", 1)  # 1 second interval
             await metrics.start_push_task()
             
@@ -71,7 +71,7 @@ class TestPrometheusMetrics:
         """Test that push gateway errors are handled gracefully."""
         test_url = "http://invalid-url:9091"
         
-        with patch('langhook.map.metrics.push_to_gateway', side_effect=Exception("Connection error")):
+        with patch('server.map.metrics.push_to_gateway', side_effect=Exception("Connection error")):
             metrics.configure_push_gateway(test_url, "test-job", 1)
             await metrics.start_push_task()
             

@@ -30,7 +30,7 @@ class TestLLMSchemaIntegration:
     @pytest.fixture
     def llm_service(self):
         """Mock LLM service for testing."""
-        with patch('langhook.subscriptions.llm.subscription_settings') as mock_settings:
+        with patch('server.subscriptions.llm.subscription_settings') as mock_settings:
             mock_settings.llm_api_key = "test-key"
             service = LLMPatternService()
             service.llm_available = True
@@ -49,7 +49,7 @@ class TestLLMSchemaIntegration:
             "actions": ["created", "updated", "deleted"]
         }
 
-        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+        with patch('server.subscriptions.schema_registry.schema_registry_service') as mock_registry:
             mock_registry.get_schema_summary = AsyncMock(return_value=mock_schema_data)
 
             prompt = await llm_service._get_system_prompt_with_schemas()
@@ -82,7 +82,7 @@ class TestLLMSchemaIntegration:
             }
         }
 
-        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+        with patch('server.subscriptions.schema_registry.schema_registry_service') as mock_registry:
             mock_registry.get_schema_summary = AsyncMock(return_value=mock_schema_data)
 
             prompt = await llm_service._get_system_prompt_with_schemas()
@@ -108,7 +108,7 @@ class TestLLMSchemaIntegration:
             "publisher_resource_actions": {}
         }
 
-        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+        with patch('server.subscriptions.schema_registry.schema_registry_service') as mock_registry:
             mock_registry.get_schema_summary = AsyncMock(return_value=mock_empty_data)
 
             prompt = await llm_service._get_system_prompt_with_schemas()
@@ -120,7 +120,7 @@ class TestLLMSchemaIntegration:
     @pytest.mark.asyncio
     async def test_system_prompt_schema_fetch_error(self, llm_service):
         """Test that system prompt handles schema fetch errors gracefully."""
-        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+        with patch('server.subscriptions.schema_registry.schema_registry_service') as mock_registry:
             mock_registry.get_schema_summary = AsyncMock(side_effect=Exception("Database error"))
 
             prompt = await llm_service._get_system_prompt_with_schemas()
@@ -153,7 +153,7 @@ class TestLLMSchemaIntegration:
             "actions": ["created"]
         }
 
-        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+        with patch('server.subscriptions.schema_registry.schema_registry_service') as mock_registry:
             mock_registry.get_schema_summary = AsyncMock(return_value=mock_schema_data)
 
             # Create a proper mock response object with actual string content
@@ -176,7 +176,7 @@ class TestLLMSchemaIntegration:
             "actions": ["created", "updated"]
         }
 
-        with patch('langhook.subscriptions.schema_registry.schema_registry_service') as mock_registry:
+        with patch('server.subscriptions.schema_registry.schema_registry_service') as mock_registry:
             mock_registry.get_schema_summary = AsyncMock(return_value=mock_schema_data)
 
             # Create a proper mock response object with actual string content

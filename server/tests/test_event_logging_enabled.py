@@ -29,8 +29,8 @@ def test_event_logging_enabled_config():
         assert settings.event_logging_enabled is True
 
 
-@patch('langhook.subscriptions.event_logging.subscription_settings')
-@patch('langhook.subscriptions.event_logging.db_service')
+@patch('server.subscriptions.event_logging.subscription_settings')
+@patch('server.subscriptions.event_logging.db_service')
 async def test_enabled_service_starts_correctly(mock_db_service, mock_settings):
     """Test that the service properly starts when enabled."""
     # Configure mocks to simulate enabled event logging

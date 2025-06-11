@@ -13,11 +13,11 @@ async def test_mapping_service_registers_schema():
     service = MappingService()
 
     # Mock all dependencies
-    with patch('langhook.map.service.cloud_event_wrapper') as mock_wrapper, \
-         patch('langhook.map.service.map_producer') as mock_producer, \
-         patch('langhook.map.service.mapping_engine') as mock_engine, \
-         patch('langhook.map.service.schema_registry_service') as mock_schema_service, \
-         patch('langhook.map.service.metrics'):
+    with patch('server.map.service.cloud_event_wrapper') as mock_wrapper, \
+         patch('server.map.service.map_producer') as mock_producer, \
+         patch('server.map.service.mapping_engine') as mock_engine, \
+         patch('server.map.service.schema_registry_service') as mock_schema_service, \
+         patch('server.map.service.metrics'):
 
         # Mock mapping engine to return canonical data
         canonical_data = {
@@ -63,11 +63,11 @@ async def test_mapping_service_handles_schema_registration_failure():
     """Test that mapping service continues even if schema registration fails."""
     service = MappingService()
 
-    with patch('langhook.map.service.cloud_event_wrapper') as mock_wrapper, \
-         patch('langhook.map.service.map_producer') as mock_producer, \
-         patch('langhook.map.service.mapping_engine') as mock_engine, \
-         patch('langhook.map.service.schema_registry_service') as mock_schema_service, \
-         patch('langhook.map.service.metrics'):
+    with patch('server.map.service.cloud_event_wrapper') as mock_wrapper, \
+         patch('server.map.service.map_producer') as mock_producer, \
+         patch('server.map.service.mapping_engine') as mock_engine, \
+         patch('server.map.service.schema_registry_service') as mock_schema_service, \
+         patch('server.map.service.metrics'):
 
         # Mock mapping engine to return canonical data
         canonical_data = {
@@ -106,11 +106,11 @@ async def test_mapping_service_skips_schema_registration_for_incomplete_data():
     """Test that mapping service skips schema registration for incomplete canonical data."""
     service = MappingService()
 
-    with patch('langhook.map.service.cloud_event_wrapper') as mock_wrapper, \
-         patch('langhook.map.service.map_producer') as mock_producer, \
-         patch('langhook.map.service.mapping_engine') as mock_engine, \
-         patch('langhook.map.service.schema_registry_service') as mock_schema_service, \
-         patch('langhook.map.service.metrics'):
+    with patch('server.map.service.cloud_event_wrapper') as mock_wrapper, \
+         patch('server.map.service.map_producer') as mock_producer, \
+         patch('server.map.service.mapping_engine') as mock_engine, \
+         patch('server.map.service.schema_registry_service') as mock_schema_service, \
+         patch('server.map.service.metrics'):
 
         # Mock mapping engine to return incomplete canonical data (missing action)
         canonical_data = {

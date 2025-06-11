@@ -18,7 +18,7 @@ async def test_dlq_end_to_end_flow():
     headers = {"content-type": "application/json", "x-github-event": "pull_request"}
 
     # Mock NATS producer to capture DLQ message
-    with patch('langhook.app.nats_producer') as mock_producer:
+    with patch('server.app.nats_producer') as mock_producer:
         # Mock the NATS producer send_dlq method
         mock_producer.send_dlq = AsyncMock()
 
@@ -37,7 +37,7 @@ async def test_dlq_end_to_end_flow():
         assert "timestamp" in dlq_message
 
         # Now test that the DLQ logging service can process this message
-        with patch('langhook.subscriptions.dlq_logging.db_service') as mock_db_service:
+        with patch('server.subscriptions.dlq_logging.db_service') as mock_db_service:
             mock_session = MagicMock()
             mock_db_service.get_session.return_value.__enter__.return_value = mock_session
 
