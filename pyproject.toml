@@ -22,16 +22,20 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    # Base SDK dependencies
+    # Base SDK dependencies only
     "httpx>=0.24.0",
     "pydantic>=2.0.0",
-    # Server framework dependencies (moved from optional-dependencies.server)
+]
+
+[project.optional-dependencies]
+server = [
+    # Server framework dependencies
     "fastapi>=0.111.0",
     "uvicorn[standard]>=0.29.0",
     "structlog>=23.0.0",
     "nats-py>=2.9.0",
     "redis[hiredis]>=5.0.0",
-    # Mapping and transformation dependencies (moved from optional-dependencies.server)
+    # Mapping and transformation dependencies
     "jsonata>=0.2.0",
     "cloudevents>=1.11.0",
     "jsonschema>=4.0.0",
@@ -41,13 +45,10 @@ dependencies = [
     "openai>=1.0.0",
     "python-dotenv>=1.1.0",
     "PyYAML>=6.0",
-    # Database dependencies (moved from optional-dependencies.server)
+    # Database dependencies
     "sqlalchemy>=2.0.0",
     "psycopg2-binary>=2.9.0",
 ]
-
-[project.optional-dependencies]
-# server dependencies are now in the main dependencies section
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
