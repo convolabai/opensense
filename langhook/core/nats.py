@@ -112,6 +112,14 @@ class BaseNATSConsumer:
     async def start(self) -> None:
         """Start the NATS consumer."""
         if self.nc is None:
+            logger.info(
+                "Starting NATS consumer",
+                url=self.nats_url,
+                stream=self.stream_name,
+                consumer=self.consumer_name,
+                filter_subject=self.filter_subject,
+                deliver_policy=self.deliver_policy,
+            )
             self.nc = await nats.connect(self.nats_url)
             self.js = self.nc.jetstream()
 
