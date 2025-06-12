@@ -22,21 +22,43 @@ pip install langhook
 ### Python SDK Usage
 
 ```python
-from langhook import LangHookClient, LangHookClientConfig
+import asyncio
+from langhook import LangHookClient, LangHookClientConfig, AuthConfig
 
-# Configure client to connect to your LangHook server
-config = LangHookClientConfig(endpoint="http://localhost:8000")
-client = LangHookClient(config)
+async def main():
+    # Create client configuration
+    config = LangHookClientConfig(
+        endpoint="http://localhost:8000",
+        auth=AuthConfig(type="token", value="your-auth-token")
+    )
+    
+    # Use client as context manager
+    async with LangHookClient(config) as client:
+        # Create a subscription
+        subscription = await client.create_subscription(
+            "Notify me when PR 1374 is approved"
+        )
+        
+        # Set up event listener
+        def event_handler(event):
+            print(f"Got event: {event.publisher}/{event.action}")
+        
+        # Start listening for events
+        stop_listening = client.listen(
+            str(subscription.id), 
+            event_handler, 
+            {"intervalSeconds": 15}
+        )
+        
+        # ... do other work ...
+        
+        # Stop listening
+        stop_listening()
+        
+        # Clean up
+        await client.delete_subscription(str(subscription.id))
 
-# Send events programmatically
-await client.send_event({
-    "source": "my-app",
-    "data": {"user_id": 123, "action": "login"}
-})
-
-# Query available schemas
-schemas = await client.get_schemas()
-print(f"Available publishers: {schemas.publishers}")
+asyncio.run(main())
 ```
 
 ### TypeScript/JavaScript SDK
@@ -48,16 +70,49 @@ npm install langhook
 ```typescript
 import { LangHookClient, LangHookClientConfig } from 'langhook';
 
-const config: LangHookClientConfig = {
-  endpoint: 'http://localhost:8000'
-};
-const client = new LangHookClient(config);
+async function main() {
+  // Create client configuration
+  const config: LangHookClientConfig = {
+    endpoint: 'http://localhost:8000',
+    auth: {
+      type: 'token',
+      value: 'your-auth-token'
+    }
+  };
+  
+  // Create client
+  const client = new LangHookClient(config);
+  
+  // Initialize connection
+  await client.init();
+  
+  // Create a subscription
+  const subscription = await client.createSubscription(
+    'Notify me when PR 1374 is approved'
+  );
+  
+  // Set up event listener
+  const eventHandler = (event) => {
+    console.log(`Got event: ${event.publisher}/${event.action}`);
+  };
+  
+  // Start listening for events
+  const stopListening = client.listen(
+    subscription.id.toString(),
+    eventHandler,
+    { intervalSeconds: 15 }
+  );
+  
+  // ... do other work ...
+  
+  // Stop listening
+  stopListening();
+  
+  // Clean up
+  await client.deleteSubscription(subscription.id.toString());
+}
 
-// Send events from your JavaScript/TypeScript app
-await client.sendEvent({
-  source: 'my-app',
-  data: { userId: 123, action: 'login' }
-});
+main().catch(console.error);
 ```
 
 ## 🚀 Running LangHook Server
