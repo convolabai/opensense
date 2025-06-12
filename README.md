@@ -216,20 +216,13 @@ POSTGRES_DSN=postgresql://user:pass@localhost:5432/langhook
 REDIS_URL=redis://localhost:6379
 ```
 
-### AI Features (Optional)
+### AI Features (Required)
 ```bash
 # Enable LLM-powered mapping suggestions
 OPENAI_API_KEY=sk-your-openai-key
 
 # Or use local Ollama
 OLLAMA_BASE_URL=http://localhost:11434
-```
-
-### Webhook Security (Optional)
-```bash
-# Verify webhook signatures
-GITHUB_SECRET=your_github_webhook_secret
-STRIPE_SECRET=your_stripe_webhook_secret
 ```
 
 See [.env.example](.env.example) for all available options.
@@ -257,14 +250,6 @@ curl -X POST http://localhost:8000/map/suggest-map \
 ### 3. Create a Natural Language Subscription
 Visit `http://localhost:8000/console` and try:
 > "Notify me when any pull request is merged"
-
-## 📈 Performance
-
-LangHook is designed for high throughput:
-- **≥ 2,000 events/second** (single 2-core container)
-- **≤ 40ms p95 latency** for event transformation  
-- **< 1% mapping failure rate**
-- **≤ 5% LLM fallback usage**
 
 ## 🏗 Architecture
 
