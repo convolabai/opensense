@@ -17,7 +17,7 @@ python -m build --wheel
 # Build TypeScript SDK
 echo "Building TypeScript SDK..."
 cd "$ROOT_DIR/sdk/typescript"
-npm run build
+npm i && npm run build
 
 echo "All packages built successfully!"
 echo ""
