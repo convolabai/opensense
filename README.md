@@ -19,45 +19,98 @@ Install the LangHook Python SDK to integrate event processing into your applicat
 pip install langhook
 ```
 
+For SDK-specific dependencies, see the [SDK documentation](./sdk/).
+
 ### Python SDK Usage
 
 ```python
-from langhook import LangHookClient, LangHookClientConfig
+import asyncio
+from sdk.python import LangHookClient, LangHookClientConfig, AuthConfig
 
-# Configure client to connect to your LangHook server
-config = LangHookClientConfig(endpoint="http://localhost:8000")
-client = LangHookClient(config)
+async def main():
+    # Configure client to connect to your LangHook server
+    config = LangHookClientConfig(
+        endpoint="http://localhost:8000",
+        auth=AuthConfig(type="token", value="your-auth-token")  # Optional
+    )
+    
+    # Use client as context manager
+    async with LangHookClient(config) as client:
+        # Create a subscription using natural language
+        subscription = await client.create_subscription(
+            "Notify me when any pull request is merged"
+        )
+        
+        # Set up event listener
+        def event_handler(event):
+            print(f"Got event: {event.publisher}/{event.action}")
+        
+        # Start listening for events
+        stop_listening = client.listen(
+            str(subscription.id), 
+            event_handler, 
+            {"intervalSeconds": 15}
+        )
+        
+        # ... do other work ...
+        
+        # Stop listening and clean up
+        stop_listening()
+        await client.delete_subscription(str(subscription.id))
 
-# Send events programmatically
-await client.send_event({
-    "source": "my-app",
-    "data": {"user_id": 123, "action": "login"}
-})
-
-# Query available schemas
-schemas = await client.get_schemas()
-print(f"Available publishers: {schemas.publishers}")
+asyncio.run(main())
 ```
 
 ### TypeScript/JavaScript SDK
 
 ```bash
-npm install langhook
+npm install langhook-sdk
 ```
 
 ```typescript
-import { LangHookClient, LangHookClientConfig } from 'langhook';
+import { LangHookClient, LangHookClientConfig } from 'langhook-sdk';
 
-const config: LangHookClientConfig = {
-  endpoint: 'http://localhost:8000'
-};
-const client = new LangHookClient(config);
+async function main() {
+  // Configure client to connect to your LangHook server
+  const config: LangHookClientConfig = {
+    endpoint: 'http://localhost:8000',
+    auth: {
+      type: 'token',
+      value: 'your-auth-token'  // Optional
+    }
+  };
+  
+  // Create client
+  const client = new LangHookClient(config);
+  
+  // Initialize connection
+  await client.init();
+  
+  // Create a subscription using natural language
+  const subscription = await client.createSubscription(
+    'Notify me when any pull request is merged'
+  );
+  
+  // Set up event listener
+  const eventHandler = (event) => {
+    console.log(`Got event: ${event.publisher}/${event.action}`);
+  };
+  
+  // Start listening for events
+  const stopListening = client.listen(
+    subscription.id.toString(),
+    eventHandler,
+    { intervalSeconds: 15 }
+  );
+  
+  // ... do other work ...
+  
+  // Stop listening and clean up
+  stopListening();
+  await client.deleteSubscription(subscription.id.toString());
+}
 
-// Send events from your JavaScript/TypeScript app
-await client.sendEvent({
-  source: 'my-app',
-  data: { userId: 123, action: 'login' }
-});
+main().catch(console.error);
 ```
 
 ## 🚀 Running LangHook Server
