@@ -15,6 +15,8 @@ interface Subscription {
   channel_type: string | null;
   channel_config: any;
   active: boolean;
+  disposable: boolean;
+  used: boolean;
   gate: GateConfig | null;
   created_at: string;
   updated_at?: string;
@@ -25,6 +27,7 @@ interface SubscriptionCreate {
   channel_type?: string;
   channel_config?: any;
   gate?: GateConfig;
+  disposable?: boolean;
 }
 
 interface EventLog {
@@ -69,6 +72,9 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
   // LLM Gate state
   const [gateEnabled, setGateEnabled] = useState<boolean>(false);
   const [gatePrompt, setGatePrompt] = useState<string>('');
+  
+  // Disposable subscription state
+  const [disposableEnabled, setDisposableEnabled] = useState<boolean>(false);
   
   // Expanded rows state
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
@@ -116,7 +122,8 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
             enabled: true,
             prompt: gatePrompt.trim() || ''
           }
-        })
+        }),
+        disposable: disposableEnabled
       };
 
       const response = await fetch('/subscriptions/', {
@@ -136,6 +143,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
       setWebhookUrl('');
       setGateEnabled(false);
       setGatePrompt('');
+      setDisposableEnabled(false);
 
       await refreshSubscriptions(); // Call the refresh function passed as a prop
 
@@ -468,6 +476,27 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
           </div>
         </div>
 
+        {/* Disposable Subscription Configuration Section */}
+        <div className="mt-6">
+          <div className="border-t border-gray-200 pt-6">
+            <div className="flex items-center gap-3 mb-2">
+              <label htmlFor="disposableEnabled" className="text-sm font-medium text-gray-700">
+                One-time Use Subscription
+              </label>
+              <input
+                id="disposableEnabled"
+                type="checkbox"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                checked={disposableEnabled}
+                onChange={(e) => setDisposableEnabled(e.target.checked)}
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              If enabled, this subscription will be automatically disabled after matching the first event.
+            </p>
+          </div>
+        </div>
+
         <div className="mt-6">
           <button
             className="w-full sm:w-auto py-2 px-6 rounded-md font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-95 text-white shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
@@ -620,11 +649,21 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                                 )}
                               </div>
                               <div className="flex justify-between items-center text-xs text-gray-500 pt-2 border-t border-gray-200">
-                                <div>
-                                  Status: {sub.active ? (
-                                    <span className="text-green-600 font-medium">Active</span>
-                                  ) : (
-                                    <span className="text-red-600 font-medium">Inactive</span>
+                                <div className="flex items-center gap-4">
+                                  <div>
+                                    Status: {sub.active && (!sub.disposable || !sub.used) ? (
+                                      <span className="text-green-600 font-medium">Active</span>
+                                    ) : (
+                                      <span className="text-red-600 font-medium">
+                                        {sub.disposable && sub.used ? 'Used' : 'Inactive'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {sub.disposable && (
+                                    <div>
+                                      Type: <span className="text-orange-600 font-medium">One-time use</span>
+                                      {sub.used && <span className="text-red-600 ml-1">(Used)</span>}
+                                    </div>
                                   )}
                                 </div>
                                 <div>

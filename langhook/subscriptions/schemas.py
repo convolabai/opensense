@@ -30,6 +30,7 @@ class SubscriptionCreate(BaseModel):
     channel_type: str | None = Field(None, description="Type of notification channel")
     channel_config: dict[str, Any] | None = Field(None, description="Configuration for the notification channel")
     gate: GateConfig | None = Field(None, description="LLM gate configuration")
+    disposable: bool = Field(False, description="Whether this subscription is for one-time use only")
 
     @field_validator('channel_type')
     @classmethod
@@ -46,6 +47,7 @@ class SubscriptionUpdate(BaseModel):
     channel_config: dict[str, Any] | None = None
     active: bool | None = None
     gate: GateConfig | None = None
+    disposable: bool | None = None
 
     @field_validator('channel_type')
     @classmethod
@@ -64,6 +66,8 @@ class SubscriptionResponse(BaseModel):
     channel_type: str | None
     channel_config: dict[str, Any] | None
     active: bool
+    disposable: bool
+    used: bool
     gate: dict[str, Any] | None
     created_at: datetime
     updated_at: datetime | None = None

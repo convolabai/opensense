@@ -19,9 +19,11 @@ interface Subscription {
   subscriber_id: string;
   description: string;
   pattern: string;
-  channel_type: string;
+  channel_type: string | null;
   channel_config: any;
   active: boolean;
+  disposable: boolean;
+  used: boolean;
   gate: GateConfig | null;
   created_at: string;
   updated_at?: string;

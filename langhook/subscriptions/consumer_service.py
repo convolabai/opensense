@@ -157,6 +157,10 @@ class SubscriptionConsumer(BaseNATSConsumer):
             # Save to database
             await self._save_subscription_event_log(subscription_event_log)
 
+            # Mark disposable subscription as used after successful event processing
+            if self.subscription.disposable:
+                await self._mark_subscription_as_used()
+
             logger.debug(
                 "Subscription event logged successfully",
                 event_id=event_id,
@@ -266,6 +270,22 @@ class SubscriptionConsumer(BaseNATSConsumer):
                 exc_info=True
             )
             return True, 500
+
+    async def _mark_subscription_as_used(self) -> None:
+        """Mark this disposable subscription as used."""
+        try:
+            await db_service.mark_disposable_subscription_as_used(self.subscription.id)
+            logger.info(
+                "Disposable subscription marked as used",
+                subscription_id=self.subscription.id
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to mark disposable subscription as used",
+                subscription_id=self.subscription.id,
+                error=str(e),
+                exc_info=True
+            )
 
 
 class SubscriptionConsumerService:

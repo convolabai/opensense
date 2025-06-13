@@ -50,6 +50,8 @@ class DatabaseService:
         self.create_ingest_mappings_table()
         # Add gate column to subscriptions table if it doesn't exist
         self.add_gate_column_to_subscriptions()
+        # Add disposable and used columns to subscriptions table if they don't exist
+        self.add_disposable_columns_to_subscriptions()
         # Add gate evaluation columns to subscription event logs table if they don't exist
         self.add_gate_columns_to_subscription_event_logs()
         # Explicitly ensure webhook mappings table exists
@@ -207,6 +209,53 @@ class DatabaseService:
                 exc_info=True
             )
 
+    def add_disposable_columns_to_subscriptions(self) -> None:
+        """Add disposable and used columns to subscriptions table if they don't exist."""
+        try:
+            with self.get_session() as session:
+                # Check if disposable column exists
+                check_disposable_sql = text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name='subscriptions' AND column_name='disposable'
+                """)
+                result = session.execute(check_disposable_sql).fetchone()
+
+                if not result:
+                    # Add disposable column if it doesn't exist
+                    add_disposable_sql = text("""
+                        ALTER TABLE subscriptions 
+                        ADD COLUMN disposable BOOLEAN NOT NULL DEFAULT FALSE
+                    """)
+                    session.execute(add_disposable_sql)
+                    logger.info("Added disposable column to subscriptions table")
+
+                # Check if used column exists
+                check_used_sql = text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name='subscriptions' AND column_name='used'
+                """)
+                result = session.execute(check_used_sql).fetchone()
+
+                if not result:
+                    # Add used column if it doesn't exist
+                    add_used_sql = text("""
+                        ALTER TABLE subscriptions 
+                        ADD COLUMN used BOOLEAN NOT NULL DEFAULT FALSE
+                    """)
+                    session.execute(add_used_sql)
+                    logger.info("Added used column to subscriptions table")
+
+                session.commit()
+
+        except Exception as e:
+            logger.error(
+                "Failed to add disposable columns to subscriptions table",
+                error=str(e),
+                exc_info=True
+            )
+
     def add_gate_columns_to_subscription_event_logs(self) -> None:
         """Add gate evaluation columns to subscription_event_logs table if they don't exist."""
         try:
@@ -343,6 +392,7 @@ class DatabaseService:
                 channel_type=subscription_data.channel_type,
                 channel_config=json.dumps(subscription_data.channel_config) if subscription_data.channel_config else None,
                 gate=subscription_data.gate.model_dump() if subscription_data.gate else None,
+                disposable=subscription_data.disposable,
                 active=True
             )
 
@@ -429,6 +479,8 @@ class DatabaseService:
                 subscription.gate = update_data.gate.model_dump()
             if update_data.active is not None:
                 subscription.active = update_data.active
+            if update_data.disposable is not None:
+                subscription.disposable = update_data.disposable
 
             session.commit()
             session.refresh(subscription)
@@ -469,10 +521,14 @@ class DatabaseService:
             return True
 
     async def get_all_active_subscriptions(self) -> list[Subscription]:
-        """Get all active subscriptions for consumer management."""
+        """Get all active subscriptions for consumer management, excluding used disposable subscriptions."""
         with self.get_session() as session:
             subscriptions = session.query(Subscription).filter(
-                Subscription.active
+                and_(
+                    Subscription.active,
+                    # Exclude disposable subscriptions that have been used
+                    ~(and_(Subscription.disposable, Subscription.used))
+                )
             ).all()
 
             # Parse channel_config JSON for each subscription if it exists
@@ -627,6 +683,44 @@ class DatabaseService:
                 event_name=mapping.event_name
             )
             
+            return True
+
+    async def mark_disposable_subscription_as_used(self, subscription_id: int) -> bool:
+        """Mark a disposable subscription as used."""
+        with self.get_session() as session:
+            subscription = session.query(Subscription).filter(
+                Subscription.id == subscription_id
+            ).first()
+
+            if not subscription:
+                logger.warning(
+                    "Subscription not found for marking as used",
+                    subscription_id=subscription_id
+                )
+                return False
+
+            if not subscription.disposable:
+                logger.warning(
+                    "Attempted to mark non-disposable subscription as used",
+                    subscription_id=subscription_id
+                )
+                return False
+
+            if subscription.used:
+                logger.info(
+                    "Disposable subscription already marked as used",
+                    subscription_id=subscription_id
+                )
+                return True
+
+            subscription.used = True
+            session.commit()
+
+            logger.info(
+                "Disposable subscription marked as used",
+                subscription_id=subscription_id
+            )
+
             return True
 
 
