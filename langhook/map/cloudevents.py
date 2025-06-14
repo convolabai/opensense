@@ -12,66 +12,6 @@ logger = structlog.get_logger("langhook")
 class CloudEventWrapper:
     """Wrapper for creating and validating CloudEvents."""
 
-    def __init__(self) -> None:
-        self._schema = self._get_canonical_event_schema()
-
-    def _get_canonical_event_schema(self) -> dict[str, Any]:
-        """Get the canonical event JSON schema (hardcoded to avoid file dependency)."""
-        return {
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "title": "LangHook Canonical Event v1",
-            "description": "Schema for LangHook canonical events with REST-aligned structure",
-            "type": "object",
-            "required": [
-                "publisher",
-                "resource",
-                "action", 
-                "timestamp",
-                "payload"
-            ],
-            "properties": {
-                "publisher": {
-                    "type": "string",
-                    "pattern": "^[a-z0-9_]+$",
-                    "description": "Lowercase slug of the system (github, stripe, etc.)"
-                },
-                "resource": {
-                    "type": "object",
-                    "required": ["type", "id"],
-                    "properties": {
-                        "type": {
-                            "type": "string",
-                            "description": "Singular noun (pull_request, issue, payment_intent)"
-                        },
-                        "id": {
-                            "oneOf": [
-                                {"type": "string"},
-                                {"type": "integer"}
-                            ],
-                            "description": "Atomic identifier - no composite keys"
-                        }
-                    },
-                    "additionalProperties": False,
-                    "description": "One logical entity"
-                },
-                "action": {
-                    "type": "string",
-                    "enum": ["created", "read", "updated", "deleted"],
-                    "description": "CRUD action enum in past tense"
-                },
-                "timestamp": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "ISO-8601 timestamp in UTC (YYYY-MM-DDTHH:mm:ssZ)"
-                },
-                "payload": {
-                    "type": "object",
-                    "description": "Entire original payload - no filtering"
-                }
-            },
-            "additionalProperties": False
-        }
-
     def create_canonical_event(
         self,
         event_id: str,
@@ -146,8 +86,63 @@ class CloudEventWrapper:
         Returns:
             True if valid, False otherwise
         """
+        schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "LangHook Canonical Event v1",
+            "description": "Schema for LangHook canonical events with REST-aligned structure",
+            "type": "object",
+            "required": [
+                "publisher",
+                "resource",
+                "action", 
+                "timestamp",
+                "payload"
+            ],
+            "properties": {
+                "publisher": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$",
+                    "description": "Lowercase slug of the system (github, stripe, etc.)"
+                },
+                "resource": {
+                    "type": "object",
+                    "required": ["type", "id"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "description": "Singular noun (pull_request, issue, payment_intent)"
+                        },
+                        "id": {
+                            "oneOf": [
+                                {"type": "string"},
+                                {"type": "integer"}
+                            ],
+                            "description": "Atomic identifier - no composite keys"
+                        }
+                    },
+                    "additionalProperties": False,
+                    "description": "One logical entity"
+                },
+                "action": {
+                    "type": "string",
+                    "enum": ["created", "read", "updated", "deleted"],
+                    "description": "CRUD action enum in past tense"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO-8601 timestamp in UTC (YYYY-MM-DDTHH:mm:ssZ)"
+                },
+                "payload": {
+                    "type": "object",
+                    "description": "Entire original payload - no filtering"
+                }
+            },
+            "additionalProperties": False
+        }
+        
         try:
-            jsonschema.validate(event, self._schema)
+            jsonschema.validate(event, schema)
             logger.debug("Canonical event validation passed", publisher=event.get("publisher"))
             return True
         except jsonschema.ValidationError as e:
