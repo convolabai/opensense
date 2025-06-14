@@ -1,8 +1,6 @@
 """CloudEvents wrapper and schema validation."""
 
-import json
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 import jsonschema
@@ -13,31 +11,6 @@ logger = structlog.get_logger("langhook")
 
 class CloudEventWrapper:
     """Wrapper for creating and validating CloudEvents."""
-
-    def __init__(self) -> None:
-        self._schema = self._load_schema()
-
-    def _load_schema(self) -> dict[str, Any]:
-        """Load the canonical event JSON schema."""
-        # Get the project root directory
-        current_file = Path(__file__)
-        # langhook/map/cloudevents.py -> langhook/map -> langhook -> project_root -> schemas
-        project_root = current_file.parent.parent.parent
-        schema_path = project_root / "schemas" / "canonical_event_v1.json"
-
-        try:
-            with open(schema_path) as f:
-                schema = json.load(f)
-            logger.info("Loaded canonical event schema", schema_path=str(schema_path))
-            return schema
-        except Exception as e:
-            logger.error(
-                "Failed to load canonical event schema",
-                schema_path=str(schema_path),
-                error=str(e),
-                exc_info=True
-            )
-            raise
 
     def create_canonical_event(
         self,
@@ -113,8 +86,63 @@ class CloudEventWrapper:
         Returns:
             True if valid, False otherwise
         """
+        schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "LangHook Canonical Event v1",
+            "description": "Schema for LangHook canonical events with REST-aligned structure",
+            "type": "object",
+            "required": [
+                "publisher",
+                "resource",
+                "action", 
+                "timestamp",
+                "payload"
+            ],
+            "properties": {
+                "publisher": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$",
+                    "description": "Lowercase slug of the system (github, stripe, etc.)"
+                },
+                "resource": {
+                    "type": "object",
+                    "required": ["type", "id"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "description": "Singular noun (pull_request, issue, payment_intent)"
+                        },
+                        "id": {
+                            "oneOf": [
+                                {"type": "string"},
+                                {"type": "integer"}
+                            ],
+                            "description": "Atomic identifier - no composite keys"
+                        }
+                    },
+                    "additionalProperties": False,
+                    "description": "One logical entity"
+                },
+                "action": {
+                    "type": "string",
+                    "enum": ["created", "read", "updated", "deleted"],
+                    "description": "CRUD action enum in past tense"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO-8601 timestamp in UTC (YYYY-MM-DDTHH:mm:ssZ)"
+                },
+                "payload": {
+                    "type": "object",
+                    "description": "Entire original payload - no filtering"
+                }
+            },
+            "additionalProperties": False
+        }
+        
         try:
-            jsonschema.validate(event, self._schema)
+            jsonschema.validate(event, schema)
             logger.debug("Canonical event validation passed", publisher=event.get("publisher"))
             return True
         except jsonschema.ValidationError as e:
