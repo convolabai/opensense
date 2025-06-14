@@ -37,26 +37,188 @@ class DatabaseService:
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
 
     def create_tables(self) -> None:
-        """Create database tables."""
+        """Create all database tables and schema objects with comprehensive schema management."""
+        # Use SQLAlchemy to create base model tables
         Base.metadata.create_all(bind=self.engine)
+        
+        # Create schema versioning table first
+        self.create_schema_migrations_table()
+        
+        # Create all tables with comprehensive schema definition
+        self.create_comprehensive_schema()
+        
+        # Record schema version
+        self.record_schema_version("1.0.0", "Comprehensive schema with all tables, columns, indexes, and constraints")
+        
+        logger.info("Database schema creation completed successfully")
 
-        # Explicitly ensure event schema registry table exists
-        self.create_schema_registry_table()
-        # Explicitly ensure event logs table exists
-        self.create_event_logs_table()
-        # Explicitly ensure subscription event logs table exists
-        self.create_subscription_event_logs_table()
-        # Explicitly ensure ingest mappings table exists
-        self.create_ingest_mappings_table()
-        # Add gate column to subscriptions table if it doesn't exist
-        self.add_gate_column_to_subscriptions()
-        # Add disposable and used columns to subscriptions table if they don't exist
-        self.add_disposable_columns_to_subscriptions()
-        # Add gate evaluation columns to subscription event logs table if they don't exist
-        self.add_gate_columns_to_subscription_event_logs()
-        # Explicitly ensure webhook mappings table exists
-        self.create_ingest_mappings_table()
-        logger.info("Subscription database tables created")
+    def create_comprehensive_schema(self) -> None:
+        """Create all database tables, columns, indexes, and constraints in one consolidated approach."""
+        try:
+            with self.get_session() as session:
+                # Create all core tables with complete schema definition
+                self._create_subscriptions_table(session)
+                self._create_event_schema_registry_table(session)
+                self._create_event_logs_table(session)
+                self._create_subscription_event_logs_table(session)
+                self._create_ingest_mappings_table(session)
+                
+                # Create all indexes at once
+                self._create_all_indexes(session)
+                
+                session.commit()
+                logger.info("Comprehensive database schema created successfully")
+                
+        except Exception as e:
+            logger.error("Failed to create comprehensive database schema", error=str(e), exc_info=True)
+            raise
+
+    def _create_subscriptions_table(self, session) -> None:
+        """Create subscriptions table with all required columns."""
+        create_table_sql = text("""
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                id SERIAL PRIMARY KEY,
+                subscriber_id VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                pattern VARCHAR(255) NOT NULL,
+                channel_type VARCHAR(50),
+                channel_config TEXT,
+                active BOOLEAN NOT NULL DEFAULT TRUE,
+                disposable BOOLEAN NOT NULL DEFAULT FALSE,
+                used BOOLEAN NOT NULL DEFAULT FALSE,
+                gate JSONB,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ
+            )
+        """)
+        session.execute(create_table_sql)
+
+    def _create_event_schema_registry_table(self, session) -> None:
+        """Create event schema registry table."""
+        create_table_sql = text("""
+            CREATE TABLE IF NOT EXISTS event_schema_registry (
+                publisher VARCHAR(255) NOT NULL,
+                resource_type VARCHAR(255) NOT NULL,
+                action VARCHAR(255) NOT NULL,
+                PRIMARY KEY (publisher, resource_type, action)
+            )
+        """)
+        session.execute(create_table_sql)
+
+    def _create_event_logs_table(self, session) -> None:
+        """Create event logs table with all required columns."""
+        create_table_sql = text("""
+            CREATE TABLE IF NOT EXISTS event_logs (
+                id SERIAL PRIMARY KEY,
+                event_id VARCHAR(255) NOT NULL,
+                source VARCHAR(255) NOT NULL,
+                subject VARCHAR(255) NOT NULL,
+                publisher VARCHAR(255) NOT NULL,
+                resource_type VARCHAR(255) NOT NULL,
+                resource_id VARCHAR(255) NOT NULL,
+                action VARCHAR(255) NOT NULL,
+                canonical_data JSONB NOT NULL,
+                raw_payload JSONB,
+                timestamp TIMESTAMPTZ NOT NULL,
+                logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """)
+        session.execute(create_table_sql)
+
+    def _create_subscription_event_logs_table(self, session) -> None:
+        """Create subscription event logs table with all required columns."""
+        create_table_sql = text("""
+            CREATE TABLE IF NOT EXISTS subscription_event_logs (
+                id SERIAL PRIMARY KEY,
+                subscription_id INTEGER NOT NULL,
+                event_id VARCHAR(255) NOT NULL,
+                source VARCHAR(255) NOT NULL,
+                subject VARCHAR(255) NOT NULL,
+                publisher VARCHAR(255) NOT NULL,
+                resource_type VARCHAR(255) NOT NULL,
+                resource_id VARCHAR(255) NOT NULL,
+                action VARCHAR(255) NOT NULL,
+                canonical_data JSONB NOT NULL,
+                raw_payload JSONB,
+                timestamp TIMESTAMPTZ NOT NULL,
+                webhook_sent BOOLEAN NOT NULL DEFAULT FALSE,
+                webhook_response_status INTEGER,
+                gate_passed BOOLEAN,
+                gate_reason TEXT,
+                logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """)
+        session.execute(create_table_sql)
+
+    def _create_ingest_mappings_table(self, session) -> None:
+        """Create ingest mappings table with all required columns."""
+        create_table_sql = text("""
+            CREATE TABLE IF NOT EXISTS ingest_mappings (
+                fingerprint VARCHAR(64) PRIMARY KEY NOT NULL,
+                publisher VARCHAR(255) NOT NULL,
+                event_name VARCHAR(255) NOT NULL,
+                mapping_expr TEXT NOT NULL,
+                event_field_expr TEXT,
+                structure JSONB NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ
+            )
+        """)
+        session.execute(create_table_sql)
+
+    def _create_all_indexes(self, session) -> None:
+        """Create all required indexes for optimal performance."""
+        indexes = [
+            # Subscriptions table indexes
+            "CREATE INDEX IF NOT EXISTS idx_subscriptions_subscriber_id ON subscriptions(subscriber_id)",
+            "CREATE INDEX IF NOT EXISTS idx_subscriptions_active ON subscriptions(active)",
+            "CREATE INDEX IF NOT EXISTS idx_subscriptions_disposable ON subscriptions(disposable)",
+            "CREATE INDEX IF NOT EXISTS idx_subscriptions_used ON subscriptions(used)",
+            
+            # Event logs table indexes
+            "CREATE INDEX IF NOT EXISTS idx_event_logs_event_id ON event_logs(event_id)",
+            "CREATE INDEX IF NOT EXISTS idx_event_logs_source ON event_logs(source)",
+            "CREATE INDEX IF NOT EXISTS idx_event_logs_publisher ON event_logs(publisher)",
+            "CREATE INDEX IF NOT EXISTS idx_event_logs_resource_type ON event_logs(resource_type)",
+            "CREATE INDEX IF NOT EXISTS idx_event_logs_resource_id ON event_logs(resource_id)",
+            "CREATE INDEX IF NOT EXISTS idx_event_logs_action ON event_logs(action)",
+            "CREATE INDEX IF NOT EXISTS idx_event_logs_timestamp ON event_logs(timestamp)",
+            "CREATE INDEX IF NOT EXISTS idx_event_logs_logged_at ON event_logs(logged_at)",
+            
+            # Subscription event logs table indexes
+            "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_subscription_id ON subscription_event_logs(subscription_id)",
+            "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_event_id ON subscription_event_logs(event_id)",
+            "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_source ON subscription_event_logs(source)",
+            "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_publisher ON subscription_event_logs(publisher)",
+            "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_resource_type ON subscription_event_logs(resource_type)",
+            "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_resource_id ON subscription_event_logs(resource_id)",
+            "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_action ON subscription_event_logs(action)",
+            "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_timestamp ON subscription_event_logs(timestamp)",
+            "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_logged_at ON subscription_event_logs(logged_at)",
+            "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_webhook_sent ON subscription_event_logs(webhook_sent)",
+            "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_gate_passed ON subscription_event_logs(gate_passed)",
+            
+            # Ingest mappings table indexes
+            "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_publisher ON ingest_mappings(publisher)",
+            "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_event_name ON ingest_mappings(event_name)",
+            "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_created_at ON ingest_mappings(created_at)",
+        ]
+        
+        for index_sql in indexes:
+            session.execute(text(index_sql))
+
+    # Legacy methods for backwards compatibility - other services call these
+    def create_event_logs_table(self) -> None:
+        """Legacy method - creates all tables including event_logs. Use create_tables() instead."""
+        self.create_tables()
+
+    def create_subscription_event_logs_table(self) -> None:
+        """Legacy method - creates all tables including subscription_event_logs. Use create_tables() instead."""
+        self.create_tables()
+
+    def create_ingest_mappings_table(self) -> None:
+        """Legacy method - creates all tables including ingest_mappings. Use create_tables() instead.""" 
+        self.create_tables()
 
     def create_schema_registry_table(self) -> None:
         """Create the event schema registry table if it doesn't exist."""
@@ -81,291 +243,7 @@ class DatabaseService:
                 exc_info=True
             )
 
-    def create_event_logs_table(self) -> None:
-        """Create the event logs table if it doesn't exist."""
-        try:
-            with self.get_session() as session:
-                # Create table with explicit SQL to ensure it exists
-                create_table_sql = text("""
-                    CREATE TABLE IF NOT EXISTS event_logs (
-                        id SERIAL PRIMARY KEY,
-                        event_id VARCHAR(255) NOT NULL,
-                        source VARCHAR(255) NOT NULL,
-                        subject VARCHAR(255) NOT NULL,
-                        publisher VARCHAR(255) NOT NULL,
-                        resource_type VARCHAR(255) NOT NULL,
-                        resource_id VARCHAR(255) NOT NULL,
-                        action VARCHAR(255) NOT NULL,
-                        canonical_data JSONB NOT NULL,
-                        raw_payload JSONB,
-                        timestamp TIMESTAMPTZ NOT NULL,
-                        logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                    )
-                """)
-                session.execute(create_table_sql)
 
-                # Create indexes for better query performance
-                index_sqls = [
-                    "CREATE INDEX IF NOT EXISTS idx_event_logs_event_id ON event_logs(event_id)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_logs_source ON event_logs(source)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_logs_publisher ON event_logs(publisher)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_logs_resource_type ON event_logs(resource_type)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_logs_resource_id ON event_logs(resource_id)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_logs_action ON event_logs(action)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_logs_timestamp ON event_logs(timestamp)",
-                    "CREATE INDEX IF NOT EXISTS idx_event_logs_logged_at ON event_logs(logged_at)",
-                ]
-
-                for index_sql in index_sqls:
-                    session.execute(text(index_sql))
-
-                session.commit()
-                logger.info("Event logs table ensured")
-        except Exception as e:
-            logger.error(
-                "Failed to create event logs table",
-                error=str(e),
-                exc_info=True
-            )
-
-    def create_subscription_event_logs_table(self) -> None:
-        """Create the subscription event logs table if it doesn't exist."""
-        try:
-            with self.get_session() as session:
-                # Create table with explicit SQL to ensure it exists
-                create_table_sql = text("""
-                    CREATE TABLE IF NOT EXISTS subscription_event_logs (
-                        id SERIAL PRIMARY KEY,
-                        subscription_id INTEGER NOT NULL,
-                        event_id VARCHAR(255) NOT NULL,
-                        source VARCHAR(255) NOT NULL,
-                        subject VARCHAR(255) NOT NULL,
-                        publisher VARCHAR(255) NOT NULL,
-                        resource_type VARCHAR(255) NOT NULL,
-                        resource_id VARCHAR(255) NOT NULL,
-                        action VARCHAR(255) NOT NULL,
-                        canonical_data JSONB NOT NULL,
-                        raw_payload JSONB,
-                        timestamp TIMESTAMPTZ NOT NULL,
-                        webhook_sent BOOLEAN NOT NULL DEFAULT FALSE,
-                        webhook_response_status INTEGER,
-                        logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                    )
-                """)
-                session.execute(create_table_sql)
-
-                # Create indexes for better query performance
-                index_sqls = [
-                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_subscription_id ON subscription_event_logs(subscription_id)",
-                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_event_id ON subscription_event_logs(event_id)",
-                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_source ON subscription_event_logs(source)",
-                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_publisher ON subscription_event_logs(publisher)",
-                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_resource_type ON subscription_event_logs(resource_type)",
-                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_resource_id ON subscription_event_logs(resource_id)",
-                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_action ON subscription_event_logs(action)",
-                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_timestamp ON subscription_event_logs(timestamp)",
-                    "CREATE INDEX IF NOT EXISTS idx_subscription_event_logs_logged_at ON subscription_event_logs(logged_at)",
-                ]
-
-                for index_sql in index_sqls:
-                    session.execute(text(index_sql))
-
-                session.commit()
-                logger.info("Subscription event logs table ensured")
-        except Exception as e:
-            logger.error(
-                "Failed to create subscription event logs table",
-                error=str(e),
-                exc_info=True
-            )
-
-    def add_gate_column_to_subscriptions(self) -> None:
-        """Add gate column to subscriptions table if it doesn't exist."""
-        try:
-            with self.get_session() as session:
-                # Check if column exists
-                check_column_sql = text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='subscriptions' AND column_name='gate'
-                """)
-                result = session.execute(check_column_sql).fetchone()
-
-                if not result:
-                    # Add column if it doesn't exist
-                    add_column_sql = text("""
-                        ALTER TABLE subscriptions 
-                        ADD COLUMN gate JSONB
-                    """)
-                    session.execute(add_column_sql)
-                    session.commit()
-                    logger.info("Added gate column to subscriptions table")
-                else:
-                    logger.info("Gate column already exists in subscriptions table")
-        except Exception as e:
-            logger.error(
-                "Failed to add gate column to subscriptions table",
-                error=str(e),
-                exc_info=True
-            )
-
-    def add_disposable_columns_to_subscriptions(self) -> None:
-        """Add disposable and used columns to subscriptions table if they don't exist."""
-        try:
-            with self.get_session() as session:
-                # Check if disposable column exists
-                check_disposable_sql = text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='subscriptions' AND column_name='disposable'
-                """)
-                result = session.execute(check_disposable_sql).fetchone()
-
-                if not result:
-                    # Add disposable column if it doesn't exist
-                    add_disposable_sql = text("""
-                        ALTER TABLE subscriptions 
-                        ADD COLUMN disposable BOOLEAN NOT NULL DEFAULT FALSE
-                    """)
-                    session.execute(add_disposable_sql)
-                    logger.info("Added disposable column to subscriptions table")
-
-                # Check if used column exists
-                check_used_sql = text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='subscriptions' AND column_name='used'
-                """)
-                result = session.execute(check_used_sql).fetchone()
-
-                if not result:
-                    # Add used column if it doesn't exist
-                    add_used_sql = text("""
-                        ALTER TABLE subscriptions 
-                        ADD COLUMN used BOOLEAN NOT NULL DEFAULT FALSE
-                    """)
-                    session.execute(add_used_sql)
-                    logger.info("Added used column to subscriptions table")
-
-                session.commit()
-
-        except Exception as e:
-            logger.error(
-                "Failed to add disposable columns to subscriptions table",
-                error=str(e),
-                exc_info=True
-            )
-
-    def add_gate_columns_to_subscription_event_logs(self) -> None:
-        """Add gate evaluation columns to subscription_event_logs table if they don't exist."""
-        try:
-            with self.get_session() as session:
-                # Check if gate_passed column exists
-                check_gate_passed_sql = text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='subscription_event_logs' AND column_name='gate_passed'
-                """)
-                result = session.execute(check_gate_passed_sql).fetchone()
-
-                if not result:
-                    # Add gate_passed column if it doesn't exist
-                    add_gate_passed_sql = text("""
-                        ALTER TABLE subscription_event_logs 
-                        ADD COLUMN gate_passed BOOLEAN
-                    """)
-                    session.execute(add_gate_passed_sql)
-                    logger.info("Added gate_passed column to subscription_event_logs table")
-
-                # Check if gate_reason column exists
-                check_gate_reason_sql = text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='subscription_event_logs' AND column_name='gate_reason'
-                """)
-                result = session.execute(check_gate_reason_sql).fetchone()
-
-                if not result:
-                    # Add gate_reason column if it doesn't exist
-                    add_gate_reason_sql = text("""
-                        ALTER TABLE subscription_event_logs 
-                        ADD COLUMN gate_reason TEXT
-                    """)
-                    session.execute(add_gate_reason_sql)
-                    logger.info("Added gate_reason column to subscription_event_logs table")
-
-                session.commit()
-
-        except Exception:
-            logger.error(
-                "Failed to add gate columns to subscription_event_logs table")
-    def create_ingest_mappings_table(self) -> None:
-        """Create the ingest mappings table if it doesn't exist."""
-        try:
-            with self.get_session() as session:
-                # Create table with explicit SQL to ensure it exists
-                create_table_sql = text("""
-                    CREATE TABLE IF NOT EXISTS ingest_mappings (
-                        fingerprint VARCHAR(64) PRIMARY KEY NOT NULL,
-                        publisher VARCHAR(255) NOT NULL,
-                        event_name VARCHAR(255) NOT NULL,
-                        mapping_expr TEXT NOT NULL,
-                        event_field_expr TEXT,
-                        structure JSONB NOT NULL,
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                        updated_at TIMESTAMPTZ
-                    )
-                """)
-                session.execute(create_table_sql)
-
-                # Add event_field_expr column if it doesn't exist (for existing installations)
-                self.add_event_field_expr_column_to_ingest_mappings(session)
-
-                # Create indexes for better query performance
-                index_sqls = [
-                    "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_publisher ON ingest_mappings(publisher)",
-                    "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_event_name ON ingest_mappings(event_name)",
-                    "CREATE INDEX IF NOT EXISTS idx_ingest_mappings_created_at ON ingest_mappings(created_at)",
-                ]
-
-                for index_sql in index_sqls:
-                    session.execute(text(index_sql))
-
-                session.commit()
-                logger.info("Ingest mappings table ensured")
-        except Exception as e:
-            logger.error(
-                "Failed to create ingest mappings table",
-                error=str(e),
-                exc_info=True
-            )
-
-    def add_event_field_expr_column_to_ingest_mappings(self, session: Session) -> None:
-        """Add event_field_expr column to ingest_mappings table if it doesn't exist."""
-        try:
-            # Check if event_field_expr column exists
-            check_column_sql = text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name='ingest_mappings' AND column_name='event_field_expr'
-            """)
-            result = session.execute(check_column_sql).fetchone()
-
-            if not result:
-                # Add event_field_expr column if it doesn't exist
-                add_column_sql = text("""
-                    ALTER TABLE ingest_mappings 
-                    ADD COLUMN event_field_expr TEXT
-                """)
-                session.execute(add_column_sql)
-                logger.info("Added event_field_expr column to ingest_mappings table")
-
-        except Exception as e:
-            logger.error(
-                "Failed to add event_field_expr column to ingest_mappings table",
-                error=str(e),
-                exc_info=True
-            )
 
     def get_session(self) -> Session:
         """Get a database session."""
@@ -723,6 +601,48 @@ class DatabaseService:
 
             return True
 
+    def create_schema_migrations_table(self) -> None:
+        """Create schema migrations table for tracking database versions."""
+        try:
+            with self.get_session() as session:
+                create_table_sql = text("""
+                    CREATE TABLE IF NOT EXISTS schema_migrations (
+                        version VARCHAR(50) PRIMARY KEY,
+                        description TEXT,
+                        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                session.execute(create_table_sql)
+                
+                # Create index for version lookups
+                index_sql = text("CREATE INDEX IF NOT EXISTS idx_schema_migrations_version ON schema_migrations(version)")
+                session.execute(index_sql)
+                
+                session.commit()
+                logger.info("Schema migrations table ensured")
+        except Exception as e:
+            logger.error("Failed to create schema migrations table", error=str(e), exc_info=True)
+
+    def record_schema_version(self, version: str, description: str) -> None:
+        """Record schema version in migrations table."""
+        try:
+            with self.get_session() as session:
+                # Check if version already exists
+                existing = session.execute(text(
+                    "SELECT version FROM schema_migrations WHERE version = :version"
+                ), {"version": version}).fetchone()
+
+                if not existing:
+                    session.execute(text("""
+                        INSERT INTO schema_migrations (version, description)
+                        VALUES (:version, :description)
+                    """), {"version": version, "description": description})
+                    session.commit()
+                    logger.info("Schema version recorded", version=version, description=description)
+                else:
+                    logger.info("Schema version already exists", version=version)
+        except Exception as e:
+            logger.error("Failed to record schema version", version=version, error=str(e), exc_info=True)
 
 # Global database service instance
 db_service = DatabaseService()
