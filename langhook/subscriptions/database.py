@@ -37,26 +37,33 @@ class DatabaseService:
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
 
     def create_tables(self) -> None:
-        """Create database tables."""
+        """Create all database tables and schema objects."""
         Base.metadata.create_all(bind=self.engine)
 
-        # Explicitly ensure event schema registry table exists
+        # Create schema versioning table first
+        self.create_schema_migrations_table()
+
+        # Core subscription system tables
         self.create_schema_registry_table()
-        # Explicitly ensure event logs table exists
         self.create_event_logs_table()
-        # Explicitly ensure subscription event logs table exists
         self.create_subscription_event_logs_table()
-        # Explicitly ensure ingest mappings table exists
         self.create_ingest_mappings_table()
-        # Add gate column to subscriptions table if it doesn't exist
+        
+        # Add/update columns to existing tables
         self.add_gate_column_to_subscriptions()
-        # Add disposable and used columns to subscriptions table if they don't exist
         self.add_disposable_columns_to_subscriptions()
-        # Add gate evaluation columns to subscription event logs table if they don't exist
         self.add_gate_columns_to_subscription_event_logs()
-        # Explicitly ensure webhook mappings table exists
-        self.create_ingest_mappings_table()
-        logger.info("Subscription database tables created")
+        
+        # Additional application tables
+        self.create_application_tables()
+        
+        # Create foreign key constraints
+        self.create_foreign_key_constraints()
+        
+        # Record schema version
+        self.record_schema_version("1.0.0", "Initial comprehensive schema with all core and application tables")
+        
+        logger.info("Database schema creation completed successfully")
 
     def create_schema_registry_table(self) -> None:
         """Create the event schema registry table if it doesn't exist."""
@@ -722,6 +729,203 @@ class DatabaseService:
             )
 
             return True
+
+    def create_schema_migrations_table(self) -> None:
+        """Create schema migrations table for tracking database versions."""
+        try:
+            with self.get_session() as session:
+                create_table_sql = text("""
+                    CREATE TABLE IF NOT EXISTS schema_migrations (
+                        version VARCHAR(50) PRIMARY KEY,
+                        description TEXT,
+                        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                session.execute(create_table_sql)
+                
+                # Create index for version lookups
+                index_sql = text("CREATE INDEX IF NOT EXISTS idx_schema_migrations_version ON schema_migrations(version)")
+                session.execute(index_sql)
+                
+                session.commit()
+                logger.info("Schema migrations table ensured")
+        except Exception as e:
+            logger.error("Failed to create schema migrations table", error=str(e), exc_info=True)
+
+    def record_schema_version(self, version: str, description: str) -> None:
+        """Record schema version in migrations table."""
+        try:
+            with self.get_session() as session:
+                # Check if version already exists
+                existing = session.execute(text(
+                    "SELECT version FROM schema_migrations WHERE version = :version"
+                ), {"version": version}).fetchone()
+
+                if not existing:
+                    session.execute(text("""
+                        INSERT INTO schema_migrations (version, description)
+                        VALUES (:version, :description)
+                    """), {"version": version, "description": description})
+                    session.commit()
+                    logger.info("Schema version recorded", version=version, description=description)
+                else:
+                    logger.info("Schema version already exists", version=version)
+        except Exception as e:
+            logger.error("Failed to record schema version", version=version, error=str(e), exc_info=True)
+
+    def create_application_tables(self) -> None:
+        """Create additional application tables (users, projects, etc.)."""
+        try:
+            with self.get_session() as session:
+                # Users table for authentication and user management
+                users_sql = text("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        id SERIAL PRIMARY KEY,
+                        username VARCHAR(100) NOT NULL UNIQUE,
+                        email VARCHAR(255) NOT NULL UNIQUE,
+                        password_hash VARCHAR(255),
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                        is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ
+                    )
+                """)
+                session.execute(users_sql)
+
+                # Projects table for project management
+                projects_sql = text("""
+                    CREATE TABLE IF NOT EXISTS projects (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(255) NOT NULL,
+                        description TEXT,
+                        owner_id INTEGER,
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ
+                    )
+                """)
+                session.execute(projects_sql)
+
+                # Snippets table for code/configuration snippets
+                snippets_sql = text("""
+                    CREATE TABLE IF NOT EXISTS snippets (
+                        id SERIAL PRIMARY KEY,
+                        project_id INTEGER,
+                        name VARCHAR(255) NOT NULL,
+                        content TEXT NOT NULL,
+                        language VARCHAR(50),
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ
+                    )
+                """)
+                session.execute(snippets_sql)
+
+                # Responses table for tracking API responses
+                responses_sql = text("""
+                    CREATE TABLE IF NOT EXISTS responses (
+                        id SERIAL PRIMARY KEY,
+                        request_id VARCHAR(255),
+                        endpoint VARCHAR(255),
+                        method VARCHAR(10),
+                        status_code INTEGER,
+                        response_data JSONB,
+                        processing_time_ms INTEGER,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                session.execute(responses_sql)
+
+                # Sessions table for user sessions
+                sessions_sql = text("""
+                    CREATE TABLE IF NOT EXISTS sessions (
+                        id SERIAL PRIMARY KEY,
+                        session_id VARCHAR(255) NOT NULL UNIQUE,
+                        user_id INTEGER,
+                        data JSONB,
+                        expires_at TIMESTAMPTZ NOT NULL,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ
+                    )
+                """)
+                session.execute(sessions_sql)
+
+                # Logs table for general application logging
+                logs_sql = text("""
+                    CREATE TABLE IF NOT EXISTS logs (
+                        id SERIAL PRIMARY KEY,
+                        level VARCHAR(20) NOT NULL,
+                        message TEXT NOT NULL,
+                        context JSONB,
+                        source VARCHAR(255),
+                        user_id INTEGER,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """)
+                session.execute(logs_sql)
+
+                # Create indexes for application tables
+                app_indexes = [
+                    "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+                    "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
+                    "CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active)",
+                    "CREATE INDEX IF NOT EXISTS idx_projects_owner_id ON projects(owner_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_projects_is_active ON projects(is_active)",
+                    "CREATE INDEX IF NOT EXISTS idx_snippets_project_id ON snippets(project_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_snippets_is_active ON snippets(is_active)",
+                    "CREATE INDEX IF NOT EXISTS idx_responses_request_id ON responses(request_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_responses_endpoint ON responses(endpoint)",
+                    "CREATE INDEX IF NOT EXISTS idx_responses_created_at ON responses(created_at)",
+                    "CREATE INDEX IF NOT EXISTS idx_sessions_session_id ON sessions(session_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)",
+                    "CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level)",
+                    "CREATE INDEX IF NOT EXISTS idx_logs_source ON logs(source)",
+                    "CREATE INDEX IF NOT EXISTS idx_logs_user_id ON logs(user_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at)",
+                ]
+
+                for index_sql in app_indexes:
+                    session.execute(text(index_sql))
+
+                session.commit()
+                logger.info("Application tables ensured")
+        except Exception as e:
+            logger.error("Failed to create application tables", error=str(e), exc_info=True)
+
+    def create_foreign_key_constraints(self) -> None:
+        """Create foreign key constraints between tables."""
+        try:
+            with self.get_session() as session:
+                constraints = [
+                    ("fk_projects_owner_id", "ALTER TABLE projects ADD CONSTRAINT fk_projects_owner_id FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL"),
+                    ("fk_snippets_project_id", "ALTER TABLE snippets ADD CONSTRAINT fk_snippets_project_id FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"),
+                    ("fk_sessions_user_id", "ALTER TABLE sessions ADD CONSTRAINT fk_sessions_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"),
+                    ("fk_logs_user_id", "ALTER TABLE logs ADD CONSTRAINT fk_logs_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL"),
+                ]
+
+                for constraint_name, constraint_sql in constraints:
+                    # Check if constraint already exists
+                    check_sql = text("""
+                        SELECT constraint_name FROM information_schema.table_constraints
+                        WHERE constraint_name = :constraint_name
+                    """)
+                    result = session.execute(check_sql, {"constraint_name": constraint_name}).fetchone()
+                    
+                    if not result:
+                        try:
+                            session.execute(text(constraint_sql))
+                            session.commit()
+                            logger.info("Foreign key constraint created", constraint=constraint_name)
+                        except Exception as e:
+                            # If constraint creation fails (e.g., due to existing data), log and continue
+                            logger.warning("Failed to create foreign key constraint", 
+                                         constraint=constraint_name, error=str(e))
+                    else:
+                        logger.info("Foreign key constraint already exists", constraint=constraint_name)
+
+        except Exception as e:
+            logger.error("Failed to create foreign key constraints", error=str(e), exc_info=True)
 
 
 # Global database service instance
