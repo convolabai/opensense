@@ -106,3 +106,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["langhook"]
+include = [
+    "langhook/static/**/*",
+]

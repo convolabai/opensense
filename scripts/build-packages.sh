@@ -9,6 +9,11 @@ ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo "Building LangHook packages..."
 
+# Build frontend first
+echo "Building frontend..."
+cd "$ROOT_DIR/web"
+npm install && npm run build
+
 # Build main package (SDK + server)
 echo "Building main package (langhook with SDK and server)..."
 cd "$ROOT_DIR"
