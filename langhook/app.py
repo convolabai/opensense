@@ -75,6 +75,10 @@ async def lifespan(app):
     logger = structlog.get_logger("langhook")
     logger.info("Starting LangHook Services", version="0.3.0")
 
+    # Ensure NATS streams exist before starting services
+    from langhook.core.startup import ensure_nats_streams
+    await ensure_nats_streams(ingest_settings.nats_url)
+
     # Start NATS producer (for ingest)
     await nats_producer.start()
 
