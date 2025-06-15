@@ -1,22 +1,25 @@
 # Multi-stage build for LangHook Services
 FROM node:18-slim as frontend-builder
 
-# Set working directory for frontend
-WORKDIR /app/frontend
+# Set working directory for the entire app
+WORKDIR /app
 
 # Copy package files
-COPY frontend/package*.json ./
+COPY frontend/package*.json ./frontend/
 
 # Install dependencies
-RUN npm install --only=production
+RUN cd frontend && npm install --only=production
 
 # Copy frontend source
-COPY frontend/src ./src
-COPY frontend/public ./public
-COPY frontend/tsconfig.json ./
+COPY frontend/src ./frontend/src
+COPY frontend/public ./frontend/public
+COPY frontend/tsconfig.json ./frontend/
 
-# Build frontend
-RUN npm run build
+# Copy langhook directory to enable the build path
+COPY langhook/ ./langhook/
+
+# Build frontend (outputs to /app/langhook/static)
+RUN cd frontend && npm run build
 
 FROM python:3.12-slim as builder
 
