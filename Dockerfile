@@ -72,7 +72,7 @@ COPY schemas/ ./schemas/
 COPY scripts/ ./scripts/
 
 # Copy built frontend from frontend-builder
-COPY --from=frontend-builder /app/frontend/build ./frontend/build
+COPY --from=frontend-builder /app/langhook/static ./langhook/static
 
 # Set ownership
 RUN chown -R langhook:langhook /app

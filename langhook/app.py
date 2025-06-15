@@ -199,7 +199,7 @@ app.include_router(subscriptions_router)
 app.include_router(schema_router)
 
 # Frontend demo routes
-frontend_path = Path(__file__).parent.parent / "frontend" / "build"
+frontend_path = Path(__file__).parent / "static"
 if frontend_path.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_path / "static")), name="static")
 
