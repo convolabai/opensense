@@ -1,6 +1,6 @@
-# Frontend Demo
+# Web Frontend
 
-This directory contains the React-based interactive demo for LangHook.
+This directory contains the React-based web frontend for LangHook, including the console and demo playground.
 
 ## Development
 
@@ -19,7 +19,7 @@ This directory contains the React-based interactive demo for LangHook.
    npm run build
    ```
 
-The demo will be available at `/demo` when the LangHook server is running.
+The frontend will be available at `/console` and `/demo` when the LangHook server is running.
 
 ## Features
 
@@ -31,4 +31,4 @@ The demo will be available at `/demo` when the LangHook server is running.
 
 ## Architecture
 
-The frontend is a single-page React application that communicates with the LangHook FastAPI backend through a proxy during development and is served as static files in production.
+The frontend is a single-page React application that communicates with the LangHook FastAPI backend through a proxy during development and is served as static files in production. The build output is placed in `../langhook/static/` to be included in the Python package.

@@ -199,7 +199,7 @@ app.include_router(subscriptions_router)
 app.include_router(schema_router)
 
 # Frontend demo routes
-frontend_path = Path(__file__).parent.parent / "frontend" / "build"
+frontend_path = Path(__file__).parent / "static"
 if frontend_path.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_path / "static")), name="static")
 
@@ -253,7 +253,7 @@ else:
         """Console not available when frontend is not built."""
         return {
             "message": "Console not available",
-            "instructions": "To build the frontend console:\n1. cd frontend\n2. npm install\n3. npm run build"
+            "instructions": "To build the frontend console:\n1. cd web\n2. npm install\n3. npm run build"
         }
         
     @app.get("/")

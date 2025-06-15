@@ -2,18 +2,21 @@
 FROM node:18-slim as frontend-builder
 
 # Set working directory for frontend
-WORKDIR /app/frontend
+WORKDIR /app/web
 
 # Copy package files
-COPY frontend/package*.json ./
+COPY web/package*.json ./
 
 # Install dependencies
 RUN npm install --only=production
 
 # Copy frontend source
-COPY frontend/src ./src
-COPY frontend/public ./public
-COPY frontend/tsconfig.json ./
+COPY web/src ./src
+COPY web/public ./public
+COPY web/tsconfig.json ./
+
+# Create langhook directory for build output
+RUN mkdir -p ../langhook
 
 # Build frontend
 RUN npm run build
@@ -72,7 +75,7 @@ COPY schemas/ ./schemas/
 COPY scripts/ ./scripts/
 
 # Copy built frontend from frontend-builder
-COPY --from=frontend-builder /app/frontend/build ./frontend/build
+COPY --from=frontend-builder /app/langhook/static ./langhook/static
 
 # Set ownership
 RUN chown -R langhook:langhook /app
