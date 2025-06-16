@@ -90,6 +90,9 @@ class AppConfig(BaseModel):
     debug: bool = Field(default=False, env="DEBUG")
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
     
+    # Server path configuration for reverse proxy deployments
+    server_path: str = Field(default="", env="SERVER_PATH")
+    
     # NATS settings (common to most services)
     nats_url: str = Field(default="nats://localhost:4222", env="NATS_URL")
     nats_stream_events: str = Field(default="events", env="NATS_STREAM_EVENTS")
@@ -137,6 +140,7 @@ def load_app_config(reload: bool = False) -> AppConfig:
         # Basic app settings
         'DEBUG': os.getenv('DEBUG', 'false'),
         'LOG_LEVEL': os.getenv('LOG_LEVEL', 'INFO'),
+        'SERVER_PATH': os.getenv('SERVER_PATH', ''),
         
         # NATS settings
         'NATS_URL': os.getenv('NATS_URL', 'nats://localhost:4222'),
@@ -195,6 +199,7 @@ def load_app_config(reload: bool = False) -> AppConfig:
     return AppConfig(
         debug=debug_val,
         log_level=env_vars['LOG_LEVEL'],
+        server_path=env_vars['SERVER_PATH'],
         nats_url=env_vars['NATS_URL'],
         nats_stream_events=env_vars['NATS_STREAM_EVENTS'],
         postgres_dsn=env_vars.get('POSTGRES_DSN'),

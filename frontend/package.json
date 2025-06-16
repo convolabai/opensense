@@ -21,7 +21,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "BUILD_PATH=../langhook/static react-scripts build",
+    "build": "./build.sh",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
