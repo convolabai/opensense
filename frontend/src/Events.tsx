@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 import { Send, ListChecks, Eye, RefreshCw, X } from 'lucide-react';
 import { samplePayloads, payloadCategories } from './sampleWebhookPayloads';
+import { apiFetch } from './apiUtils';
 
 interface EventLog {
   id: number;
@@ -85,7 +86,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
     setEventLogsLoading(true);
     setEventLogsError('');
     try {
-      const response = await fetch(`/event-logs?page=${currentPage}&size=${pageSize}`);
+      const response = await apiFetch(`/event-logs?page=${currentPage}&size=${pageSize}`);
       if (!response.ok) {
         throw new Error('Failed to fetch event logs');
       }
@@ -115,7 +116,7 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (source === 'github') { headers['X-GitHub-Event'] = 'pull_request'; }
 
-      const response = await fetch(`/ingest/${source}`, { method: 'POST', headers, body: JSON.stringify(payload) });
+      const response = await apiFetch(`/ingest/${source}`, { method: 'POST', headers, body: JSON.stringify(payload) });
 
       if (!response.ok) {
         const errorData = await response.json();

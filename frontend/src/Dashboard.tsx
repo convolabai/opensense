@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, RefreshCw } from 'lucide-react';
+import { apiFetch } from './apiUtils';
 
 interface Metrics {
   events_processed: number;
@@ -15,7 +16,7 @@ const Dashboard: React.FC = () => {
 
   const loadMetrics = async () => {
     try {
-      const response = await fetch('/map/metrics/json');
+      const response = await apiFetch('/map/metrics/json');
       if (response.ok) {
         const data = await response.json();
         setMetrics(data);

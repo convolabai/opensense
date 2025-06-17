@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Eye, Calendar, Hash, Tag, Code, Trash2 } from 'lucide-react';
+import { apiFetch } from './apiUtils';
 
 interface IngestMappingData {
   fingerprint: string;
@@ -36,7 +37,7 @@ const IngestMapping: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/subscriptions/ingest-mappings?page=${page}&size=${pageSize}`);
+      const response = await apiFetch(`/subscriptions/ingest-mappings?page=${page}&size=${pageSize}`);
       if (response.ok) {
         const data: IngestMappingListResponse = await response.json();
         setMappings(data.mappings);
@@ -82,7 +83,7 @@ const IngestMapping: React.FC = () => {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`/subscriptions/ingest-mappings/${encodeURIComponent(fingerprint)}`, {
+      const response = await apiFetch(`/subscriptions/ingest-mappings/${encodeURIComponent(fingerprint)}`, {
         method: 'DELETE',
       });
 

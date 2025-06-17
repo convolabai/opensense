@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
+import { apiFetch } from './apiUtils';
 import Dashboard from './Dashboard';
 import Events from './Events';
 import Subscriptions from './Subscriptions';
@@ -40,7 +41,7 @@ function ConsoleApp() {
 
   const loadSubscriptions = async () => {
     try {
-      const response = await fetch('/subscriptions/');
+      const response = await apiFetch('/subscriptions/');
       if (response.ok) {
         const data = await response.json();
         setSubscriptions(data.subscriptions || []);
