@@ -5,12 +5,15 @@ import './index.css';
 import ConsoleApp from './ConsoleApp';
 import DemoApp from './DemoApp';
 
+// Get the base path from environment variable set during build
+const basePath = process.env.REACT_APP_BASE_PATH || '';
+
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
   <React.StrictMode>
-    <Router>
+    <Router basename={basePath}>
       <Routes>
         <Route path="/console/*" element={<ConsoleApp />} />
         <Route path="/demo/*" element={<DemoApp />} />
