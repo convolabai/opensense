@@ -36,6 +36,7 @@ from langhook.subscriptions.schema_routes import router as schema_router
 from langhook.subscriptions.schema_registry import schema_registry_service
 from langhook.subscriptions.event_logging import event_logging_service
 from langhook.subscriptions.dlq_logging import dlq_logging_service
+from langhook.core.config import app_config
 
 logger = structlog.get_logger("langhook")
 
@@ -184,6 +185,7 @@ app = FastAPI(
     docs_url="/docs" if (ingest_settings.debug or map_settings.debug) else None,
     redoc_url="/redoc" if (ingest_settings.debug or map_settings.debug) else None,
     lifespan=lifespan,
+    root_path=app_config.server_path,
 )
 
 # Add rate limiting middleware
