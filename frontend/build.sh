@@ -8,7 +8,7 @@ export BUILD_PATH="../langhook/static"
 if [ -n "$SERVER_PATH" ]; then
     # Remove trailing slash from SERVER_PATH if present and add /static
     SERVER_PATH_CLEAN="${SERVER_PATH%/}"
-    export PUBLIC_URL="${SERVER_PATH_CLEAN}/static"
+    export PUBLIC_URL="${SERVER_PATH_CLEAN}"
     echo "Building with SERVER_PATH: $SERVER_PATH"
     echo "PUBLIC_URL set to: $PUBLIC_URL"
 else
