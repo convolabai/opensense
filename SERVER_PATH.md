@@ -29,6 +29,12 @@ This ensures that all static asset references in the frontend (JavaScript, CSS, 
 
 Here's an example nginx configuration for serving LangHook at a subpath:
 
+**How it works:**
+- Nginx receives requests at `/langhook/*` (e.g., `/langhook/health/`)
+- The `proxy_pass` directive with trailing slash automatically strips the `/langhook` prefix
+- FastAPI receives the request without the prefix (e.g., `/health/`)
+- FastAPI's `root_path="/langhook"` tells it that its public base URL is `/langhook` for URL generation
+
 ```nginx
 server {
     listen 80;
@@ -41,9 +47,6 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # Strip the /langhook prefix when forwarding to backend
-        rewrite ^/langhook/(.*) /$1 break;
     }
 }
 ```
