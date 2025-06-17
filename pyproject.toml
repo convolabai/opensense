@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langhook"
-version = "0.3.6"
+version = "0.3.12"
 description = "LangHook Python SDK and Server - Make any event from anywhere instantly understandable and actionable by anyone"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -106,3 +106,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
+[tool.hatch.build]
+packages = ["langhook"]          # bundle Python package
+include = ["langhook/static/**"]# still useful for the sdist
+[tool.hatch.build.force-include] # NEW – mapping, not list
+"langhook/static" = "langhook/static"   # copy the whole dir into wheel/sdist

@@ -17,4 +17,4 @@ else
 fi
 
 # Build the React app
-react-scripts build
+npx react-scripts build
