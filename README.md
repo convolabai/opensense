@@ -287,16 +287,13 @@ See [.env.example](.env.example) for all available options.
 curl http://localhost:8000/schema/
 ```
 
-### 2. Generate a Mapping Suggestion
+### 2. Send a Webhook Event
 ```bash
-curl -X POST http://localhost:8000/map/suggest-map \
+curl -X POST http://localhost:8000/ingest/github \
   -H "Content-Type: application/json" \
   -d '{
-    "source": "github",
-    "payload": {
-      "action": "opened",
-      "pull_request": {"number": 1374}
-    }
+    "action": "opened",
+    "pull_request": {"number": 1374}
   }'
 ```
 
@@ -345,10 +342,434 @@ pytest tests/ --ignore=tests/e2e/
 ./scripts/run-e2e-tests.sh
 ```
 
+## 📖 API Reference
+
+LangHook provides a comprehensive REST API for webhook ingestion, event processing, subscription management, and schema operations. All endpoints return JSON unless otherwise specified.
+
+### Base URL Structure
+- **Local Development**: `http://localhost:8000`
+- **With SERVER_PATH**: `http://your-domain{SERVER_PATH}`
+
+All API responses include standard HTTP status codes and may include a `X-Request-ID` header for tracing.
+
+---
+
+### 🏥 Health & Status
+
+#### **GET** `/health/`
+Health check endpoint for monitoring and readiness probes.
+
+**Response:**
+```json
+{
+  "status": "up",
+  "services": {
+    "ingest": "up",
+    "map": "up"
+  },
+  "version": "0.3.0"
+}
+```
+
+---
+
+### 📥 Webhook Ingestion
+
+#### **POST** `/ingest/{source}`
+Accepts webhook payloads from any source. Events are processed asynchronously and transformed into canonical format.
+
+**Parameters:**
+- `source` (path): Source identifier (e.g., "github", "stripe", "slack")
+
+**Headers:**
+- `Content-Type: application/json` (required)
+- `X-Hub-Signature-256`: HMAC signature (optional, for verification)
+
+**Request Body:** JSON payload from webhook source
+
+**Response (202 Accepted):**
+```json
+{
+  "message": "Event accepted",
+  "request_id": "req_12345abcde"
+}
+```
+
+**Example:**
+```bash
+curl -X POST http://localhost:8000/ingest/github \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "opened",
+    "pull_request": {
+      "number": 1374,
+      "title": "Add new feature"
+    }
+  }'
+```
+
+---
+
+### 📋 Schema Registry
+
+#### **GET** `/schema/`
+Get the complete event schema registry with all discovered publishers, resource types, and actions.
+
+**Response:**
+```json
+{
+  "publishers": ["github", "stripe", "slack"],
+  "resource_types": {
+    "github": ["pull_request", "issue", "push"],
+    "stripe": ["invoice", "payment_intent"]
+  },
+  "actions": ["opened", "closed", "created", "updated"]
+}
+```
+
+#### **DELETE** `/schema/publishers/{publisher}`
+Delete all schema entries for a specific publisher.
+
+**Parameters:**
+- `publisher` (path): Publisher name to delete
+
+**Response:** 204 No Content
+
+#### **DELETE** `/schema/publishers/{publisher}/resource-types/{resource_type}`
+Delete schema entries for a publisher/resource_type combination.
+
+**Parameters:**
+- `publisher` (path): Publisher name
+- `resource_type` (path): Resource type to delete
+
+**Response:** 204 No Content
+
+#### **DELETE** `/schema/publishers/{publisher}/resource-types/{resource_type}/actions/{action}`
+Delete a specific schema entry.
+
+**Parameters:**
+- `publisher` (path): Publisher name
+- `resource_type` (path): Resource type
+- `action` (path): Action to delete
+
+**Response:** 204 No Content
+
+---
+
+### 🔔 Subscriptions
+
+#### **POST** `/subscriptions/`
+Create a new subscription using natural language or structured data.
+
+**Request Body:**
+```json
+{
+  "description": "Notify me when any pull request is merged",
+  "channel_type": "webhook",
+  "channel_config": {
+    "url": "https://your-webhook-endpoint.com/notify"
+  },
+  "gate": {
+    "enabled": true,
+    "prompt": "Only notify for high-priority PRs"
+  }
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": 123,
+  "subscriber_id": "default",
+  "description": "Notify me when any pull request is merged",
+  "pattern": "langhook.events.github.pull_request.*.closed",
+  "channel_type": "webhook",
+  "channel_config": {
+    "url": "https://your-webhook-endpoint.com/notify"
+  },
+  "active": true,
+  "disposable": false,
+  "used": false,
+  "gate": {
+    "enabled": true,
+    "prompt": "Only notify for high-priority PRs"
+  },
+  "created_at": "2023-06-18T12:00:00Z"
+}
+```
+
+#### **GET** `/subscriptions/`
+List all subscriptions with pagination.
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `size` (optional): Items per page (default: 50, max: 100)
+
+**Response:**
+```json
+{
+  "subscriptions": [
+    {
+      "id": 123,
+      "subscriber_id": "default",
+      "description": "Notify me when any pull request is merged",
+      "pattern": "langhook.events.github.pull_request.*.closed",
+      "active": true,
+      "created_at": "2023-06-18T12:00:00Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "size": 50
+}
+```
+
+#### **GET** `/subscriptions/{subscription_id}`
+Get details of a specific subscription.
+
+**Parameters:**
+- `subscription_id` (path): Subscription ID
+
+**Response:** Same format as POST response
+
+#### **PUT** `/subscriptions/{subscription_id}`
+Update an existing subscription.
+
+**Parameters:**
+- `subscription_id` (path): Subscription ID
+
+**Request Body:** Partial subscription data (same format as POST)
+
+**Response:** Updated subscription data
+
+#### **DELETE** `/subscriptions/{subscription_id}`
+Delete a subscription.
+
+**Parameters:**
+- `subscription_id` (path): Subscription ID
+
+**Response:** 204 No Content
+
+#### **GET** `/subscriptions/{subscription_id}/events`
+List events that matched a specific subscription.
+
+**Parameters:**
+- `subscription_id` (path): Subscription ID
+- `page` (query, optional): Page number (default: 1)
+- `size` (query, optional): Items per page (default: 50, max: 100)
+
+**Response:**
+```json
+{
+  "event_logs": [
+    {
+      "id": 456,
+      "subscription_id": 123,
+      "event_id": "evt_abc123",
+      "source": "github",
+      "subject": "pull_request.1374",
+      "publisher": "github",
+      "resource_type": "pull_request",
+      "resource_id": "1374",
+      "action": "closed",
+      "canonical_data": {
+        "publisher": "github",
+        "resource": {"type": "pull_request", "id": "1374"},
+        "action": "closed"
+      },
+      "timestamp": "2023-06-18T12:00:00Z",
+      "webhook_sent": true,
+      "webhook_response_status": 200,
+      "gate_passed": true
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "size": 50
+}
+```
+
+---
+
+### 🗄️ Ingest Mappings
+
+#### **GET** `/subscriptions/ingest-mappings`
+List discovered ingest mappings that transform webhook payloads.
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `size` (optional): Items per page (default: 50, max: 100)
+
+**Response:**
+```json
+{
+  "mappings": [
+    {
+      "fingerprint": "github_pull_request_opened",
+      "publisher": "github",
+      "event_name": "pull_request.opened",
+      "mapping_expr": "{ \"publisher\": \"github\", \"resource\": { \"type\": \"pull_request\", \"id\": pull_request.number }, \"action\": action }",
+      "structure": {
+        "action": "string",
+        "pull_request": "object"
+      },
+      "created_at": "2023-06-18T12:00:00Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "size": 50
+}
+```
+
+#### **DELETE** `/subscriptions/ingest-mappings/{fingerprint}`
+Delete a specific ingest mapping.
+
+**Parameters:**
+- `fingerprint` (path): Mapping fingerprint
+
+**Response:** 204 No Content
+
+---
+
+### 📊 Metrics & Monitoring
+
+#### **GET** `/map/metrics`
+Get Prometheus-formatted metrics for monitoring.
+
+**Response:** Plain text Prometheus metrics format
+
+#### **GET** `/map/metrics/json`
+Get metrics in JSON format for easy consumption.
+
+**Response:**
+```json
+{
+  "events_processed": 1250,
+  "events_mapped": 1200,
+  "events_failed": 50,
+  "llm_invocations": 15,
+  "mapping_success_rate": 0.96,
+  "llm_usage_rate": 0.012
+}
+```
+
+---
+
+### 📜 Event Logs
+
+#### **GET** `/event-logs`
+List all processed events with pagination.
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `size` (optional): Items per page (default: 50, max: 100)
+
+**Response:**
+```json
+{
+  "event_logs": [
+    {
+      "id": 789,
+      "event_id": "evt_xyz789",
+      "source": "github",
+      "subject": "pull_request.1374",
+      "publisher": "github",
+      "resource_type": "pull_request",
+      "resource_id": "1374",
+      "action": "opened",
+      "canonical_data": {
+        "publisher": "github",
+        "resource": {"type": "pull_request", "id": "1374"},
+        "action": "opened"
+      },
+      "raw_payload": {
+        "action": "opened",
+        "pull_request": {"number": 1374}
+      },
+      "timestamp": "2023-06-18T12:00:00Z",
+      "logged_at": "2023-06-18T12:00:01Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "size": 50
+}
+```
+
+---
+
+### 🎨 Frontend Routes
+
+#### **GET** `/console`
+Serves the interactive web console for managing subscriptions and testing webhooks.
+
+#### **GET** `/demo`
+Serves the demo playground application.
+
+#### **GET** `/`
+Redirects to the console interface.
+
+---
+
+### Error Responses
+
+All endpoints may return these error responses:
+
+**400 Bad Request:**
+```json
+{
+  "detail": "Invalid JSON payload",
+  "request_id": "req_12345abcde"
+}
+```
+
+**401 Unauthorized:**
+```json
+{
+  "detail": "Invalid signature",
+  "request_id": "req_12345abcde"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "detail": "Resource not found",
+  "request_id": "req_12345abcde"
+}
+```
+
+**413 Request Entity Too Large:**
+```json
+{
+  "detail": "Request body too large",
+  "request_id": "req_12345abcde"
+}
+```
+
+**422 Unprocessable Entity:**
+```json
+{
+  "detail": "No suitable event schema found for description",
+  "request_id": "req_12345abcde"
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "detail": "Internal server error",
+  "request_id": "req_12345abcde"
+}
+```
+
+---
+
 ## 📚 Documentation
 
 - [Agent Documentation](./AGENTS.md) - For AI agents and contributors
-- [API Reference](http://localhost:8000/docs) - Interactive OpenAPI docs
+- [Interactive API Docs](http://localhost:8000/docs) - OpenAPI documentation (when debug enabled)
 - [Examples](./examples/) - Sample payloads and mappings
 - [Contributing Guide](./CONTRIBUTING.md) - Development setup
 
