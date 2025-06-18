@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, ChevronDown, ChevronRight, RefreshCw, AlertTriangle, Trash2 } from 'lucide-react';
+import { apiFetch } from './apiUtils';
 
 interface SchemaData {
   publishers: string[];
@@ -26,7 +27,7 @@ const Schema: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/schema/');
+      const response = await apiFetch('/schema/');
       if (response.ok) {
         const data = await response.json();
         setSchemaData(data);
@@ -65,7 +66,7 @@ const Schema: React.FC = () => {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`/schema/publishers/${encodeURIComponent(publisher)}`, {
+      const response = await apiFetch(`/schema/publishers/${encodeURIComponent(publisher)}`, {
         method: 'DELETE',
       });
 
@@ -94,7 +95,7 @@ const Schema: React.FC = () => {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`/schema/publishers/${encodeURIComponent(publisher)}/resource-types/${encodeURIComponent(resourceType)}`, {
+      const response = await apiFetch(`/schema/publishers/${encodeURIComponent(publisher)}/resource-types/${encodeURIComponent(resourceType)}`, {
         method: 'DELETE',
       });
 
@@ -123,7 +124,7 @@ const Schema: React.FC = () => {
     setDeleteSuccess(null);
 
     try {
-      const response = await fetch(`/schema/publishers/${encodeURIComponent(publisher)}/resource-types/${encodeURIComponent(resourceType)}/actions/${encodeURIComponent(action)}`, {
+      const response = await apiFetch(`/schema/publishers/${encodeURIComponent(publisher)}/resource-types/${encodeURIComponent(resourceType)}/actions/${encodeURIComponent(action)}`, {
         method: 'DELETE',
       });
 

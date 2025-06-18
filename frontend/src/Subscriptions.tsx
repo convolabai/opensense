@@ -1,5 +1,6 @@
 import React, { useState } from 'react'; // useEffect might not be needed if no initial data fetch is done here
 import { Plus, Eye, RefreshCw, Bell, Trash2, List, ChevronDown, ChevronRight } from 'lucide-react';
+import { apiFetch } from './apiUtils';
 
 // Interfaces (copied from App.tsx, ensure they are consistent)
 interface GateConfig {
@@ -126,7 +127,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
         disposable: disposableEnabled
       };
 
-      const response = await fetch('/subscriptions/', {
+      const response = await apiFetch('/subscriptions/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscriptionData)
@@ -164,7 +165,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
     setSubscriptionSuccess('');
 
     try {
-      const response = await fetch(`/subscriptions/${subscriptionId}`, {
+      const response = await apiFetch(`/subscriptions/${subscriptionId}`, {
         method: 'DELETE',
       });
 
@@ -195,7 +196,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
     setEventsError('');
     
     try {
-      const response = await fetch(`/subscriptions/${subscriptionId}/events?page=${page}&size=${eventsPageSize}`);
+      const response = await apiFetch(`/subscriptions/${subscriptionId}/events?page=${page}&size=${eventsPageSize}`);
       if (!response.ok) {
         throw new Error('Failed to fetch subscription events');
       }
