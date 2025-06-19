@@ -319,8 +319,11 @@ Additionally, you must generate a gate_prompt that will be used to evaluate whet
 
 Examples of good gate prompts:
 - For "GitHub comments from Alice": "Evaluate if this event is a GitHub comment AND the author is Alice"
+- For "GitHub PR on robotics-android is approved": "Evaluate if this event is a GitHub pull request AND the repository name is 'robotics-android'"
+- For "Stripe payments from enterprise accounts": "Evaluate if this event is a Stripe payment AND the account type is 'enterprise'"
 - For "Stripe payments over $1000": "Evaluate if this event is a Stripe payment AND the amount is greater than $1000"
 - For "Slack messages containing 'urgent'": "Evaluate if this event is a Slack message AND contains the word 'urgent'"
+- For "Issues opened in my-project repository": "Evaluate if this event is an issue creation AND the repository name is 'my-project'"
 - For "Stripe refunds over $500": "Approve if this Stripe refund is more than $500 in value"
 - For "Production deployments that failed": "Approve if this deployment event indicates a failure in the production environment"
 - For "High priority security alerts": "Approve if this security event has high priority or critical severity"
