@@ -100,8 +100,87 @@ def test_wrap_and_validate():
     assert cloud_event["data"]["resource"]["id"] == 456
 
 
+def test_field_path_evaluation_in_subject():
+    """Test that field paths in resource IDs are properly evaluated in the subject."""
+    wrapper = CloudEventWrapper()
+    
+    # GitHub push webhook payload example
+    raw_payload = {
+        "ref": "refs/heads/main",
+        "head_commit": {
+            "id": "384c3b877a118f0957e893f202f86ecdbddd3f4e",
+            "message": "Fix bugs"
+        }
+    }
+    
+    # Canonical data where resource ID is a field path (simulating JSONata output)
+    canonical_data = {
+        "publisher": "github",
+        "resource": {"type": "commit", "id": "head_commit.id"},  # Field path
+        "action": "created"
+    }
+    
+    canonical_event = wrapper.create_canonical_event(
+        event_id="test-field-path",
+        source="github",
+        canonical_data=canonical_data,
+        raw_payload=raw_payload
+    )
+    
+    cloud_event = wrapper.create_cloudevents_envelope("test-field-path", canonical_event)
+    
+    # The field path should be evaluated to get the actual commit ID
+    assert cloud_event["subject"] == "commit/384c3b877a118f0957e893f202f86ecdbddd3f4e"
+    assert cloud_event["type"] == "com.github.commit.created"
+
+
+def test_field_path_edge_cases():
+    """Test edge cases for field path evaluation."""
+    wrapper = CloudEventWrapper()
+    
+    raw_payload = {
+        "user": {"id": "user123"},
+        "nonexistent": "value"
+    }
+    
+    # Test cases: (resource_id, expected_subject_suffix)
+    test_cases = [
+        # Valid field path
+        ("user.id", "user123"),
+        # Non-existent field path (should return original)
+        ("missing.field", "missing.field"),
+        # Regular string (should not be evaluated)
+        ("regular_string", "regular_string"),
+        # Numeric ID (should pass through)
+        (12345, "12345"),
+        # URL (should not be evaluated)
+        ("https://example.com", "https://example.com"),
+    ]
+    
+    for resource_id, expected_suffix in test_cases:
+        canonical_data = {
+            "publisher": "test",
+            "resource": {"type": "resource", "id": resource_id},
+            "action": "created"
+        }
+        
+        canonical_event = wrapper.create_canonical_event(
+            event_id="test-edge",
+            source="test",
+            canonical_data=canonical_data,
+            raw_payload=raw_payload
+        )
+        
+        cloud_event = wrapper.create_cloudevents_envelope("test-edge", canonical_event)
+        expected_subject = f"resource/{expected_suffix}"
+        
+        assert cloud_event["subject"] == expected_subject
+
+
 if __name__ == "__main__":
     test_canonical_event_creation()
     test_event_validation()
     test_wrap_and_validate()
+    test_field_path_evaluation_in_subject()
+    test_field_path_edge_cases()
     print("All CloudEvent tests passed!")

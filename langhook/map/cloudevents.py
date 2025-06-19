@@ -63,18 +63,75 @@ class CloudEventWrapper:
         resource = canonical_event["resource"]
         action = canonical_event["action"]
 
+        # Evaluate resource ID if it looks like a field path
+        resource_id = self._evaluate_field_path(resource['id'], canonical_event.get("payload", {}))
+
         # Create CloudEvent envelope
         cloud_event = {
             "id": event_id,
             "specversion": "1.0",
             "source": f"/{publisher}",
             "type": f"com.{publisher}.{resource['type']}.{action}",
-            "subject": f"{resource['type']}/{resource['id']}",
+            "subject": f"{resource['type']}/{resource_id}",
             "time": canonical_event["timestamp"],
             "data": canonical_event
         }
 
         return cloud_event
+
+    def _evaluate_field_path(self, resource_id: Any, payload: dict[str, Any]) -> Any:
+        """
+        Evaluate a field path against the payload if it looks like a JSONata expression.
+        
+        Args:
+            resource_id: The resource ID, which might be a field path to evaluate
+            payload: The original payload to evaluate against
+            
+        Returns:
+            The evaluated value if it's a field path, otherwise the original resource_id
+        """
+        # If resource_id is not a string, return as-is
+        if not isinstance(resource_id, str):
+            return resource_id
+            
+        # Check if it looks like a field path (contains dots but no spaces, and no quotes)
+        # This is a heuristic to detect JSONata field paths vs literal strings
+        if ('.' in resource_id and 
+            ' ' not in resource_id and 
+            '"' not in resource_id and 
+            "'" not in resource_id and
+            not resource_id.startswith('http') and  # avoid URLs
+            len(resource_id.split('.')) <= 5):  # reasonable nesting depth
+            
+            try:
+                import jsonata
+                evaluated_value = jsonata.transform(resource_id, payload)
+                
+                # If evaluation succeeds and returns a non-null value, use it
+                if evaluated_value is not None:
+                    logger.debug(
+                        "Evaluated field path in resource ID",
+                        field_path=resource_id,
+                        evaluated_value=evaluated_value
+                    )
+                    return evaluated_value
+                else:
+                    logger.debug(
+                        "Field path evaluation returned None, using original value",
+                        field_path=resource_id
+                    )
+                    return resource_id
+                    
+            except Exception as e:
+                logger.debug(
+                    "Failed to evaluate field path, using original value",
+                    field_path=resource_id,
+                    error=str(e)
+                )
+                return resource_id
+        
+        # Not a field path or evaluation failed, return original value
+        return resource_id
 
     def validate_canonical_event(self, event: dict[str, Any]) -> bool:
         """
