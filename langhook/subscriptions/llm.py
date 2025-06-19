@@ -31,7 +31,7 @@ class LLMPatternService:
             if not self.llm:
                 logger.error("Failed to initialize LLM - startup aborted")
                 raise RuntimeError("Failed to initialize LLM for pattern service")
-            
+
             logger.info(
                 "LLM initialized for pattern service",
                 provider=subscription_settings.llm_provider,
@@ -245,7 +245,7 @@ class LLMPatternService:
         from langhook.subscriptions.schema_registry import schema_registry_service
 
         try:
-            schema_data = await schema_registry_service.get_schema_summary()
+            schema_data = await schema_registry_service.get_schema_summary(include_samples=True)
         except Exception as e:
             logger.warning(
                 "Failed to fetch schema data for prompt, using fallback",
@@ -268,22 +268,56 @@ IMPORTANT: No event schemas are currently registered in the system. You must res
             if "publisher_resource_actions" in schema_data and schema_data["publisher_resource_actions"]:
                 # Use the new granular format
                 publishers_list = ", ".join(schema_data["publishers"])
-                
+
                 # Build detailed schema information showing exact combinations
                 schema_combinations = []
                 for publisher, resource_actions in schema_data["publisher_resource_actions"].items():
                     for resource_type, actions in resource_actions.items():
                         actions_str = ", ".join(actions)
                         schema_combinations.append(f"- {publisher}.{resource_type}: {actions_str}")
-                
+
                 schema_combinations_text = "\n".join(schema_combinations)
-                
+
+                # Build sample data information if available
+                sample_data_text = ""
+                if "sample_events" in schema_data and schema_data["sample_events"]:
+                    sample_data_lines = []
+                    for key, sample in schema_data["sample_events"].items():
+                        resource_id = sample.get("resource_id", "unknown")
+                        action = sample.get("action", "unknown")
+                        subject = sample.get("subject", f"langhook.events.{key}.{resource_id}.{action}")
+
+                        # Extract meaningful information from the canonical data
+                        canonical_data = sample.get("canonical_data", {})
+                        raw_data = canonical_data.get("raw", {})
+
+                        # Try to extract names or additional context from raw data
+                        context_info = ""
+                        if raw_data:
+                            if "repository" in raw_data:
+                                repo_name = raw_data["repository"].get("name", "")
+                                if repo_name:
+                                    context_info = f" (repository: {repo_name})"
+                            elif "pull_request" in raw_data and "base" in raw_data["pull_request"]:
+                                repo_name = raw_data["pull_request"]["base"].get("repo", {}).get("name", "")
+                                if repo_name:
+                                    context_info = f" (repository: {repo_name})"
+
+                        sample_data_lines.append(f"  - {key}: ID={resource_id}, Subject={subject}{context_info}")
+
+                    sample_data_text = f"""
+
+SAMPLE EVENT DATA:
+{chr(10).join(sample_data_lines)}
+
+KEY INSIGHT: Notice how resource IDs are atomic identifiers (numbers, alphanumeric codes), while names like repository names appear in the raw payload context, not in the ID field."""
+
                 schema_info = f"""
 AVAILABLE EVENT SCHEMAS:
 Publishers: {publishers_list}
 
 Available publisher.resource_type combinations and their supported actions:
-{schema_combinations_text}
+{schema_combinations_text}{sample_data_text}
 
 IMPORTANT: You may ONLY use the exact publisher, resource type, and action combinations listed above. If the user's request cannot be mapped to these exact schemas, respond with "ERROR: No suitable schema found" instead of a pattern."""
             else:
@@ -359,13 +393,22 @@ Rules:
    - e.g., “opened” = created, “seen” = read, “merged” = updated
 2. Only use exact values from allowed schema
 3. Use `*` for missing IDs
-4. If no valid mapping, reply: `"ERROR: No suitable schema found"`
+4. **CRITICAL**: Resource IDs are atomic identifiers (numbers, UUIDs, codes). If user mentions names (repository names, user names, etc.), use `*` for the ID and let LLM Gate handle name filtering
+5. If no valid mapping, reply: `"ERROR: No suitable schema found"`
 
 Examples:
 🟢 "A GitHub PR is merged" → `langhook.events.github.pull_request.*.updated`
 🟢 "Slack file is uploaded" → `langhook.events.slack.file.*.created`
 🟢 "PR submitted on GitHub" → `langhook.events.github.pull_request.*.created`
-🔴 "A comment is liked" → `"ERROR: No suitable schema found"`{gate_instructions}"""
+🟢 "GitHub PR on robotics-android is approved" → `langhook.events.github.pull_request.*.updated`
+   (Note: "robotics-android" is a repository name, not PR ID - use * and let gate filter by repo name)
+🟢 "Stripe payment from customer Alice exceeds $1000" → `langhook.events.stripe.payment.*.created`
+   (Note: "Alice" is customer name, not payment ID - use * and let gate filter by customer)
+🟢 "PR 1374 is merged" → `langhook.events.github.pull_request.1374.updated`
+   (Note: 1374 is the actual PR ID, use it directly)
+🔴 "A comment is liked" → `"ERROR: No suitable schema found"`
+
+**Key Principle**: When in doubt about whether something is an ID or a name, use `*` for the ID field. LLM Gate can evaluate names, descriptions, and other contextual information from the full event payload.{gate_instructions}"""
 
     def _create_user_prompt(self, description: str, gate_enabled: bool = False) -> str:
         """Create the user prompt for pattern conversion and optional gate prompt generation."""
