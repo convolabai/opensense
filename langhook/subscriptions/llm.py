@@ -31,7 +31,7 @@ class LLMPatternService:
             if not self.llm:
                 logger.error("Failed to initialize LLM - startup aborted")
                 raise RuntimeError("Failed to initialize LLM for pattern service")
-            
+
             logger.info(
                 "LLM initialized for pattern service",
                 provider=subscription_settings.llm_provider,
@@ -122,23 +122,23 @@ class LLMPatternService:
 
     async def convert_to_pattern_and_gate(self, description: str, gate_enabled: bool = False) -> dict:
         """
-        Convert natural language description to NATS filter pattern and optionally generate gate prompt.
+        Convert natural language description to NATS filter pattern and optionally include gate prompt.
 
         Args:
             description: Natural language description like "Notify me when PR 1374 is approved"
-            gate_enabled: Whether to generate a gate prompt for semantic filtering
+            gate_enabled: Whether to include a gate prompt for semantic filtering
 
         Returns:
             Dict containing:
             - pattern: NATS filter pattern like "github.pull_request.1374.update"
-            - gate_prompt: Gate evaluation prompt (only if gate_enabled=True)
+            - gate_prompt: Gate evaluation prompt (only if gate_enabled=True, uses description)
 
         Raises:
             NoSuitableSchemaError: When no suitable schema is found for the request
         """
         try:
-            system_prompt = await self._get_system_prompt_with_schemas(gate_enabled)
-            user_prompt = self._create_user_prompt(description, gate_enabled)
+            system_prompt = await self._get_system_prompt_with_schemas()
+            user_prompt = self._create_user_prompt(description)
 
             # Create messages in a format compatible with different LLM providers
             if hasattr(self.llm, 'agenerate'):
@@ -168,37 +168,29 @@ class LLMPatternService:
                 )
                 raise NoSuitableSchemaError(f"No suitable schema found for description: {description}")
 
-            # Parse the response - try JSON first, then fallback to pattern extraction
-            result = self._parse_llm_response(response_text, gate_enabled)
+            # Parse the response - only extract pattern from LLM
+            result = self._parse_llm_response(response_text)
 
             if result and result.get("pattern"):
+                # If gate is enabled, add the description as the gate prompt
+                if gate_enabled:
+                    result["gate_prompt"] = description
+
                 logger.info(
-                    "LLM pattern and gate conversion completed",
+                    "LLM pattern conversion completed",
                     description=description,
                     pattern=result["pattern"],
                     gate_enabled=gate_enabled,
-                    has_gate_prompt=gate_enabled and "gate_prompt" in result
+                    has_gate_prompt=gate_enabled
                 )
                 return result
             else:
-                if gate_enabled:
-                    # When gate is enabled, we require LLM to provide both pattern and gate_prompt
-                    logger.error(
-                        "LLM failed to provide required gate prompt",
-                        description=description,
-                        response=response_text
-                    )
-                    raise ValueError(
-                        f"LLM failed to generate required gate prompt for description: '{description}'. "
-                        f"Gate prompts require LLM to return JSON with both 'pattern' and 'gate_prompt' fields."
-                    )
-                else:
-                    logger.error(
-                        "Failed to extract pattern from LLM response",
-                        description=description,
-                        response=response_text
-                    )
-                    raise ValueError(f"LLM failed to generate valid pattern for description: '{description}'")
+                logger.error(
+                    "Failed to extract pattern from LLM response",
+                    description=description,
+                    response=response_text
+                )
+                raise ValueError(f"LLM failed to generate valid pattern for description: '{description}'")
 
         except NoSuitableSchemaError:
             raise
@@ -212,7 +204,7 @@ class LLMPatternService:
             raise
         except Exception as e:
             logger.error(
-                "LLM pattern and gate conversion failed",
+                "LLM pattern conversion failed",
                 description=description,
                 error=str(e),
                 exc_info=True
@@ -239,8 +231,8 @@ class LLMPatternService:
         result = await self.convert_to_pattern_and_gate(description, gate_enabled=False)
         return result["pattern"]
 
-    async def _get_system_prompt_with_schemas(self, gate_enabled: bool = False) -> str:
-        """Get the system prompt for pattern conversion with real schema data and optional gate prompt generation."""
+    async def _get_system_prompt_with_schemas(self) -> str:
+        """Get the system prompt for pattern conversion with real schema data."""
         # Import here to avoid circular imports
         from langhook.subscriptions.schema_registry import schema_registry_service
 
@@ -268,16 +260,16 @@ IMPORTANT: No event schemas are currently registered in the system. You must res
             if "publisher_resource_actions" in schema_data and schema_data["publisher_resource_actions"]:
                 # Use the new granular format
                 publishers_list = ", ".join(schema_data["publishers"])
-                
+
                 # Build detailed schema information showing exact combinations
                 schema_combinations = []
                 for publisher, resource_actions in schema_data["publisher_resource_actions"].items():
                     for resource_type, actions in resource_actions.items():
                         actions_str = ", ".join(actions)
                         schema_combinations.append(f"- {publisher}.{resource_type}: {actions_str}")
-                
+
                 schema_combinations_text = "\n".join(schema_combinations)
-                
+
                 schema_info = f"""
 AVAILABLE EVENT SCHEMAS:
 Publishers: {publishers_list}
@@ -306,41 +298,7 @@ Resource types by publisher:
 
 IMPORTANT: You may ONLY use the publishers, resource types, and actions listed above. If the user's request cannot be mapped to these exact schemas, respond with "ERROR: No suitable schema found" instead of a pattern."""
 
-        if gate_enabled:
-            # Combined prompt for pattern + gate prompt generation
-            gate_instructions = """
-
-GATE PROMPT GENERATION:
-Additionally, you must generate a gate_prompt that will be used to evaluate whether incoming events match the user's specific intent. This prompt should:
-1. Be specific to the user's exact criteria and requirements
-2. Only evaluate what the user explicitly requested (no bias toward "importance" or "urgency")
-3. Focus on the user's specific conditions, filters, or criteria
-4. NOT include JSON format instructions (the system will handle response formatting)
-
-Examples of good gate prompts:
-- For "GitHub comments from Alice": "Evaluate if this event is a GitHub comment AND the author is Alice"
-- For "GitHub PR on backend-service is merged": "Evaluate if this event is a GitHub pull request AND the repository name is 'backend-service'"
-- For "Stripe payments from enterprise accounts": "Evaluate if this event is a Stripe payment AND the account type is 'enterprise'"
-- For "Stripe payments over $1000": "Evaluate if this event is a Stripe payment AND the amount is greater than $1000"
-- For "Slack messages containing 'urgent'": "Evaluate if this event is a Slack message AND contains the word 'urgent'"
-- For "Issues created in web-frontend repository": "Evaluate if this event is an issue creation AND the repository name is 'web-frontend'"
-- For "Stripe refunds over $500": "Approve if this Stripe refund is more than $500 in value"
-- For "Production deployments that failed": "Approve if this deployment event indicates a failure in the production environment"
-- For "High priority security alerts": "Approve if this security event has high priority or critical severity"
-
-RESPONSE FORMAT:
-You must respond with a JSON object containing both the pattern and gate_prompt:
-{
-  "pattern": "langhook.events.publisher.resource.id.action",
-  "gate_prompt": "Your gate evaluation prompt here"
-}
-
-If no suitable schema is found, respond with:
-{
-  "error": "No suitable schema found"
-}"""
-        else:
-            gate_instructions = """
+        gate_instructions = """
 
 RESPONSE FORMAT:
 Respond with only the pattern or respond with "ERROR: No suitable schema found" if no suitable schema is found."""
@@ -372,20 +330,13 @@ Examples:
 
 Pattern derivation examples with topics:
 🟢 "GitHub issues opened in mobile-app repo" → Pattern: `langhook.events.github.issue.*.created` + Gate: repository filtering
-🟢 "Slack messages posted to #alerts channel" → Pattern: `langhook.events.slack.message.*.created` + Gate: channel filtering  
+🟢 "Slack messages posted to #alerts channel" → Pattern: `langhook.events.slack.message.*.created` + Gate: channel filtering
 🟢 "Pull requests approved by senior devs" → Pattern: `langhook.events.github.pull_request.*.updated` + Gate: reviewer role filtering
 🟢 "Stripe payments over $500 from VIP customers" → Pattern: `langhook.events.stripe.payment.*.created` + Gate: amount + customer type filtering{gate_instructions}"""
 
-    def _create_user_prompt(self, description: str, gate_enabled: bool = False) -> str:
-        """Create the user prompt for pattern conversion and optional gate prompt generation."""
-        if gate_enabled:
-            return f"""Convert this natural language description to a NATS filter pattern and generate a gate prompt:
-
-"{description}"
-
-Respond with JSON containing both pattern and gate_prompt."""
-        else:
-            return f"""Convert this natural language description to a NATS filter pattern:
+    def _create_user_prompt(self, description: str) -> str:
+        """Create the user prompt for pattern conversion."""
+        return f"""Convert this natural language description to a NATS filter pattern:
 
 "{description}"
 
@@ -421,34 +372,12 @@ Pattern:"""
 
         return None
 
-    def _parse_llm_response(self, response: str, gate_enabled: bool) -> dict | None:
-        """Parse LLM response for pattern and optional gate prompt."""
-        import json
-
-        if gate_enabled:
-            # Try to parse JSON response
-            try:
-                data = json.loads(response.strip())
-                if isinstance(data, dict) and "pattern" in data:
-                    # When gate is enabled, gate_prompt is required
-                    if "gate_prompt" not in data:
-                        raise ValueError("LLM response missing required gate_prompt when gate is enabled")
-                    return data
-            except json.JSONDecodeError:
-                pass
-
-            # For gate-enabled requests, we need proper JSON with both pattern and gate_prompt
-            pattern = self._extract_pattern_from_response(response)
-            if pattern:
-                raise ValueError(
-                    f"LLM failed to return properly formatted JSON response with gate_prompt. "
-                    f"Expected JSON with 'pattern' and 'gate_prompt' fields, but got: {response[:100]}..."
-                )
-        else:
-            # Only pattern extraction needed
-            pattern = self._extract_pattern_from_response(response)
-            if pattern:
-                return {"pattern": pattern}
+    def _parse_llm_response(self, response: str) -> dict | None:
+        """Parse LLM response for pattern."""
+        # Only pattern extraction needed
+        pattern = self._extract_pattern_from_response(response)
+        if pattern:
+            return {"pattern": pattern}
 
         return None
 
