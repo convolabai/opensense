@@ -140,7 +140,7 @@ class LLMPatternService:
         try:
             system_prompt = await self._get_system_prompt_with_schemas()
             user_prompt = self._create_user_prompt(description)
-
+            logger.info("Using system prompt: %s", system_prompt)
             # Create messages in a format compatible with different LLM providers
             if hasattr(self.llm, 'agenerate'):
                 # LangChain-style interface

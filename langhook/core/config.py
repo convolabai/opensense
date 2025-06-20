@@ -52,7 +52,7 @@ class SubscriptionSettings(BaseModel):
     # LLM service settings
     llm_provider: str = Field(default="openai", env="LLM_PROVIDER")  # openai, azure_openai, anthropic, google, local
     llm_api_key: Optional[str] = Field(default=None, env="LLM_API_KEY")
-    llm_model: str = Field(default="gpt-4o-mini", env="LLM_MODEL")
+    llm_model: str = Field(default="gpt-4.1-mini", env="LLM_MODEL")
     llm_base_url: Optional[str] = Field(default=None, env="LLM_BASE_URL")  # For local LLMs or custom endpoints
     llm_temperature: float = Field(default=0.1, env="LLM_TEMPERATURE")
     llm_max_tokens: int = Field(default=500, env="LLM_MAX_TOKENS")
@@ -171,7 +171,7 @@ def load_app_config(reload: bool = False) -> AppConfig:
         # Subscription settings
         'LLM_PROVIDER': os.getenv('LLM_PROVIDER', 'openai'),
         'LLM_API_KEY': os.getenv('LLM_API_KEY') or os.getenv('OPENAI_API_KEY'),
-        'LLM_MODEL': os.getenv('LLM_MODEL', 'gpt-4o-mini'),
+        'LLM_MODEL': os.getenv('LLM_MODEL', 'gpt-4.1-mini'),
         'LLM_BASE_URL': os.getenv('LLM_BASE_URL'),
         'LLM_TEMPERATURE': float(os.getenv('LLM_TEMPERATURE', '0.1')),
         'LLM_MAX_TOKENS': int(os.getenv('LLM_MAX_TOKENS', '500')),
