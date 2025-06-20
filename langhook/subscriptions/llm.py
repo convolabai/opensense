@@ -319,8 +319,9 @@ Rules:
 1. Think like a REST API: map natural verbs to `created`, `read`, or `updated`.
    - e.g., “opened” = created, “seen” = read, “merged” = updated
 2. Only use exact values from allowed schema
-3. Use `*` for missing IDs
-4. If no valid mapping, reply: `"ERROR: No suitable schema found"`
+3. Use `*` for missing IDs.
+4. [IMPORTANT] Make sure the ID is really ID of the resource, not of other entity.
+5. If no valid mapping, reply: `"ERROR: No suitable schema found"`
 
 Examples:
 🟢 "A GitHub PR is merged" → `langhook.events.github.pull_request.*.updated`
