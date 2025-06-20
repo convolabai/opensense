@@ -32,6 +32,7 @@ class LLMPatternService:
                 logger.error("Failed to initialize LLM - startup aborted")
                 raise RuntimeError("Failed to initialize LLM for pattern service")
 
+
             logger.info(
                 "LLM initialized for pattern service",
                 provider=subscription_settings.llm_provider,
@@ -237,7 +238,7 @@ class LLMPatternService:
         from langhook.subscriptions.schema_registry import schema_registry_service
 
         try:
-            schema_data = await schema_registry_service.get_schema_summary()
+            schema_data = await schema_registry_service.get_schema_summary(include_samples=True)
         except Exception as e:
             logger.warning(
                 "Failed to fetch schema data for prompt, using fallback",
@@ -270,12 +271,46 @@ IMPORTANT: No event schemas are currently registered in the system. You must res
 
                 schema_combinations_text = "\n".join(schema_combinations)
 
+                # Build sample data information if available
+                sample_data_text = ""
+                if "sample_events" in schema_data and schema_data["sample_events"]:
+                    sample_data_lines = []
+                    for key, sample in schema_data["sample_events"].items():
+                        resource_id = sample.get("resource_id", "unknown")
+                        action = sample.get("action", "unknown")
+                        subject = sample.get("subject", f"langhook.events.{key}.{resource_id}.{action}")
+
+                        # Extract meaningful information from the canonical data
+                        canonical_data = sample.get("canonical_data", {})
+                        raw_data = canonical_data.get("raw", {})
+
+                        # Try to extract names or additional context from raw data
+                        context_info = ""
+                        if raw_data:
+                            if "repository" in raw_data:
+                                repo_name = raw_data["repository"].get("name", "")
+                                if repo_name:
+                                    context_info = f" (repository: {repo_name})"
+                            elif "pull_request" in raw_data and "base" in raw_data["pull_request"]:
+                                repo_name = raw_data["pull_request"]["base"].get("repo", {}).get("name", "")
+                                if repo_name:
+                                    context_info = f" (repository: {repo_name})"
+
+                        sample_data_lines.append(f"  - {key}: ID={resource_id}, Subject={subject}{context_info}")
+
+                    sample_data_text = f"""
+
+SAMPLE EVENT DATA:
+{chr(10).join(sample_data_lines)}
+
+KEY INSIGHT: Notice how resource IDs are atomic identifiers (numbers, alphanumeric codes), while names like repository names appear in the raw payload context, not in the ID field."""
+
                 schema_info = f"""
 AVAILABLE EVENT SCHEMAS:
 Publishers: {publishers_list}
 
 Available publisher.resource_type combinations and their supported actions:
-{schema_combinations_text}
+{schema_combinations_text}{sample_data_text}
 
 IMPORTANT: You may ONLY use the exact publisher, resource type, and action combinations listed above. If the user's request cannot be mapped to these exact schemas, respond with "ERROR: No suitable schema found" instead of a pattern."""
             else:
@@ -319,25 +354,36 @@ Rules:
 1. Think like a REST API: map natural verbs to `created`, `read`, or `updated`.
    - e.g., “opened” = created, “seen” = read, “merged” = updated
 2. Only use exact values from allowed schema
-3. Use `*` for missing IDs.
-4. [IMPORTANT] Make sure the ID is really ID of the resource, not of other entity.
+3. Use `*` for missing IDs
+4. **CRITICAL**: Resource IDs are atomic identifiers (numbers, UUIDs, codes). If user mentions names (repository names, user names, etc.), or ID of something that is not a resource ID, use `*` for the ID and let LLM Gate handle name filtering
 5. If no valid mapping, reply: `"ERROR: No suitable schema found"`
 
 Examples:
 🟢 "A GitHub PR is merged" → `langhook.events.github.pull_request.*.updated`
 🟢 "Slack file is uploaded" → `langhook.events.slack.file.*.created`
 🟢 "PR submitted on GitHub" → `langhook.events.github.pull_request.*.created`
+🟢 "GitHub PR on robotics-android is approved" → `langhook.events.github.pull_request.*.updated`
+   (Note: "robotics-android" is a repository name, not PR ID - use * and let gate filter by repo name)
+🟢 "Stripe payment from customer Alice exceeds $1000" → `langhook.events.stripe.payment.*.created`
+   (Note: "Alice" is customer name, not payment ID - use * and let gate filter by customer)
+🟢 "PR 1374 is merged" → `langhook.events.github.pull_request.*.updated`
+   (Note: 1374 is PR NUMBER, not a unique ID used inside Github webhook system)
+🟢 "PR 2600651412 is merged" → `langhook.events.github.pull_request.2600651412.updated`
 🔴 "A comment is liked" → `"ERROR: No suitable schema found"`
 
-Pattern derivation examples with topics:
-🟢 "GitHub issues opened in mobile-app repo" → Pattern: `langhook.events.github.issue.*.created` + Gate: repository filtering
-🟢 "Slack messages posted to #alerts channel" → Pattern: `langhook.events.slack.message.*.created` + Gate: channel filtering
-🟢 "Pull requests approved by senior devs" → Pattern: `langhook.events.github.pull_request.*.updated` + Gate: reviewer role filtering
-🟢 "Stripe payments over $500 from VIP customers" → Pattern: `langhook.events.stripe.payment.*.created` + Gate: amount + customer type filtering{gate_instructions}"""
+**Key Principle**: When in doubt about whether something is an ID or a name, use `*` for the ID field. LLM Gate can evaluate names, descriptions, and other contextual information from the full event payload.
+You're also given sample of the webhook event, so you should be able to see whether the request is specifically the resource ID in the same format as webhook.{gate_instructions}"""
 
-    def _create_user_prompt(self, description: str) -> str:
-        """Create the user prompt for pattern conversion."""
-        return f"""Convert this natural language description to a NATS filter pattern:
+    def _create_user_prompt(self, description: str, gate_enabled: bool = False) -> str:
+        """Create the user prompt for pattern conversion and optional gate prompt generation."""
+        if gate_enabled:
+            return f"""Convert this natural language description to a NATS filter pattern and generate a gate prompt:
+
+"{description}"
+
+Respond with JSON containing both pattern and gate_prompt."""
+        else:
+            return f"""Convert this natural language description to a NATS filter pattern:
 
 "{description}"
 
