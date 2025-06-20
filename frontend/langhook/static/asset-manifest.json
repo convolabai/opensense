@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/langhook/static/css/main.99fa22d5.css",
+    "main.js": "/langhook/static/js/main.c539effe.js",
+    "index.html": "/langhook/index.html",
+    "main.99fa22d5.css.map": "/langhook/static/css/main.99fa22d5.css.map",
+    "main.c539effe.js.map": "/langhook/static/js/main.c539effe.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.99fa22d5.css",
+    "static/js/main.c539effe.js"
+  ]
+}

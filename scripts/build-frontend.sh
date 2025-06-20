@@ -1,8 +1,8 @@
 #!/bin/bash
 # Build script for LangHook frontend with optional server path support
-
+cd ./frontend
 # Set the build path
-export BUILD_PATH="../langhook/static"
+export BUILD_PATH="./langhook/static"
 
 # Configure PUBLIC_URL based on SERVER_PATH
 if [ -n "$SERVER_PATH" ]; then
@@ -22,3 +22,5 @@ fi
 
 # Build the React app
 npx react-scripts build
+
+cd ..
