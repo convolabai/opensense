@@ -1,11 +1,12 @@
 """Tests for LLM Gate functionality."""
 
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
+
 from langhook.subscriptions.gate import LLMGateService
-from langhook.subscriptions.schemas import GateConfig
 from langhook.subscriptions.prompts import PromptLibrary
+from langhook.subscriptions.schemas import GateConfig
 
 
 class TestLLMGateService:
@@ -94,9 +95,9 @@ class TestLLMGateService:
     def test_parse_llm_response_valid_json(self, gate_service):
         """Test parsing of valid LLM JSON response."""
         response = '{"decision": true}'
-        
+
         parsed = gate_service._parse_llm_response(response)
-        
+
         assert parsed["decision"] is True
         assert "reasoning" in parsed
 
@@ -109,54 +110,82 @@ class TestLLMGateService:
 ```
 
 Hope this helps!'''
-        
+
         parsed = gate_service._parse_llm_response(response)
-        
+
         assert parsed["decision"] is False
         assert "reasoning" in parsed
 
     def test_parse_llm_response_invalid_json(self, gate_service):
         """Test parsing of invalid LLM response."""
         response = "This is not JSON at all!"
-        
+
         parsed = gate_service._parse_llm_response(response)
-        
+
         # Should return safe defaults
         assert parsed["decision"] is False
         assert "Failed to parse" in parsed["reasoning"]
 
-    def test_parse_llm_response_gate_enabled_missing_gate_prompt(self):
-        """Test that missing gate_prompt raises error when gate is enabled in LLM service."""
+    def test_parse_llm_response_handles_json_pattern(self):
+        """Test that _parse_llm_response correctly extracts pattern from JSON response."""
         from langhook.subscriptions.llm import LLMPatternService
-        
+
         service = LLMPatternService()
         response = '{"pattern": "langhook.events.github.pull_request.*.created"}'
-        
-        with pytest.raises(ValueError, match="missing required gate_prompt"):
-            service._parse_llm_response(response, gate_enabled=True)
 
-    def test_parse_llm_response_gate_enabled_invalid_json_error(self):
-        """Test that invalid JSON raises error when gate is enabled in LLM service."""
-        from langhook.subscriptions.llm import LLMPatternService
-        
-        service = LLMPatternService()
-        response = "langhook.events.github.pull_request.*.created"  # Just pattern, no JSON
-        
-        with pytest.raises(ValueError, match="LLM failed to return properly formatted JSON"):
-            service._parse_llm_response(response, gate_enabled=True)
+        result = service._parse_llm_response(response)
 
-    def test_parse_llm_response_gate_enabled_with_valid_json(self):
-        """Test parsing valid JSON response when gate is enabled in LLM service."""
-        from langhook.subscriptions.llm import LLMPatternService
-        
-        service = LLMPatternService()
-        response = '{"pattern": "langhook.events.github.pull_request.*.created", "gate_prompt": "Evaluate if this is a GitHub PR"}'
-        
-        result = service._parse_llm_response(response, gate_enabled=True)
-        
         assert result is not None
         assert result["pattern"] == "langhook.events.github.pull_request.*.created"
-        assert result["gate_prompt"] == "Evaluate if this is a GitHub PR"
+
+    def test_parse_llm_response_handles_plain_pattern(self):
+        """Test that _parse_llm_response correctly extracts plain pattern response."""
+        from langhook.subscriptions.llm import LLMPatternService
+
+        service = LLMPatternService()
+        response = "langhook.events.github.pull_request.*.created"
+
+        result = service._parse_llm_response(response)
+
+        assert result is not None
+        assert result["pattern"] == "langhook.events.github.pull_request.*.created"
+
+    def test_convert_to_pattern_and_gate_adds_description_as_gate_prompt(self):
+        """Test that convert_to_pattern_and_gate uses description as gate_prompt when gate is enabled."""
+        from unittest.mock import AsyncMock
+
+        from langhook.subscriptions.llm import LLMPatternService
+
+        # Test the key behavior: when gate_enabled=True, result should include gate_prompt with description
+        # We'll mock the entire method chain to focus on this specific functionality
+
+        description = "GitHub pull requests"
+        expected_pattern = "langhook.events.github.pull_request.*.created"
+
+        with patch.object(LLMPatternService, '__init__', return_value=None):
+            service = LLMPatternService()
+
+            # Mock the internal method calls to simulate successful pattern extraction
+            with patch.object(service, '_get_system_prompt_with_schemas', return_value="mock_system_prompt"):
+                with patch.object(service, '_create_user_prompt', return_value="mock_user_prompt"):
+                    with patch.object(service, '_is_no_schema_response', return_value=False):
+                        with patch.object(service, '_parse_llm_response', return_value={"pattern": expected_pattern}):
+                            # Mock the LLM service parts
+                            service.llm = AsyncMock()
+                            service.llm.ainvoke.return_value.content = expected_pattern
+
+                            import asyncio
+
+                            # Test with gate_enabled=False
+                            result_no_gate = asyncio.run(service.convert_to_pattern_and_gate(description, gate_enabled=False))
+                            assert "pattern" in result_no_gate
+                            assert "gate_prompt" not in result_no_gate
+
+                            # Test with gate_enabled=True
+                            result_with_gate = asyncio.run(service.convert_to_pattern_and_gate(description, gate_enabled=True))
+                            assert "pattern" in result_with_gate
+                            assert "gate_prompt" in result_with_gate
+                            assert result_with_gate["gate_prompt"] == description
 
 
 class TestGateConfigSchema:
@@ -165,7 +194,7 @@ class TestGateConfigSchema:
     def test_gate_config_defaults(self):
         """Test that gate config has proper defaults."""
         config = GateConfig()
-        
+
         assert config.enabled is False
         assert config.prompt == ""
 
@@ -176,7 +205,7 @@ class TestGateConfigSchema:
             enabled=True,
             prompt="Test prompt for evaluation"
         )
-        
+
         assert config.enabled is True
         assert config.prompt == "Test prompt for evaluation"
 
@@ -187,7 +216,7 @@ class TestPromptLibrary:
     def test_prompt_library_loads_defaults(self):
         """Test that prompt library loads default fallback templates."""
         library = PromptLibrary()
-        
+
         assert "default" in library.templates
         assert "strict" in library.templates
         assert "precise" in library.templates
@@ -197,7 +226,7 @@ class TestPromptLibrary:
     def test_get_template(self):
         """Test getting a template by name."""
         library = PromptLibrary()
-        
+
         default_template = library.get_template("default")
         assert "intelligent event filter" in default_template.lower()
         # Updated to only expect decision in JSON response
@@ -207,18 +236,18 @@ class TestPromptLibrary:
     def test_get_nonexistent_template(self):
         """Test getting a non-existent template returns default."""
         library = PromptLibrary()
-        
+
         template = library.get_template("nonexistent")
         assert template == library.get_template("default")
 
     def test_list_templates(self):
         """Test listing all templates."""
         library = PromptLibrary()
-        
+
         templates = library.list_templates()
         assert isinstance(templates, dict)
         assert "default" in templates
-        
+
         # Should be truncated summaries
         for summary in templates.values():
             assert len(summary) <= 103  # 100 + "..."

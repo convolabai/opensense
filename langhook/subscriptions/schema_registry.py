@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from langhook.subscriptions.database import db_service
-from langhook.subscriptions.models import EventSchemaRegistry
+from langhook.subscriptions.models import EventLog, EventSchemaRegistry
 
 logger = structlog.get_logger("langhook")
 
@@ -72,13 +72,17 @@ class SchemaRegistryService:
                 exc_info=True
             )
 
-    async def get_schema_summary(self) -> dict[str, Any]:
+    async def get_schema_summary(self, include_samples: bool = False) -> dict[str, Any]:
         """
         Get a structured summary of all registered schemas.
 
+        Args:
+            include_samples: Whether to include sample event data for each schema combination
+
         Returns:
             Dictionary with publishers, resource_types grouped by publisher, actions,
-            and granular publisher_resource_actions showing exact combinations
+            granular publisher_resource_actions showing exact combinations, and optionally
+            sample_events with example data for each publisher.resource_type combination
         """
         try:
             with db_service.get_session() as session:
@@ -105,7 +109,7 @@ class SchemaRegistryService:
                 for publisher in publishers:
                     publisher_resource_actions[publisher] = {}
                     publisher_entries = [e for e in all_entries if e.publisher == publisher]
-                    
+
                     # Group by resource type within this publisher
                     resource_types_for_publisher = list({e.resource_type for e in publisher_entries})
                     for resource_type in resource_types_for_publisher:
@@ -114,12 +118,19 @@ class SchemaRegistryService:
                         resource_actions.sort()
                         publisher_resource_actions[publisher][resource_type] = resource_actions
 
-                return {
+                result = {
                     "publishers": publishers,
                     "resource_types": resource_types,
                     "actions": actions,
                     "publisher_resource_actions": publisher_resource_actions
                 }
+
+                # Add sample events if requested
+                if include_samples:
+                    sample_events = await self._get_sample_events(session, publisher_resource_actions)
+                    result["sample_events"] = sample_events
+
+                return result
 
         except SQLAlchemyError as e:
             logger.error(
@@ -145,6 +156,47 @@ class SchemaRegistryService:
                 "actions": [],
                 "publisher_resource_actions": {}
             }
+
+    async def _get_sample_events(self, session, publisher_resource_actions: dict) -> dict[str, dict[str, Any]]:
+        """
+        Get sample event data for each publisher.resource_type combination.
+
+        Args:
+            session: Database session
+            publisher_resource_actions: Dictionary of publisher -> resource_type -> actions
+
+        Returns:
+            Dictionary with publisher.resource_type keys and sample event data as values
+        """
+        sample_events = {}
+
+        try:
+            # Get a sample event for each publisher.resource_type combination
+            for publisher, resource_types in publisher_resource_actions.items():
+                for resource_type in resource_types.keys():
+                    # Query for a recent sample event
+                    sample_event = session.query(EventLog).filter(
+                        EventLog.publisher == publisher,
+                        EventLog.resource_type == resource_type
+                    ).order_by(EventLog.logged_at.desc()).first()
+
+                    if sample_event:
+                        key = f"{publisher}.{resource_type}"
+                        sample_events[key] = {
+                            "resource_id": sample_event.resource_id,
+                            "action": sample_event.action,
+                            "canonical_data": sample_event.canonical_data,
+                            "subject": sample_event.subject
+                        }
+
+        except SQLAlchemyError as e:
+            logger.warning(
+                "Failed to fetch sample events for schema summary",
+                error=str(e)
+            )
+            # Return empty samples on error - this shouldn't break the main functionality
+
+        return sample_events
 
     async def delete_publisher(self, publisher: str) -> bool:
         """
