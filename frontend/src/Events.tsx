@@ -68,6 +68,11 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
   const [selectedEventLog, setSelectedEventLog] = useState<EventLog | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
   
+  // Resource type filtering state
+  const [availableResourceTypes, setAvailableResourceTypes] = useState<string[]>([]);
+  const [selectedResourceTypes, setSelectedResourceTypes] = useState<string[]>([]);
+  const [schemaLoading, setSchemaLoading] = useState(false);
+  
   const pageSize = 20;
 
 
@@ -79,14 +84,46 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
   }, [selectedPayload]);
 
   useEffect(() => {
+    loadResourceTypes();
+  }, []);
+
+  useEffect(() => {
     loadEventLogs();
-  }, [currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPage, selectedResourceTypes]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadResourceTypes = async () => {
+    setSchemaLoading(true);
+    try {
+      const response = await apiFetch('/schema/');
+      if (response.ok) {
+        const data = await response.json();
+        // Extract all unique resource types from all publishers
+        const allResourceTypes = new Set<string>();
+        Object.values(data.resource_types || {}).forEach((types: any) => {
+          if (Array.isArray(types)) {
+            types.forEach(type => allResourceTypes.add(type));
+          }
+        });
+        setAvailableResourceTypes(Array.from(allResourceTypes).sort());
+      }
+    } catch (err) {
+      console.error('Failed to load resource types:', err);
+    } finally {
+      setSchemaLoading(false);
+    }
+  };
 
   const loadEventLogs = async () => {
     setEventLogsLoading(true);
     setEventLogsError('');
     try {
-      const response = await apiFetch(`/event-logs?page=${currentPage}&size=${pageSize}`);
+      let url = `/event-logs?page=${currentPage}&size=${pageSize}`;
+      if (selectedResourceTypes.length > 0) {
+        const resourceTypesParam = selectedResourceTypes.map(type => `resource_types=${encodeURIComponent(type)}`).join('&');
+        url += `&${resourceTypesParam}`;
+      }
+      
+      const response = await apiFetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch event logs');
       }
@@ -321,6 +358,64 @@ const Events: React.FC<EventsProps> = ({ subscriptions }) => {
             <RefreshCw size={16} className={eventLogsLoading ? 'animate-spin' : ''} />
             Refresh
           </button>
+        </div>
+
+        {/* Resource Type Filter */}
+        <div className="mb-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Filter by Resource Type:</label>
+            <div className="flex flex-wrap gap-2">
+              {schemaLoading ? (
+                <div className="text-sm text-gray-500">Loading resource types...</div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setSelectedResourceTypes([]);
+                      // Reset to first page when filter changes
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                      selectedResourceTypes.length === 0
+                        ? 'bg-blue-100 text-blue-800 border-blue-200'
+                        : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                    }`}
+                  >
+                    All Types
+                  </button>
+                  {availableResourceTypes.map((resourceType) => {
+                    const isSelected = selectedResourceTypes.includes(resourceType);
+                    return (
+                      <button
+                        key={resourceType}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedResourceTypes(prev => prev.filter(t => t !== resourceType));
+                          } else {
+                            setSelectedResourceTypes(prev => [...prev, resourceType]);
+                          }
+                          // Reset to first page when filter changes
+                          setCurrentPage(1);
+                        }}
+                        className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                          isSelected
+                            ? 'bg-blue-100 text-blue-800 border-blue-200'
+                            : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                        }`}
+                      >
+                        {resourceType}
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          </div>
+          {selectedResourceTypes.length > 0 && (
+            <div className="mt-2 text-sm text-gray-600">
+              Showing events for: {selectedResourceTypes.join(', ')}
+            </div>
+          )}
         </div>
 
         {eventLogsError && (

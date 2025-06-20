@@ -280,9 +280,10 @@ class HealthResponse(BaseModel):
 @app.get("/event-logs", response_model=dict)
 async def list_event_logs(
     page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(50, ge=1, le=100, description="Items per page")
+    size: int = Query(50, ge=1, le=100, description="Items per page"),
+    resource_types: list[str] = Query(None, description="Filter by resource types")
 ) -> dict:
-    """List event logs with pagination."""
+    """List event logs with pagination and optional resource type filtering."""
     try:
         from langhook.subscriptions.database import db_service
         from langhook.subscriptions.schemas import EventLogResponse, EventLogListResponse
@@ -290,7 +291,8 @@ async def list_event_logs(
         skip = (page - 1) * size
         event_logs, total = await db_service.get_event_logs(
             skip=skip,
-            limit=size
+            limit=size,
+            resource_types=resource_types
         )
 
         return EventLogListResponse(
