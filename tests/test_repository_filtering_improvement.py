@@ -45,14 +45,14 @@ class TestRepositoryFilteringImprovement:
             system_prompt = await llm_service._get_system_prompt_with_schemas(gate_enabled=True)
             
             # Check that repository-specific filtering examples are included
-            assert "robotics-android" in system_prompt
-            assert "repository name is 'robotics-android'" in system_prompt
-            assert "my-project repository" in system_prompt
-            assert "repository name is 'my-project'" in system_prompt
+            assert "backend-service" in system_prompt
+            assert "repository name is 'backend-service'" in system_prompt
+            assert "web-frontend repository" in system_prompt
+            assert "repository name is 'web-frontend'" in system_prompt
 
     def test_user_prompt_for_repository_case(self, llm_service):
         """Test user prompt generation for repository-specific cases."""
-        description = "Github PR on robotics-android is approved"
+        description = "Github PR on backend-service is merged"
         user_prompt = llm_service._create_user_prompt(description, gate_enabled=True)
         
         assert description in user_prompt
@@ -62,17 +62,17 @@ class TestRepositoryFilteringImprovement:
 
     def test_parse_repository_specific_response(self, llm_service):
         """Test parsing of repository-specific gate prompt responses."""
-        # Test case matching the issue description
+        # Test case similar to the issue description but with different names
         response = '''{
             "pattern": "langhook.events.github.pull_request.*.updated",
-            "gate_prompt": "Checks whether the pull request is from robotics-android repository"
+            "gate_prompt": "Checks whether the pull request is from backend-service repository"
         }'''
         
         result = llm_service._parse_llm_response(response, gate_enabled=True)
         
         assert result is not None
         assert result["pattern"] == "langhook.events.github.pull_request.*.updated"
-        assert "robotics-android" in result["gate_prompt"]
+        assert "backend-service" in result["gate_prompt"]
         assert "repository" in result["gate_prompt"]
 
     def test_parse_alternative_repository_response_formats(self, llm_service):
@@ -81,13 +81,13 @@ class TestRepositoryFilteringImprovement:
             # Case 1: Direct repository check
             '''{
                 "pattern": "langhook.events.github.pull_request.*.updated",
-                "gate_prompt": "Evaluate if this event is a GitHub pull request AND the repository name is 'robotics-android'"
+                "gate_prompt": "Evaluate if this event is a GitHub pull request AND the repository name is 'backend-service'"
             }''',
             
-            # Case 2: Repository filter with approval check
+            # Case 2: Repository filter with creation check
             '''{
                 "pattern": "langhook.events.github.issue.*.created",
-                "gate_prompt": "Evaluate if this event is an issue creation AND the repository name is 'my-project'"
+                "gate_prompt": "Evaluate if this event is an issue creation AND the repository name is 'web-frontend'"
             }''',
             
             # Case 3: Enterprise account filtering
@@ -123,10 +123,9 @@ class TestRepositoryFilteringImprovement:
             
             system_prompt = await llm_service._get_system_prompt_with_schemas(gate_enabled=True)
             
-            # Verify the system prompt contains relevant examples for the issue
-            # "Github PR on robotics-android is approved" should map to repository filtering
-            assert "GitHub PR on robotics-android" in system_prompt
-            assert "approved" not in system_prompt or "updated" in system_prompt  # approved -> updated mapping
+            # Verify the system prompt contains relevant examples for repository filtering
+            # Should show conceptually similar examples without exact matching
+            assert "backend-service" in system_prompt or "web-frontend" in system_prompt
             
             # Check that the pattern examples show correct mapping
             assert "langhook.events.github.pull_request.*.updated" in system_prompt

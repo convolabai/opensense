@@ -319,11 +319,11 @@ Additionally, you must generate a gate_prompt that will be used to evaluate whet
 
 Examples of good gate prompts:
 - For "GitHub comments from Alice": "Evaluate if this event is a GitHub comment AND the author is Alice"
-- For "GitHub PR on robotics-android is approved": "Evaluate if this event is a GitHub pull request AND the repository name is 'robotics-android'"
+- For "GitHub PR on backend-service is merged": "Evaluate if this event is a GitHub pull request AND the repository name is 'backend-service'"
 - For "Stripe payments from enterprise accounts": "Evaluate if this event is a Stripe payment AND the account type is 'enterprise'"
 - For "Stripe payments over $1000": "Evaluate if this event is a Stripe payment AND the amount is greater than $1000"
 - For "Slack messages containing 'urgent'": "Evaluate if this event is a Slack message AND contains the word 'urgent'"
-- For "Issues opened in my-project repository": "Evaluate if this event is an issue creation AND the repository name is 'my-project'"
+- For "Issues created in web-frontend repository": "Evaluate if this event is an issue creation AND the repository name is 'web-frontend'"
 - For "Stripe refunds over $500": "Approve if this Stripe refund is more than $500 in value"
 - For "Production deployments that failed": "Approve if this deployment event indicates a failure in the production environment"
 - For "High priority security alerts": "Approve if this security event has high priority or critical severity"
@@ -368,7 +368,13 @@ Examples:
 🟢 "A GitHub PR is merged" → `langhook.events.github.pull_request.*.updated`
 🟢 "Slack file is uploaded" → `langhook.events.slack.file.*.created`
 🟢 "PR submitted on GitHub" → `langhook.events.github.pull_request.*.created`
-🔴 "A comment is liked" → `"ERROR: No suitable schema found"`{gate_instructions}"""
+🔴 "A comment is liked" → `"ERROR: No suitable schema found"`
+
+Pattern derivation examples with topics:
+🟢 "GitHub issues opened in mobile-app repo" → Pattern: `langhook.events.github.issue.*.created` + Gate: repository filtering
+🟢 "Slack messages posted to #alerts channel" → Pattern: `langhook.events.slack.message.*.created` + Gate: channel filtering  
+🟢 "Pull requests approved by senior devs" → Pattern: `langhook.events.github.pull_request.*.updated` + Gate: reviewer role filtering
+🟢 "Stripe payments over $500 from VIP customers" → Pattern: `langhook.events.stripe.payment.*.created` + Gate: amount + customer type filtering{gate_instructions}"""
 
     def _create_user_prompt(self, description: str, gate_enabled: bool = False) -> str:
         """Create the user prompt for pattern conversion and optional gate prompt generation."""
