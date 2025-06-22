@@ -418,11 +418,16 @@ class DatabaseService:
     async def get_event_logs(
         self,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
+        resource_types: list[str] | None = None
     ) -> tuple[list[EventLog], int]:
-        """Get event logs with pagination."""
+        """Get event logs with pagination and optional resource type filtering."""
         with self.get_session() as session:
             query = session.query(EventLog).order_by(EventLog.logged_at.desc())
+            
+            # Apply resource type filter if provided
+            if resource_types:
+                query = query.filter(EventLog.resource_type.in_(resource_types))
 
             total = query.count()
             event_logs = query.offset(skip).limit(limit).all()
