@@ -9,6 +9,7 @@ import nats
 import structlog
 from nats.js import JetStreamContext
 from nats.js.api import ConsumerConfig, DeliverPolicy
+from nats.js.errors import ServiceUnavailableError
 
 logger = structlog.get_logger("langhook")
 
@@ -174,6 +175,29 @@ class BaseNATSConsumer:
             self.js = None
             logger.info("NATS consumer stopped")
 
+    async def _reset_connection(self) -> None:
+        """Reset the NATS connection and subscription."""
+        logger.info("Resetting NATS connection due to service unavailable error")
+
+        # Clean up existing connection
+        if self._subscription:
+            try:
+                await self._subscription.unsubscribe()
+            except Exception:
+                pass  # Ignore errors during cleanup
+            self._subscription = None
+
+        if self.nc:
+            try:
+                await self.nc.close()
+            except Exception:
+                pass  # Ignore errors during cleanup
+            self.nc = None
+            self.js = None
+
+        # Re-establish connection
+        await self.start()
+
     async def consume_messages(self) -> None:
         """Consume messages from the NATS stream."""
         if not self.js:
@@ -181,6 +205,10 @@ class BaseNATSConsumer:
 
         self._running = True
         logger.info("Starting message consumption")
+
+        consecutive_service_errors = 0
+        max_consecutive_errors = 3
+        base_backoff = 2.0
 
         try:
             # Subscribe to the consumer
@@ -194,6 +222,9 @@ class BaseNATSConsumer:
                 try:
                     # Fetch messages in batches
                     messages = await self._subscription.fetch(batch=10, timeout=1.0)
+
+                    # Reset consecutive error counter on successful fetch
+                    consecutive_service_errors = 0
 
                     for msg in messages:
                         try:
@@ -219,6 +250,38 @@ class BaseNATSConsumer:
                 except TimeoutError:
                     # No messages available, continue loop
                     continue
+                except ServiceUnavailableError:
+                    consecutive_service_errors += 1
+                    logger.warning(
+                        "NATS service unavailable",
+                        consecutive_errors=consecutive_service_errors,
+                        max_consecutive_errors=max_consecutive_errors,
+                    )
+
+                    if consecutive_service_errors >= max_consecutive_errors:
+                        logger.info("Max consecutive service errors reached, resetting connection")
+                        try:
+                            await self._reset_connection()
+                            # Re-subscribe after connection reset
+                            self._subscription = await self.js.pull_subscribe(
+                                self.filter_subject,
+                                durable=self.consumer_name,
+                                stream=self.stream_name,
+                            )
+                            consecutive_service_errors = 0
+                        except Exception as reset_error:
+                            logger.error(
+                                "Failed to reset connection",
+                                error=str(reset_error),
+                                exc_info=True,
+                            )
+                            # Use exponential backoff if reset fails
+                            backoff_time = base_backoff * (2 ** min(consecutive_service_errors - 1, 5))
+                            await asyncio.sleep(backoff_time)
+                    else:
+                        # Exponential backoff for service unavailable errors
+                        backoff_time = base_backoff * (2 ** (consecutive_service_errors - 1))
+                        await asyncio.sleep(backoff_time)
                 except Exception as e:
                     logger.error(
                         "Error fetching messages",
