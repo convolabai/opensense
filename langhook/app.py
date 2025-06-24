@@ -177,7 +177,7 @@ async def lifespan(app):
     # Stop NATS producer
     await nats_producer.stop()
 
-
+logger.info("Server Path", path=app_config.server_path)
 app = FastAPI(
     title="LangHook Services",
     description="Unified API for LangHook ingest gateway and canonicaliser services",

@@ -190,7 +190,7 @@ Be precise and selective:
         try:
             # Try to extract JSON from the response
             response = response.strip()
-
+            logger.info("Parsing LLM response:" + response)
             # Handle code blocks
             if "```json" in response:
                 start = response.find("```json") + 7
