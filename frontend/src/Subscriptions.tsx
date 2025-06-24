@@ -1,5 +1,5 @@
 import React, { useState } from 'react'; // useEffect might not be needed if no initial data fetch is done here
-import { Plus, Eye, RefreshCw, Bell, Trash2, List, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Eye, RefreshCw, Bell, Trash2, List, ChevronDown, ChevronRight, Filter } from 'lucide-react';
 import { apiFetch } from './apiUtils';
 
 // Interfaces (copied from App.tsx, ensure they are consistent)
@@ -88,6 +88,8 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
   const [showEventsModal, setShowEventsModal] = useState(false);
   const [eventsCurrentPage, setEventsCurrentPage] = useState(1);
   const [totalEvents, setTotalEvents] = useState(0);
+  const [eventFilter, setEventFilter] = useState<'all' | 'blocked' | 'allowed'>('all');
+  const [expandedEventRows, setExpandedEventRows] = useState<Set<number>>(new Set());
   
   const eventsPageSize = 20;
 
@@ -216,6 +218,25 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
     setSelectedSubscription(null);
     setSubscriptionEvents([]);
     setEventsError('');
+    setEventFilter('all');
+    setExpandedEventRows(new Set());
+  };
+
+  const toggleEventRowExpansion = (eventId: number) => {
+    const newExpandedRows = new Set(expandedEventRows);
+    if (newExpandedRows.has(eventId)) {
+      newExpandedRows.delete(eventId);
+    } else {
+      newExpandedRows.add(eventId);
+    }
+    setExpandedEventRows(newExpandedRows);
+  };
+
+  const getFilteredEvents = () => {
+    if (eventFilter === 'all') return subscriptionEvents;
+    if (eventFilter === 'blocked') return subscriptionEvents.filter(event => event.gate_passed === false);
+    if (eventFilter === 'allowed') return subscriptionEvents.filter(event => event.gate_passed === true);
+    return subscriptionEvents;
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -227,9 +248,11 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
   const SubscriptionEventsModal = () => {
     if (!selectedSubscription) return null;
 
+    const filteredEvents = getFilteredEvents();
+
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+        <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
           <div className="flex justify-between items-center p-6 border-b border-gray-200">
             <div>
               <h2 className="text-xl font-semibold text-gray-800">Events for Subscription</h2>
@@ -244,9 +267,51 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
             </button>
           </div>
           
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+          {/* Filter Controls */}
+          {selectedSubscription.gate?.enabled && (
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center gap-4">
+                <Filter size={16} className="text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Filter by gate result:</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEventFilter('all')}
+                    className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                      eventFilter === 'all'
+                        ? 'bg-blue-100 text-blue-800 border-blue-200'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    All Events ({subscriptionEvents.length})
+                  </button>
+                  <button
+                    onClick={() => setEventFilter('allowed')}
+                    className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                      eventFilter === 'allowed'
+                        ? 'bg-green-100 text-green-800 border-green-200'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    Allowed ({subscriptionEvents.filter(e => e.gate_passed === true).length})
+                  </button>
+                  <button
+                    onClick={() => setEventFilter('blocked')}
+                    className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                      eventFilter === 'blocked'
+                        ? 'bg-red-100 text-red-800 border-red-200'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    Blocked ({subscriptionEvents.filter(e => e.gate_passed === false).length})
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="overflow-y-auto max-h-[calc(90vh-200px)]">
             {eventsError && (
-              <div className="p-4 rounded-md mb-6 text-sm bg-red-100 border border-red-400 text-red-700">
+              <div className="p-4 m-6 rounded-md text-sm bg-red-100 border border-red-400 text-red-700">
                 {eventsError}
               </div>
             )}
@@ -256,145 +321,204 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                 <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                 <span className="ml-3 text-gray-600">Loading events...</span>
               </div>
-            ) : subscriptionEvents.length > 0 ? (
-              <div className="space-y-4">
-                {subscriptionEvents.map((event) => (
-                  <div key={event.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">Event Information</h4>
-                        <div className="space-y-1 text-sm">
-                          <div><span className="font-medium">Event ID:</span> {event.event_id}</div>
-                          <div><span className="font-medium">Source:</span> {event.source}</div>
-                          <div><span className="font-medium">Publisher:</span> {event.publisher}</div>
-                          <div><span className="font-medium">Resource:</span> {event.resource_type} ({event.resource_id})</div>
-                          <div><span className="font-medium">Action:</span> 
-                            <span className="inline-flex items-center px-2 py-1 ml-2 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              {event.action}
-                            </span>
-                          </div>
-                          <div><span className="font-medium">Time:</span> {formatTimestamp(event.timestamp)}</div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">Channel Status</h4>
-                        <div className="space-y-1 text-sm">
-                          {selectedSubscription.channel_type === 'webhook' && selectedSubscription.channel_config?.url ? (
-                            <div className="flex items-center gap-2">
-                              {event.webhook_sent ? (
-                                <>
-                                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                                  <span className="text-green-600">Webhook notification sent</span>
-                                  {event.webhook_response_status && (
-                                    <span className="text-xs text-gray-500">({event.webhook_response_status})</span>
-                                  )}
-                                </>
-                              ) : (
-                                <>
-                                  <span className="w-2 h-2 bg-red-400 rounded-full"></span>
-                                  <span className="text-red-600">Webhook not sent</span>
-                                </>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
-                              <span className="text-purple-600">Available for polling</span>
-                            </div>
-                          )}
-                          {selectedSubscription.channel_type === 'webhook' && selectedSubscription.channel_config?.url && (
-                            <div className="text-xs text-gray-500">
-                              URL: {selectedSubscription.channel_config.url}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Gate Evaluation Section */}
-                    {selectedSubscription.gate?.enabled && (event.gate_passed !== null || event.gate_passed !== undefined) && (
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">LLM Gate Evaluation</h4>
-                        <div className="bg-gray-50 p-3 rounded-md space-y-2">
-                          <div className="flex items-center gap-2">
-                            {event.gate_passed ? (
-                              <>
-                                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                                <span className="text-green-600 font-medium">Passed</span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="w-2 h-2 bg-red-400 rounded-full"></span>
-                                <span className="text-red-600 font-medium">Blocked</span>
-                              </>
-                            )}
-                          </div>
-                          {event.gate_reason && (
-                            <div className="text-xs text-gray-600">
-                              <span className="font-medium">Reason:</span> {event.gate_reason}
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-500">
-                            <span className="font-medium">Gate Prompt:</span> {selectedSubscription.gate.prompt}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">Canonical Data</h4>
-                        <div className="bg-gray-800 text-gray-200 p-3 rounded-md font-mono text-xs overflow-x-auto">
-                          <pre>{JSON.stringify(event.canonical_data, null, 2)}</pre>
-                        </div>
-                      </div>
-
-                      {event.raw_payload && (
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-500 mb-2">Raw Payload</h4>
-                          <div className="bg-gray-800 text-gray-200 p-3 rounded-md font-mono text-xs overflow-x-auto">
-                            <pre>{JSON.stringify(event.raw_payload, null, 2)}</pre>
-                          </div>
-                        </div>
+            ) : filteredEvents.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12"></th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resource</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                      {selectedSubscription.gate?.enabled && (
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gate</th>
                       )}
-                    </div>
-                  </div>
-                ))}
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredEvents.map((event) => {
+                      const isExpanded = expandedEventRows.has(event.id);
+                      return (
+                        <React.Fragment key={event.id}>
+                          <tr className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => toggleEventRowExpansion(event.id)}
+                                className="flex items-center justify-center w-6 h-6 text-gray-400 hover:text-gray-600 transition-colors"
+                                title={isExpanded ? "Hide details" : "Show details"}
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown size={14} />
+                                ) : (
+                                  <ChevronRight size={14} />
+                                )}
+                              </button>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="text-gray-900 font-medium truncate max-w-xs" title={event.event_id}>
+                                {event.event_id}
+                              </div>
+                              <div className="text-gray-500 text-xs">{event.publisher}</div>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="text-gray-900">{event.resource_type}</div>
+                              <div className="text-gray-500 text-xs">{event.resource_id}</div>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {event.action}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500">
+                              {formatTimestamp(event.timestamp)}
+                            </td>
+                            {selectedSubscription.gate?.enabled && (
+                              <td className="px-4 py-3 text-sm">
+                                {event.gate_passed !== null && event.gate_passed !== undefined ? (
+                                  <div className="flex items-center gap-2">
+                                    {event.gate_passed ? (
+                                      <>
+                                        <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                        <span className="text-green-600 text-xs font-medium">Allowed</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                                        <span className="text-red-600 text-xs font-medium">Blocked</span>
+                                      </>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 text-xs">N/A</span>
+                                )}
+                              </td>
+                            )}
+                            <td className="px-4 py-3 text-sm">
+                              {selectedSubscription.channel_type === 'webhook' && selectedSubscription.channel_config?.url ? (
+                                <div className="flex items-center gap-2">
+                                  {event.webhook_sent ? (
+                                    <>
+                                      <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                      <span className="text-green-600 text-xs">Sent</span>
+                                      {event.webhook_response_status && (
+                                        <span className="text-xs text-gray-500">({event.webhook_response_status})</span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                                      <span className="text-red-600 text-xs">Failed</span>
+                                    </>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
+                                  <span className="text-purple-600 text-xs">Polling</span>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr>
+                              <td colSpan={selectedSubscription.gate?.enabled ? 7 : 6} className="px-4 py-4 bg-gray-50">
+                                <div className="space-y-4">
+                                  {/* Gate Evaluation Details */}
+                                  {selectedSubscription.gate?.enabled && event.gate_reason && (
+                                    <div>
+                                      <h5 className="text-sm font-medium text-gray-700 mb-2">Gate Reasoning</h5>
+                                      <div className="bg-white p-3 rounded border text-sm text-gray-700">
+                                        {event.gate_reason}
+                                      </div>
+                                    </div>
+                                  )}
 
-                {/* Pagination */}
-                {eventsTotalPages > 1 && (
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <div className="text-sm text-gray-500">
-                      Showing {((eventsCurrentPage - 1) * eventsPageSize) + 1} to {Math.min(eventsCurrentPage * eventsPageSize, totalEvents)} of {totalEvents} events
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => selectedSubscription && loadSubscriptionEvents(selectedSubscription.id, eventsCurrentPage - 1)}
-                        disabled={eventsCurrentPage === 1 || eventsLoading}
-                        className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Previous
-                      </button>
-                      <span className="px-3 py-2 text-sm font-medium text-gray-700">
-                        Page {eventsCurrentPage} of {eventsTotalPages}
-                      </span>
-                      <button
-                        onClick={() => selectedSubscription && loadSubscriptionEvents(selectedSubscription.id, eventsCurrentPage + 1)}
-                        disabled={eventsCurrentPage === eventsTotalPages || eventsLoading}
-                        className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
-                )}
+                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {/* Canonical Data */}
+                                    <div>
+                                      <h5 className="text-sm font-medium text-gray-700 mb-2">Canonical Data</h5>
+                                      <div className="bg-gray-800 text-gray-200 p-3 rounded font-mono text-xs max-h-60 overflow-y-auto">
+                                        <pre>{JSON.stringify(event.canonical_data, null, 2)}</pre>
+                                      </div>
+                                    </div>
+
+                                    {/* Raw Payload */}
+                                    {event.raw_payload && (
+                                      <div>
+                                        <h5 className="text-sm font-medium text-gray-700 mb-2">Raw Payload</h5>
+                                        <div className="bg-gray-800 text-gray-200 p-3 rounded font-mono text-xs max-h-60 overflow-y-auto">
+                                          <pre>{JSON.stringify(event.raw_payload, null, 2)}</pre>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Additional Event Details */}
+                                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-2 border-t border-gray-200 text-xs text-gray-500">
+                                    <div><span className="font-medium">Source:</span> {event.source}</div>
+                                    <div><span className="font-medium">Subject:</span> {event.subject}</div>
+                                    <div><span className="font-medium">Logged:</span> {formatTimestamp(event.logged_at)}</div>
+                                    {selectedSubscription.channel_config?.url && (
+                                      <div className="truncate"><span className="font-medium">Webhook:</span> {selectedSubscription.channel_config.url}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             ) : (
               <div className="text-center text-gray-500 py-12">
                 <List size={48} className="mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">No events found</p>
-                <p className="text-sm">This subscription hasn't matched any events yet.</p>
+                <p className="text-lg font-medium">
+                  {eventFilter === 'all' ? 'No events found' : `No ${eventFilter} events found`}
+                </p>
+                <p className="text-sm">
+                  {eventFilter === 'all' 
+                    ? "This subscription hasn't matched any events yet."
+                    : `No events match the ${eventFilter} filter.`
+                  }
+                </p>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {eventsTotalPages > 1 && (
+              <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+                <div className="text-sm text-gray-500">
+                  Showing {((eventsCurrentPage - 1) * eventsPageSize) + 1} to {Math.min(eventsCurrentPage * eventsPageSize, totalEvents)} of {totalEvents} events
+                  {eventFilter !== 'all' && (
+                    <span className="ml-2 text-blue-600">
+                      (filtered to {filteredEvents.length} {eventFilter})
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => selectedSubscription && loadSubscriptionEvents(selectedSubscription.id, eventsCurrentPage - 1)}
+                    disabled={eventsCurrentPage === 1 || eventsLoading}
+                    className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-3 py-2 text-sm font-medium text-gray-700">
+                    Page {eventsCurrentPage} of {eventsTotalPages}
+                  </span>
+                  <button
+                    onClick={() => selectedSubscription && loadSubscriptionEvents(selectedSubscription.id, eventsCurrentPage + 1)}
+                    disabled={eventsCurrentPage === eventsTotalPages || eventsLoading}
+                    className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             )}
           </div>
