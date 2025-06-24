@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/langhook/static/css/main.99fa22d5.css",
-    "main.js": "/langhook/static/js/main.c539effe.js",
-    "index.html": "/langhook/index.html",
-    "main.99fa22d5.css.map": "/langhook/static/css/main.99fa22d5.css.map",
-    "main.c539effe.js.map": "/langhook/static/js/main.c539effe.js.map"
+    "main.css": "langhook/static/css/main.1da83468.css",
+    "main.js": "langhook/static/js/main.8f637861.js",
+    "index.html": "langhook/index.html",
+    "main.1da83468.css.map": "langhook/static/css/main.1da83468.css.map",
+    "main.8f637861.js.map": "langhook/static/js/main.8f637861.js.map"
   },
   "entrypoints": [
-    "static/css/main.99fa22d5.css",
-    "static/js/main.c539effe.js"
+    "static/css/main.1da83468.css",
+    "static/js/main.8f637861.js"
   ]
 }
