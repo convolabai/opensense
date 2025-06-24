@@ -12,6 +12,8 @@ const mockSubscriptions = [
     channel_type: 'webhook',
     channel_config: { url: 'https://example.com/webhook' },
     active: true,
+    disposable: false,
+    used: false,
     gate: {
       enabled: true,
       prompt: 'Only critical PRs'
@@ -26,6 +28,8 @@ const mockSubscriptions = [
     channel_type: null,
     channel_config: null,
     active: true,
+    disposable: false,
+    used: false,
     gate: null,
     created_at: '2023-01-02T00:00:00Z'
   }
@@ -38,11 +42,13 @@ describe('Subscriptions Component', () => {
     jest.clearAllMocks();
   });
 
-  test('renders subscription table with compact columns', () => {
+  test('renders subscription table with new columns', () => {
     render(<Subscriptions subscriptions={mockSubscriptions} refreshSubscriptions={mockRefreshSubscriptions} />);
     
-    // Check that the main table headers are present
+    // Check that the new table headers are present
     expect(screen.getByText('Description')).toBeInTheDocument();
+    expect(screen.getByText('Topic Filter')).toBeInTheDocument();
+    expect(screen.getByText('Create Time')).toBeInTheDocument();
     expect(screen.getByText('LLM Gate')).toBeInTheDocument();
     expect(screen.getByText('Notification Type')).toBeInTheDocument();
     expect(screen.getByText('Actions')).toBeInTheDocument();
@@ -53,12 +59,16 @@ describe('Subscriptions Component', () => {
     expect(screen.queryByText('Created')).not.toBeInTheDocument();
   });
 
-  test('shows subscription data in compact format', () => {
+  test('shows subscription data with topic filter and timestamp', () => {
     render(<Subscriptions subscriptions={mockSubscriptions} refreshSubscriptions={mockRefreshSubscriptions} />);
     
     // Check subscription descriptions are shown
     expect(screen.getByText('Test subscription for GitHub PRs')).toBeInTheDocument();
     expect(screen.getByText('Test subscription for deployments')).toBeInTheDocument();
+
+    // Check topic filters are shown in table
+    expect(screen.getByText('github.pull_request.*')).toBeInTheDocument();
+    expect(screen.getByText('deploy.*')).toBeInTheDocument();
 
     // Check LLM Gate status is shown
     expect(screen.getAllByText('Enabled')).toHaveLength(1);
@@ -67,25 +77,29 @@ describe('Subscriptions Component', () => {
     // Check notification types are shown
     expect(screen.getByText('Webhook')).toBeInTheDocument();
     expect(screen.getByText('Polling')).toBeInTheDocument();
+
+    // Check that timestamps are shown (dates should be converted to local format)
+    expect(screen.getByText(/1\/1\/2023/)).toBeInTheDocument(); // 2023-01-01 should show as some date format
+    expect(screen.getByText(/1\/2\/2023/)).toBeInTheDocument(); // 2023-01-02 should show as some date format
   });
 
   test('expand/collapse functionality works', () => {
     render(<Subscriptions subscriptions={mockSubscriptions} refreshSubscriptions={mockRefreshSubscriptions} />);
     
-    // Initially, detailed info should not be visible
-    expect(screen.queryByText('Topic Filter')).not.toBeInTheDocument();
+    // Topic Filter is now always visible in the main table
+    expect(screen.getByText('Topic Filter')).toBeInTheDocument();
+    
+    // Initially, LLM Gate Prompt should not be visible (it's only in expanded view for enabled gates)
     expect(screen.queryByText('LLM Gate Prompt')).not.toBeInTheDocument();
 
-    // Find and click the first expand button (ChevronRight)
+    // Find and click the second expand button (the subscription with gate enabled, which is now sorted second due to older date)
     const expandButtons = screen.getAllByTitle('Expand details');
     expect(expandButtons).toHaveLength(2);
     
-    fireEvent.click(expandButtons[0]);
+    fireEvent.click(expandButtons[1]); // Click second button since sorting changed order
 
-    // After expanding, detailed info should be visible
-    expect(screen.getByText('Topic Filter')).toBeInTheDocument();
+    // After expanding, LLM Gate Prompt should be visible for the subscription with gate enabled
     expect(screen.getByText('LLM Gate Prompt')).toBeInTheDocument();
-    expect(screen.getByText('github.pull_request.*')).toBeInTheDocument();
     expect(screen.getByText('Only critical PRs')).toBeInTheDocument();
 
     // Button should now be a collapse button
@@ -95,21 +109,22 @@ describe('Subscriptions Component', () => {
     const collapseButton = screen.getByTitle('Collapse details');
     fireEvent.click(collapseButton);
 
-    // Detailed info should be hidden again
-    expect(screen.queryByText('Topic Filter')).not.toBeInTheDocument();
+    // LLM Gate Prompt should be hidden again
     expect(screen.queryByText('LLM Gate Prompt')).not.toBeInTheDocument();
   });
 
   test('shows appropriate content in expanded view for subscription without gate', () => {
     render(<Subscriptions subscriptions={mockSubscriptions} refreshSubscriptions={mockRefreshSubscriptions} />);
     
-    // Expand the second subscription (without gate)
+    // Expand the first subscription (without gate - due to sorting, the newer one without gate is first)
     const expandButtons = screen.getAllByTitle('Expand details');
-    fireEvent.click(expandButtons[1]);
+    fireEvent.click(expandButtons[0]);
 
-    // Should show topic filter but not LLM gate prompt
+    // Topic filter is always visible in main table now
     expect(screen.getByText('Topic Filter')).toBeInTheDocument();
     expect(screen.getByText('deploy.*')).toBeInTheDocument();
+    
+    // LLM Gate Prompt should not be visible for subscription without gate
     expect(screen.queryByText('LLM Gate Prompt')).not.toBeInTheDocument();
   });
 });

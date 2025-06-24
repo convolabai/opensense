@@ -34,6 +34,7 @@ function ConsoleApp() {
   const [activeTab, setActiveTab] = useState<TabName>('Dashboard');
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     loadSubscriptions();
@@ -60,6 +61,8 @@ function ConsoleApp() {
         setActiveTab={setActiveTab} 
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
       />
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile header with hamburger menu */}
