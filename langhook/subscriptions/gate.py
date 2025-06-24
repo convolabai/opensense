@@ -165,12 +165,20 @@ Be precise and selective:
         try:
             # Use the existing LLM service infrastructure
             if hasattr(self.llm_service, 'llm') and self.llm_service.llm:
-                # Create system prompt + user prompt combination
-                system_prompt = self._create_system_prompt()
-                full_prompt = f"{system_prompt}\n\nUser's subscription intent: {user_prompt}"
+                # Import here to avoid errors if langchain is not installed
+                from langchain.schema import HumanMessage, SystemMessage
 
-                response = await self.llm_service.llm.ainvoke(full_prompt)
-                return response.content if hasattr(response, 'content') else str(response)
+                # Create system and user prompts separately
+                system_prompt = self._create_system_prompt()
+                
+                # Create messages in proper format
+                messages = [
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=f"User's subscription intent: {user_prompt}")
+                ]
+
+                response = await self.llm_service.llm.agenerate([messages])
+                return response.generations[0][0].text.strip()
             else:
                 raise RuntimeError("LLM not available")
         except Exception as e:
