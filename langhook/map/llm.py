@@ -259,7 +259,7 @@ Rules:
 	2.	Pick main object (e.g., PR, message) as resource.type.
 	3.	Map action to CRUD:
 	•	created → "opened", "created"
-	•	updated → "approved", "merged", "edited"
+	•	updated → "approved", "merged", "edited", "closed"
 	•	deleted → "deleted", "removed"
 	•	read    → "viewed", "accessed"
 	4.	resource.id: scalar path (no concat).
@@ -286,10 +286,19 @@ Example 2 - GitHub PR Review Approved
   "event_field": "action"
 }
 
+⸻
+
+Example 3 - GitHub PR Closed
+
+{
+  "jsonata": "{ \"publisher\": \"github\", \"resource\": { \"type\": \"pull_request\", \"id\": pull_request.id }, \"action\": \"updated\", \"timestamp\": pull_request.closed_at }",
+  "event_field": "action"
+}
+
 
 ⸻
 
-Example 3 - Stripe Payment Succeeded
+Example 4 - Stripe Payment Succeeded
 
 {
   "jsonata": "{ \"publisher\": \"stripe\", \"resource\": { \"type\": \"payment\", \"id\": data.object.id }, \"action\": \"updated\", \"timestamp\": $formatInteger(created * 1000, \"[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z\") }",
@@ -299,7 +308,7 @@ Example 3 - Stripe Payment Succeeded
 
 ⸻
 
-Example 4 - Slack Message Posted
+Example 5 - Slack Message Posted
 
 {
   "jsonata": "{ \"publisher\": \"slack\", \"resource\": { \"type\": \"message\", \"id\": event.ts }, \"action\": \"created\", \"timestamp\": $fromMillis($number(event.ts) * 1000) }",
@@ -309,7 +318,7 @@ Example 4 - Slack Message Posted
 
 ⸻
 
-Example 5 - Salesforce Contact Updated
+Example 6 - Salesforce Contact Updated
 
 {
   "jsonata": "{ \"publisher\": \"salesforce\", \"resource\": { \"type\": \"contact\", \"id\": sobject.Id }, \"action\": \"updated\", \"timestamp\": sobject.LastModifiedDate }",
