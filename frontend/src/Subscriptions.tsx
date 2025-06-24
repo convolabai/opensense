@@ -243,6 +243,11 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
     return new Date(timestamp).toLocaleString();
   };
 
+  // Sort subscriptions by created_at in descending order (newest first)
+  const sortedSubscriptions = [...subscriptions].sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
   const eventsTotalPages = Math.ceil(totalEvents / eventsPageSize);
 
   const SubscriptionEventsModal = () => {
@@ -660,13 +665,19 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
           </button>
         </div>
 
-        {subscriptions.length > 0 ? (
+        {sortedSubscriptions.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Topic Filter
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Create Time
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     LLM Gate
@@ -680,7 +691,7 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {subscriptions.map((sub) => {
+                {sortedSubscriptions.map((sub) => {
                   const isExpanded = expandedRows.has(sub.id);
                   return (
                     <React.Fragment key={sub.id}>
@@ -702,6 +713,14 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                               {sub.description}
                             </div>
                           </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
+                            {sub.pattern}
+                          </code>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {formatTimestamp(sub.created_at)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {sub.gate?.enabled ? (
@@ -755,24 +774,16 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                       </tr>
                       {isExpanded && (
                         <tr>
-                          <td colSpan={4} className="px-6 py-4 bg-gray-50">
+                          <td colSpan={6} className="px-6 py-4 bg-gray-50">
                             <div className="space-y-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {sub.gate?.enabled && (
                                 <div>
-                                  <h4 className="text-sm font-medium text-gray-700 mb-2">Topic Filter</h4>
-                                  <code className="bg-white border border-gray-200 px-3 py-2 rounded text-xs font-mono block">
-                                    {sub.pattern}
-                                  </code>
-                                </div>
-                                {sub.gate?.enabled && (
-                                  <div>
-                                    <h4 className="text-sm font-medium text-gray-700 mb-2">LLM Gate Prompt</h4>
-                                    <div className="bg-white border border-gray-200 px-3 py-2 rounded text-xs">
-                                      {sub.gate.prompt || <span className="text-gray-500 italic">Using subscription description</span>}
-                                    </div>
+                                  <h4 className="text-sm font-medium text-gray-700 mb-2">LLM Gate Prompt</h4>
+                                  <div className="bg-white border border-gray-200 px-3 py-2 rounded text-xs">
+                                    {sub.gate.prompt || <span className="text-gray-500 italic">Using subscription description</span>}
                                   </div>
-                                )}
-                              </div>
+                                </div>
+                              )}
                               <div className="flex justify-between items-center text-xs text-gray-500 pt-2 border-t border-gray-200">
                                 <div className="flex items-center gap-4">
                                   <div>
@@ -791,9 +802,11 @@ const Subscriptions: React.FC<SubscriptionsProps> = ({ subscriptions, refreshSub
                                     </div>
                                   )}
                                 </div>
-                                <div>
-                                  Created: {new Date(sub.created_at).toLocaleDateString()}
-                                </div>
+                                {sub.channel_config?.url && (
+                                  <div className="truncate max-w-xs">
+                                    <span className="font-medium">Webhook URL:</span> {sub.channel_config.url}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>
