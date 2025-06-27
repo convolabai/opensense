@@ -232,8 +232,10 @@ class LLMPatternService:
         result = await self.convert_to_pattern_and_gate(description, gate_enabled=False)
         return result["pattern"]
 
-    async def _get_system_prompt_with_schemas(self) -> str:
+    async def _get_system_prompt_with_schemas(self, template_name: str = "default") -> str:
         """Get the system prompt for pattern conversion with real schema data."""
+        from langhook.subscriptions.prompts import prompt_library
+
         # Import here to avoid circular imports
         from langhook.subscriptions.schema_registry import schema_registry_service
 
@@ -373,6 +375,42 @@ Examples:
 
 **Key Principle**: When in doubt about whether something is an ID or a name, use `*` for the ID field. LLM Gate can evaluate names, descriptions, and other contextual information from the full event payload.
 You're also given sample of the webhook event, so you should be able to see whether the request is specifically the resource ID in the same format as webhook.{gate_instructions}"""
+
+        # Get the configurable template
+        try:
+            template = prompt_library.get_subscription_template(template_name)
+            # Fill in the template with schema information
+            return template.format(schema_info=schema_info, gate_instructions=gate_instructions)
+        except Exception as e:
+            logger.warning(f"Failed to use subscription template '{template_name}', using fallback", error=str(e))
+            # Fallback to hardcoded template if template system fails
+            return f"""You are a NATS JetStream filter pattern generator for LangHook.
+
+Your task: convert a natural-language event description into a valid NATS subject pattern using this schema:
+
+Pattern: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>
+
+Wildcards: `*` = one token, `>` = one or more tokens at end
+
+Allowed:
+
+{schema_info}
+
+
+Rules:
+1. Think like a REST API: map natural verbs to `created`, `read`, or `updated`.
+   - e.g., "opened" = created, "seen" = read, "merged" = updated
+2. Only use exact values from allowed schema
+3. Use `*` for missing IDs
+4. **CRITICAL**: Resource IDs are atomic identifiers (numbers, UUIDs, codes). If user mentions names (repository names, user names, etc.), or ID of something that is not a resource ID, use `*` for the ID and let LLM Gate handle name filtering
+5. If no valid mapping, reply: `"ERROR: No suitable schema found"`
+
+Examples:
+- "GitHub PR approved" → "langhook.events.github.pull_request.*.updated"
+- "Stripe payment over $100" → "langhook.events.stripe.payment.*.updated"
+- "Any Slack message" → "langhook.events.slack.message.*.*"
+
+{gate_instructions}"""
 
     def _create_user_prompt(self, description: str, gate_enabled: bool = False) -> str:
         """Create the user prompt for pattern conversion and optional gate prompt generation."""

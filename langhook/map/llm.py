@@ -62,7 +62,7 @@ class LLMSuggestionService:
         if jsonata_expr is None:
             logger.error("Failed to generate JSONata expression", source=source)
             return None
-            
+
         # Sanitize JSONata expression for compatibility
         jsonata_expr = jsonata_expr.replace("\\'", '"')
         # Apply the JSONata expression to get canonical data
@@ -225,9 +225,16 @@ class LLMSuggestionService:
             )
             return None
 
-    def _create_jsonata_system_prompt(self) -> str:
+    def _create_jsonata_system_prompt(self, template_name: str = "default") -> str:
         """Create the system prompt for JSONata generation."""
-        return """
+        from langhook.subscriptions.prompts import prompt_library
+
+        try:
+            return prompt_library.get_mapping_template(template_name)
+        except Exception as e:
+            logger.warning(f"Failed to get mapping template '{template_name}', using fallback", error=str(e))
+            # Fallback to hardcoded default if template system fails
+            return """
 You are LangHook Webhook → JSONata Mapper.
 
 Input:
@@ -346,7 +353,7 @@ Example 6 - Salesforce Contact Updated
 
             # Sanitize JSONata expression for compatibility (same as in transform_to_canonical)
             sanitized_expr = jsonata_expr.replace("\\'", '"')
-            
+
             # Test the JSONata expression
             result = jsonata.transform(sanitized_expr, raw_payload)
 
