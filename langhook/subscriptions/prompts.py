@@ -1,9 +1,10 @@
 """Prompt library for LLM templates."""
 
 import os
+import yaml
+from typing import Dict, Any
 
 import structlog
-import yaml
 
 logger = structlog.get_logger("langhook")
 
@@ -337,7 +338,7 @@ Examples:
         """Get a subscription pattern generation template by name."""
         return self.get_template(template_name, "subscription")
 
-    def list_templates(self, template_type: str = None) -> dict[str, str]:
+    def list_templates(self, template_type: str = None) -> Dict[str, Any]:
         """List all available templates, optionally filtered by type."""
         if template_type == "gate":
             return {name: template[:100] + "..." for name, template in self.gate_templates.items()}
@@ -352,6 +353,10 @@ Examples:
                 "mapping": {name: template[:100] + "..." for name, template in self.mapping_templates.items()},
                 "subscription": {name: template[:100] + "..." for name, template in self.subscription_templates.items()}
             }
+
+    def list_gate_templates(self) -> Dict[str, str]:
+        """List gate templates (backward compatibility)."""
+        return {name: template[:100] + "..." for name, template in self.gate_templates.items()}
 
     def set_template(self, template_name: str, template_content: str, template_type: str) -> None:
         """Set a prompt template."""
@@ -378,6 +383,12 @@ Examples:
     def reload_templates(self) -> None:
         """Reload templates from disk."""
         self.load_templates()
+
+    # Backward compatibility properties
+    @property
+    def templates(self) -> Dict[str, str]:
+        """Get gate templates for backward compatibility."""
+        return self.gate_templates
 
 
 # Global prompt library instance

@@ -109,7 +109,7 @@ const Prompts: React.FC = () => {
   };
 
   const handleDelete = async (templateName: string, templateType: string) => {
-    if (!confirm(`Are you sure you want to delete the template "${templateName}"?`)) {
+    if (!window.confirm(`Are you sure you want to delete the template "${templateName}"?`)) {
       return;
     }
 
