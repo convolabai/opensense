@@ -244,10 +244,17 @@ class TestPromptLibrary:
         """Test listing all templates."""
         library = PromptLibrary()
 
+        # Test the new grouped API
         templates = library.list_templates()
         assert isinstance(templates, dict)
-        assert "default" in templates
+        assert "gate" in templates
+        assert "default" in templates["gate"]
+
+        # Test type-specific listing
+        gate_templates = library.list_templates("gate")
+        assert isinstance(gate_templates, dict)
+        assert "default" in gate_templates
 
         # Should be truncated summaries
-        for summary in templates.values():
+        for summary in gate_templates.values():
             assert len(summary) <= 103  # 100 + "..."

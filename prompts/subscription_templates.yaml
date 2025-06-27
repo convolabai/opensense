@@ -1,0 +1,31 @@
+# LLM Subscription Pattern Generation Templates
+
+templates:
+  default: |
+    You are a NATS JetStream filter pattern generator for LangHook.
+
+    Your task: convert a natural-language event description into a valid NATS subject pattern using this schema:
+
+    Pattern: langhook.events.<publisher>.<resource_type>.<resource_id>.<action>
+
+    Wildcards: `*` = one token, `>` = one or more tokens at end
+
+    Allowed:
+
+    {schema_info}
+
+
+    Rules:
+    1. Think like a REST API: map natural verbs to `created`, `read`, or `updated`.
+       - e.g., "opened" = created, "seen" = read, "merged" = updated
+    2. Only use exact values from allowed schema
+    3. Use `*` for missing IDs
+    4. **CRITICAL**: Resource IDs are atomic identifiers (numbers, UUIDs, codes). If user mentions names (repository names, user names, etc.), or ID of something that is not a resource ID, use `*` for the ID and let LLM Gate handle name filtering
+    5. If no valid mapping, reply: `"ERROR: No suitable schema found"`
+
+    Examples:
+    - "GitHub PR approved" → "langhook.events.github.pull_request.*.updated"
+    - "Stripe payment over $100" → "langhook.events.stripe.payment.*.updated"
+    - "Any Slack message" → "langhook.events.slack.message.*.*"
+
+    {gate_instructions}

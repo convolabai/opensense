@@ -1,11 +1,15 @@
 """Subscription API routes."""
 
 
+from typing import Any
+
 import structlog
 from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel
 
 from langhook.subscriptions.database import db_service
 from langhook.subscriptions.llm import LLMPatternService, NoSuitableSchemaError
+from langhook.subscriptions.prompts import prompt_library
 from langhook.subscriptions.schemas import (
     IngestMappingListResponse,
     IngestMappingResponse,
@@ -18,6 +22,21 @@ from langhook.subscriptions.schemas import (
 )
 
 logger = structlog.get_logger("langhook")
+
+# Pydantic models for prompt management
+class PromptTemplateRequest(BaseModel):
+    name: str
+    content: str
+    type: str  # "gate", "mapping", or "subscription"
+
+class PromptTemplateResponse(BaseModel):
+    name: str
+    content: str
+    type: str
+    preview: str  # first 100 chars for preview
+
+class PromptTemplateListResponse(BaseModel):
+    templates: dict[str, Any]  # grouped by type or single type
 
 # Import the consumer service
 def get_consumer_service():
@@ -169,18 +188,18 @@ async def delete_ingest_mapping(
     """Delete an ingest mapping by fingerprint."""
     try:
         deleted = await db_service.delete_ingestion_mapping(fingerprint)
-        
+
         if not deleted:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Ingest mapping not found"
             )
-        
+
         logger.info(
             "Ingest mapping deleted via API",
             fingerprint=fingerprint
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -462,4 +481,153 @@ async def delete_subscription(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete subscription"
+        ) from e
+
+
+# Prompt Management Endpoints
+
+@router.get("/prompts/templates", response_model=PromptTemplateListResponse)
+async def list_prompt_templates(
+    template_type: str = Query(None, description="Filter by template type: gate, mapping, subscription")
+) -> PromptTemplateListResponse:
+    """List all available prompt templates, optionally filtered by type."""
+    try:
+        templates = prompt_library.list_templates(template_type)
+        return PromptTemplateListResponse(templates=templates)
+    except Exception as e:
+        logger.error("Failed to list prompt templates", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list prompt templates"
+        ) from e
+
+
+@router.get("/prompts/templates/{template_type}/{template_name}", response_model=PromptTemplateResponse)
+async def get_prompt_template(
+    template_type: str,
+    template_name: str
+) -> PromptTemplateResponse:
+    """Get a specific prompt template."""
+    try:
+        if template_type not in ["gate", "mapping", "subscription"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid template type. Must be: gate, mapping, or subscription"
+            )
+
+        content = prompt_library.get_template(template_name, template_type)
+        if not content:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Template '{template_name}' of type '{template_type}' not found"
+            )
+
+        preview = content[:100] + "..." if len(content) > 100 else content
+        return PromptTemplateResponse(
+            name=template_name,
+            content=content,
+            type=template_type,
+            preview=preview
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to get prompt template",
+                    template_type=template_type,
+                    template_name=template_name,
+                    error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get prompt template"
+        ) from e
+
+
+@router.post("/prompts/templates", response_model=PromptTemplateResponse, status_code=status.HTTP_201_CREATED)
+async def create_prompt_template(
+    template: PromptTemplateRequest
+) -> PromptTemplateResponse:
+    """Create or update a prompt template."""
+    try:
+        if template.type not in ["gate", "mapping", "subscription"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid template type. Must be: gate, mapping, or subscription"
+            )
+
+        prompt_library.set_template(template.name, template.content, template.type)
+
+        preview = template.content[:100] + "..." if len(template.content) > 100 else template.content
+
+        logger.info("Prompt template created/updated",
+                   template_name=template.name,
+                   template_type=template.type,
+                   content_length=len(template.content))
+
+        return PromptTemplateResponse(
+            name=template.name,
+            content=template.content,
+            type=template.type,
+            preview=preview
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to create prompt template",
+                    template_name=template.name,
+                    template_type=template.type,
+                    error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create prompt template"
+        ) from e
+
+
+@router.delete("/prompts/templates/{template_type}/{template_name}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_prompt_template(
+    template_type: str,
+    template_name: str
+) -> None:
+    """Delete a prompt template."""
+    try:
+        if template_type not in ["gate", "mapping", "subscription"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid template type. Must be: gate, mapping, or subscription"
+            )
+
+        deleted = prompt_library.delete_template(template_name, template_type)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Template '{template_name}' of type '{template_type}' not found"
+            )
+
+        logger.info("Prompt template deleted",
+                   template_name=template_name,
+                   template_type=template_type)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to delete prompt template",
+                    template_type=template_type,
+                    template_name=template_name,
+                    error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete prompt template"
+        ) from e
+
+
+@router.post("/prompts/reload", status_code=status.HTTP_204_NO_CONTENT)
+async def reload_prompt_templates() -> None:
+    """Reload prompt templates from disk."""
+    try:
+        prompt_library.reload_templates()
+        logger.info("Prompt templates reloaded from disk")
+    except Exception as e:
+        logger.error("Failed to reload prompt templates", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reload prompt templates"
         ) from e

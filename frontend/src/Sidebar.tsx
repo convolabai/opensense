@@ -1,7 +1,7 @@
 import React from 'react';
-import { LayoutDashboard, ListChecks, MailQuestion, BookOpen, GitMerge, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, ListChecks, MailQuestion, BookOpen, GitMerge, X, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 
-type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema' | 'Ingest Mapping';
+type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema' | 'Ingest Mapping' | 'Prompts';
 
 interface SidebarProps {
   activeTab: TabName;
@@ -18,6 +18,7 @@ const navItems = [
   { name: 'Subscriptions', icon: MailQuestion },
   { name: 'Schema', icon: BookOpen },
   { name: 'Ingest Mapping', icon: GitMerge },
+  { name: 'Prompts', icon: MessageSquare },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed, setIsCollapsed }) => {

@@ -6,9 +6,10 @@ import Events from './Events';
 import Subscriptions from './Subscriptions';
 import Schema from './Schema';
 import IngestMapping from './IngestMapping';
+import Prompts from './Prompts';
 import Sidebar from './Sidebar';
 
-type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema' | 'Ingest Mapping';
+type TabName = 'Dashboard' | 'Events' | 'Subscriptions' | 'Schema' | 'Ingest Mapping' | 'Prompts';
 
 interface GateConfig {
   enabled: boolean;
@@ -132,6 +133,7 @@ function ConsoleApp() {
           {activeTab === 'Subscriptions' && <Subscriptions subscriptions={subscriptions} refreshSubscriptions={loadSubscriptions} />}
           {activeTab === 'Schema' && <Schema />}
           {activeTab === 'Ingest Mapping' && <IngestMapping />}
+          {activeTab === 'Prompts' && <Prompts />}
         </div>
       </div>
     </main>
